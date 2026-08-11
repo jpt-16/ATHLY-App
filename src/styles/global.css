@@ -1,0 +1,190 @@
+/*
+ * Global styles for ATHLY.
+ *
+ * Everything below is carried over from the prototype's document head. The
+ * screens style themselves inline (see `prototype/styles.ts`), so this file
+ * holds only what inline styles cannot express: the page ground, the keyframes
+ * the screens animate with, and the hover rules.
+ */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #e8e5de;
+  font-family: Archivo, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: #17a05e;
+}
+
+a:hover {
+  color: #0e7b47;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+::selection {
+  background: rgb(23 160 94 / 25%);
+}
+
+/* Scroll containers inside the phone frame hide their scrollbar. */
+.ffs::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.ffs {
+  scrollbar-width: none;
+}
+
+/* ── screen transitions ──────────────────────────────────────────── */
+
+@keyframes ffIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ffUp {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes ffFade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ffSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ffPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes ffToast {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  12% {
+    opacity: 1;
+    transform: none;
+  }
+
+  88% {
+    opacity: 1;
+    transform: none;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ── hover states ────────────────────────────────────────────────── */
+/*
+ * The design tool expressed hover as a `style-hover` attribute alongside each
+ * element's inline style, and generated one class per distinct declaration.
+ * Those classes are reproduced here verbatim. `!important` is required: the
+ * elements they apply to carry inline styles, which would otherwise win.
+ */
+
+.dc-ho0:hover {
+  background: rgb(17 24 21 / 6%) !important;
+}
+
+.dc-ho1:hover {
+  background: #0e7b47 !important;
+}
+
+.dc-ho2:hover {
+  border-color: rgb(17 24 21 / 30%) !important;
+}
+
+.dc-ho3:hover {
+  border-color: #111815 !important;
+}
+
+.dc-ho4:hover {
+  background: #2a2f35 !important;
+}
+
+.dc-ho5:hover {
+  background: rgb(244 242 237 / 24%) !important;
+}
+
+.dc-ho6:hover {
+  background: rgb(244 242 237 / 20%) !important;
+}
+
+.dc-ho7:hover {
+  background: rgb(91 227 160 / 10%) !important;
+}
+
+.dc-ho8:hover {
+  background: rgb(244 242 237 / 7%) !important;
+}
+
+.dc-ho9:hover {
+  background: #fbfaf8 !important;
+}
+
+.dc-ho10:hover {
+  background: rgb(17 24 21 / 3.5%) !important;
+}
+
+.dc-ho11:hover {
+  border-color: #5be3a0 !important;
+  color: #5be3a0 !important;
+}
+
+.dc-ho12:hover {
+  background: #232830 !important;
+}
+
+.dc-ho13:hover {
+  border-color: #111815 !important;
+  color: #111815 !important;
+}

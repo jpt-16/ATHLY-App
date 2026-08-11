@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+<style>
+html,body{margin:0;padding:0;background:#E8E5DE;font-family:Archivo,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#17A05E}a:hover{color:#0E7B47}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+::selection{background:rgba(23,160,94,.25)}
+.ffs::-webkit-scrollbar{width:0;height:0}.ffs{scrollbar-width:none}
+@keyframes ffIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes ffUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes ffFade{from{opacity:0}to{opacity:1}}
+@keyframes ffSpin{to{transform:rotate(360deg)}}
+@keyframes ffPulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes ffToast{0%{opacity:0;transform:translateY(14px)}12%{opacity:1;transform:none}88%{opacity:1;transform:none}100%{opacity:0;transform:translateY(6px)}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:18px;padding:36px 20px 56px;background:#E8E5DE">
+
+<div style="display:flex;align-items:center;gap:12px;width:402px;max-width:100%">
+<div style="width:26px;height:26px;border-radius:8px;background:#111815;display:flex;align-items:center;justify-content:center;position:relative;flex:none">
+<span style="font-size:10.5px;font-weight:900;color:#F4F2ED;letter-spacing:-.04em">A</span>
+<div style="position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#17A05E;border:2px solid #E8E5DE"></div>
+</div>
+<div style="font-weight:900;font-stretch:125%;font-size:17px;letter-spacing:.01em;color:#111815">ATHLY</div>
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#A5A093;margin-left:auto">Interactive prototype</div>
+</div>
+
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+
+<div style="position:relative;height:100%;min-height:100%;width:100%;overflow:hidden;background:#F4F2ED;color:#111815;font-family:Archivo,system-ui,sans-serif">
+
+<!-- ══════ ONBOARDING ══════ -->
+<sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#F4F2ED">
+
+<sc-if value="{{ obShowBar }}" hint-placeholder-val="{{ true }}">
+<div style="padding:60px 22px 0;display:flex;align-items:center;gap:12px">
+<button onClick="{{ obBack }}" style="width:34px;height:34px;border:2px solid rgba(17,24,21,.14);display:flex;align-items:center;justify-content:center;border-radius:10px;flex:none" style-hover="background:rgba(17,24,21,.06)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+</button>
+<div style="flex:1;height:4px;background:rgba(17,24,21,.1);border-radius:99px;overflow:hidden">
+<div style="height:100%;background:#17A05E;border-radius:99px;transition:width .45s cubic-bezier(.2,.8,.2,1);width:{{ obPct }}"></div>
+</div>
+<div style="font-size:11px;font-weight:700;color:#8C8779;min-width:34px;text-align:right">{{ obCount }}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ob0 }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;background:#111815;display:flex;flex-direction:column;justify-content:flex-end;padding:0 26px 46px;animation:ffFade .4s ease">
+<div style="position:absolute;top:0;left:0;right:0;height:430px;overflow:hidden">
+<div style="position:absolute;top:-90px;right:-70px;width:340px;height:340px;border-radius:50%;background:#17A05E;opacity:.92"></div>
+<div style="position:absolute;top:130px;left:-60px;width:180px;height:180px;border-radius:50%;background:#F4F2ED;opacity:.1"></div>
+<div style="position:absolute;top:262px;right:44px;width:120px;height:26px;border-radius:99px;background:#5BE3A0;opacity:.45"></div>
+</div>
+<div style="position:absolute;top:70px;left:26px;display:flex;align-items:center;gap:10px">
+<div style="width:30px;height:30px;border-radius:9px;background:#F4F2ED;display:flex;align-items:center;justify-content:center;position:relative;flex:none">
+<span style="font-size:12px;font-weight:900;color:#111815;letter-spacing:-.04em">A</span>
+<div style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:#5BE3A0;border:2px solid #111815"></div>
+</div>
+<span style="font-size:15px;font-weight:900;font-stretch:125%;letter-spacing:.01em;color:#F4F2ED">ATHLY</span>
+</div>
+<div style="position:relative">
+<h1 style="margin:0 0 14px;font-size:47px;line-height:.98;font-weight:900;font-stretch:113%;letter-spacing:-.015em;color:#F4F2ED;text-wrap:balance">Eat food you actually like.</h1>
+<p style="margin:0 0 34px;font-size:16px;line-height:1.5;color:rgba(244,242,237,.65);max-width:305px">Tell us what you love, what you won't touch, and when you train. Athly handles the rest — no spreadsheets.</p>
+<button onClick="{{ obNext }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:#17A05E;color:#fff;font-weight:800;font-size:16px;border-radius:14px" style-hover="background:#0E7B47">
+<span>Let's set you up</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+</button>
+<div style="margin-top:16px;font-size:12px;color:rgba(244,242,237,.4);text-align:center">Takes about two minutes</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ obQuestion }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;overflow-y:auto;padding:26px 22px 0" class="ffs">
+<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#17A05E;margin-bottom:10px">{{ obKicker }}</div>
+<h2 style="margin:0 0 8px;font-size:31px;line-height:1.05;font-weight:900;font-stretch:113%;letter-spacing:-.013em;text-wrap:balance">{{ obTitle }}</h2>
+<p style="margin:0 0 22px;font-size:14px;line-height:1.5;color:#6E6A60">{{ obSub }}</p>
+
+<sc-if value="{{ obIsText }}" hint-placeholder-val="{{ true }}">
+<div style="padding-bottom:20px">
+<input value="{{ nameDraft }}" onChange="{{ nameChange }}" placeholder="e.g. Jordan" style="width:100%;padding:18px;font:inherit;font-size:24px;font-weight:800;letter-spacing:-.02em;background:#fff;border:2px solid rgba(17,24,21,.12);border-radius:14px;color:#111815;caret-color:#17A05E"/>
+<div style="margin-top:12px;font-size:12.5px;color:#8C8779;line-height:1.5">Athly uses it to talk to you, nothing else.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ obIsList }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:10px;padding-bottom:20px">
+<sc-for list="{{ obOptions }}" as="opt" hint-placeholder-count="4">
+<button onClick="{{ opt.pick }}" style="{{ opt.rowStyle }}" style-hover="border-color:rgba(17,24,21,.3)">
+<div style="display:flex;flex-direction:column;gap:3px;text-align:left">
+<div style="font-weight:800;font-size:16px;letter-spacing:-.01em">{{ opt.label }}</div>
+<div style="font-size:12.5px;color:#6E6A60;line-height:1.35">{{ opt.hint }}</div>
+</div>
+<div style="{{ opt.dotStyle }}"></div>
+</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ obIsBody }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:10px;padding-bottom:20px">
+<sc-for list="{{ bodyRows }}" as="b" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:14px;padding:14px 14px 14px 17px">
+<div>
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:5px">{{ b.label }}</div>
+<div style="font-size:26px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;line-height:1">{{ b.value }}</div>
+</div>
+<div style="display:flex;gap:8px">
+<button onClick="{{ b.dec }}" style="width:44px;height:44px;border-radius:12px;border:2px solid rgba(17,24,21,.13);display:flex;align-items:center;justify-content:center" style-hover="border-color:#111815">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="3" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+</button>
+<button onClick="{{ b.inc }}" style="width:44px;height:44px;border-radius:12px;background:#111815;display:flex;align-items:center;justify-content:center" style-hover="background:#2A2F35">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F4F2ED" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+</div>
+</div>
+</sc-for>
+<div style="display:flex;gap:10px;align-items:flex-start;background:rgba(23,160,94,.08);border-radius:14px;padding:14px 15px">
+<div style="width:18px;height:18px;border-radius:5px;background:#17A05E;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">
+<span style="font-size:7.5px;font-weight:900;color:#fff;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:12.5px;line-height:1.45;color:#0E7B47;font-weight:600">These set your starting calorie and protein numbers. You'll see the math before we build anything.</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ obIsTarget }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:10px;padding-bottom:20px">
+<div style="display:flex;gap:10px">
+<div style="flex:1;background:#fff;border-radius:14px;padding:15px 16px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:6px">Now</div>
+<div style="font-size:25px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;line-height:1">{{ nowWeight }}</div>
+</div>
+<div style="flex:1.3;background:#111815;border-radius:14px;padding:13px 13px 13px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+<div>
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#5BE3A0;margin-bottom:6px">Goal</div>
+<div style="font-size:25px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;line-height:1;color:#F4F2ED">{{ goalWeight }}</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<button onClick="{{ goalUp }}" style="width:40px;height:32px;border-radius:9px;background:rgba(244,242,237,.14);display:flex;align-items:center;justify-content:center" style-hover="background:rgba(244,242,237,.24)">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F4F2ED" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+<button onClick="{{ goalDown }}" style="width:40px;height:32px;border-radius:9px;background:rgba(244,242,237,.14);display:flex;align-items:center;justify-content:center" style-hover="background:rgba(244,242,237,.24)">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F4F2ED" stroke-width="3" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+</button>
+</div>
+</div>
+</div>
+<div style="background:#fff;border-radius:14px;padding:16px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:11px">{{ rateLabel }}</div>
+<div style="display:flex;gap:6px">
+<sc-for list="{{ rateOpts }}" as="r" hint-placeholder-count="5">
+<button onClick="{{ r.pick }}" style="{{ r.style }}">{{ r.label }}</button>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;gap:10px;align-items:flex-start;background:rgba(23,160,94,.08);border-radius:14px;padding:14px 15px">
+<div style="width:18px;height:18px;border-radius:5px;background:#17A05E;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">
+<span style="font-size:7.5px;font-weight:900;color:#fff;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:12.5px;line-height:1.45;color:#0E7B47;font-weight:600">{{ paceNote }}</div>
+</div>
+<div style="font-size:11.5px;line-height:1.5;color:#8C8779;font-weight:600;padding:0 2px">{{ paceScope }}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ obIsChips }}" hint-placeholder-val="{{ true }}">
+<sc-if value="{{ obHasNote }}" hint-placeholder-val="{{ true }}">
+<div style="margin:-8px 0 16px;font-size:12.5px;line-height:1.45;color:#0E7B47;font-weight:700;background:rgba(23,160,94,.09);border-radius:11px;padding:11px 13px">{{ obNote }}</div>
+</sc-if>
+<div style="display:flex;flex-wrap:wrap;gap:8px;padding-bottom:22px">
+<sc-for list="{{ obOptions }}" as="opt" hint-placeholder-count="16">
+<button onClick="{{ opt.pick }}" style="{{ opt.chipStyle }}">{{ opt.label }}</button>
+</sc-for>
+</div>
+<div style="padding-bottom:20px">
+<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:8px">Or type your own</div>
+<input value="{{ obDraft }}" onChange="{{ obDraftChange }}" onKeyDown="{{ obDraftKey }}" placeholder="{{ obDraftHint }}" style="width:100%;padding:13px 14px;font:inherit;font-size:14px;background:#fff;border:2px solid rgba(17,24,21,.12);border-radius:12px;color:#111815;caret-color:#17A05E"/>
+</div>
+</sc-if>
+
+<sc-if value="{{ obIsWeek }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:8px;padding-bottom:22px">
+<sc-for list="{{ weekRows }}" as="d" hint-placeholder-count="7">
+<div style="{{ d.rowStyle }}">
+<button onClick="{{ d.toggle }}" style="{{ d.headStyle }}">
+<span style="{{ d.dayStyle }}">{{ d.day }}</span>
+<span style="{{ d.dotStyle }}"></span>
+<span style="{{ d.sumStyle }}">{{ d.summary }}</span>
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B5B0A4" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="{{ d.caretStyle }}"><path d="M6 9l6 6 6-6"></path></svg>
+</button>
+<sc-if value="{{ d.open }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:14px;padding:2px 14px 15px">
+<div style="display:flex;border:2px solid rgba(17,24,21,.12);border-radius:11px;overflow:hidden">
+<sc-for list="{{ d.modes }}" as="m" hint-placeholder-count="3">
+<button onClick="{{ m.pick }}" style="{{ m.style }}">{{ m.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ d.hasTime }}" hint-placeholder-val="{{ true }}">
+<div>
+<div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:8px">{{ d.timeLabel }}</div>
+<div class="ffs" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px">
+<sc-for list="{{ d.times }}" as="t" hint-placeholder-count="6">
+<button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<div>
+<button onClick="{{ d.liftToggle }}" style="{{ d.liftStyle }}">
+<span style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6v12M18 6v12M2 9v6M22 9v6M6 12h12"></path></svg>
+<span>Strength session</span>
+</span>
+<span style="{{ d.liftStateStyle }}">{{ d.liftState }}</span>
+</button>
+<sc-if value="{{ d.lift }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="display:flex;gap:7px;overflow-x:auto;padding:10px 0 2px">
+<sc-for list="{{ d.liftTimes }}" as="t" hint-placeholder-count="6">
+<button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+<sc-if value="{{ d.durOpen }}" hint-placeholder-val="{{ true }}">
+<div>
+<div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:8px">How long <span style="text-transform:none;letter-spacing:0;font-weight:700;color:#B5B0A4">· optional</span></div>
+<div style="display:flex;gap:7px">
+<sc-for list="{{ d.durs }}" as="t" hint-placeholder-count="4">
+<button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<div style="display:flex;gap:10px;align-items:flex-start;background:rgba(23,160,94,.08);border-radius:14px;padding:14px 15px;margin-top:6px">
+<div style="width:18px;height:18px;border-radius:5px;background:#17A05E;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">
+<span style="font-size:7.5px;font-weight:900;color:#fff;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:12.5px;line-height:1.45;color:#0E7B47;font-weight:600">{{ weekSummary }}</div>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div style="padding:14px 22px 30px;border-top:2px solid rgba(17,24,21,.1);background:#F4F2ED">
+<button onClick="{{ obNext }}" disabled="{{ obBlocked }}" style="{{ obCtaStyle }}">
+<span>{{ obCta }}</span>
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTargets }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;inset:0;background:#111815;overflow-y:auto;padding:0 26px 34px;animation:ffFade .35s ease">
+<div style="padding-top:62px;display:flex;align-items:center;gap:10px;margin-bottom:24px">
+<div style="width:26px;height:26px;border-radius:8px;background:#F4F2ED;display:flex;align-items:center;justify-content:center;flex:none">
+<span style="font-size:10.5px;font-weight:900;color:#111815;letter-spacing:-.04em">A</span>
+</div>
+<span style="font-size:13px;font-weight:900;color:rgba(244,242,237,.65)">ATHLY</span>
+</div>
+<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#5BE3A0;margin-bottom:10px">{{ targets.mode }}</div>
+<h2 style="margin:0 0 8px;font-size:31px;font-weight:900;font-stretch:113%;letter-spacing:-.015em;line-height:1.05;color:#F4F2ED">{{ targets.headline }}</h2>
+<p style="margin:0 0 22px;font-size:14px;line-height:1.5;color:rgba(244,242,237,.55)">{{ targets.sub }}</p>
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:18px">
+<div style="font-size:60px;font-weight:900;font-stretch:113%;letter-spacing:-.021em;line-height:.9;color:#F4F2ED">{{ targets.calText }}</div>
+<div style="font-size:15px;font-weight:800;color:rgba(244,242,237,.5)">cal / day</div>
+</div>
+<div style="background:rgba(244,242,237,.07);border-radius:18px;overflow:hidden;margin-bottom:14px">
+<sc-for list="{{ targets.math }}" as="m" hint-placeholder-count="4">
+<div style="{{ m.style }}">
+<div>
+<div style="font-size:13.5px;font-weight:700;color:#F4F2ED">{{ m.label }}</div>
+<div style="font-size:11.5px;color:rgba(244,242,237,.45);margin-top:2px">{{ m.note }}</div>
+</div>
+<div style="{{ m.valueStyle }}">{{ m.value }}</div>
+</div>
+</sc-for>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+<sc-for list="{{ targets.macros }}" as="m" hint-placeholder-count="3">
+<div style="background:rgba(244,242,237,.07);border-radius:14px;padding:14px">
+<div style="font-size:22px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;color:#F4F2ED;line-height:1">{{ m.value }}</div>
+<div style="font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:#5BE3A0;margin-top:6px">{{ m.label }}</div>
+</div>
+</sc-for>
+</div>
+<div style="font-size:12px;line-height:1.5;color:rgba(244,242,237,.5);margin:-6px 0 12px">{{ targets.proteinBasis }}</div>
+<div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:rgba(244,242,237,.38);margin-bottom:9px">How protein is set</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<sc-for list="{{ targets.pOpts }}" as="p" hint-placeholder-count="3">
+<button onClick="{{ p.pick }}" style="{{ p.style }}">
+<div style="{{ p.labelStyle }}">{{ p.label }}</div>
+<div style="{{ p.subStyle }}">{{ p.sub }}</div>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{ targets.pCustomOn }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(244,242,237,.07);border-radius:14px;padding:11px 11px 11px 15px;margin-bottom:16px">
+<div style="font-size:12.5px;font-weight:700;color:rgba(244,242,237,.72)">Daily protein</div>
+<div style="display:flex;align-items:center;gap:10px">
+<button onClick="{{ targets.pDown }}" style="width:34px;height:32px;border-radius:10px;background:rgba(244,242,237,.12);display:flex;align-items:center;justify-content:center" style-hover="background:rgba(244,242,237,.2)">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F4F2ED" stroke-width="3" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+</button>
+<div style="font-size:17px;font-weight:900;font-stretch:113%;color:#F4F2ED;min-width:52px;text-align:center">{{ targets.pCustomVal }}</div>
+<button onClick="{{ targets.pUp }}" style="width:34px;height:32px;border-radius:10px;background:rgba(244,242,237,.12);display:flex;align-items:center;justify-content:center" style-hover="background:rgba(244,242,237,.2)">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F4F2ED" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+</div>
+</div>
+</sc-if>
+<div style="display:flex;gap:10px;align-items:flex-start;background:rgba(91,227,160,.1);border-radius:14px;padding:14px 15px;margin-bottom:16px">
+<div style="width:18px;height:18px;border-radius:5px;background:#5BE3A0;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">
+<span style="font-size:7.5px;font-weight:900;color:#111815;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:12.5px;line-height:1.45;color:#5BE3A0;font-weight:600">{{ targets.tuning }}</div>
+</div>
+<div style="font-size:12px;line-height:1.55;color:rgba(244,242,237,.42);margin-bottom:20px">{{ targets.disclaimer }}</div>
+<button onClick="{{ startBuild }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:#17A05E;color:#fff;font-weight:800;font-size:16px;border-radius:14px" style-hover="background:#0E7B47">
+<span>Build my week</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+</button>
+<button onClick="{{ obBack }}" style="width:100%;padding:14px;margin-top:8px;font-weight:700;font-size:13.5px;color:rgba(244,242,237,.5)">Back to my numbers</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ obBuilding }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;background:#111815;display:flex;flex-direction:column;justify-content:center;padding:0 30px;animation:ffFade .3s ease">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:34px">
+<div style="width:30px;height:30px;border-radius:9px;background:#F4F2ED;display:flex;align-items:center;justify-content:center;position:relative;flex:none">
+<span style="font-size:12px;font-weight:900;color:#111815;letter-spacing:-.04em">A</span>
+<div style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:#5BE3A0;border:2px solid #111815;animation:ffPulse 1.1s ease infinite"></div>
+</div>
+<span style="font-size:14px;font-weight:900;color:rgba(244,242,237,.7)">ATHLY</span>
+</div>
+<h2 style="margin:0 0 10px;font-size:29px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;color:#F4F2ED">{{ buildTitle }}</h2>
+<p style="margin:0 0 30px;font-size:14px;color:rgba(244,242,237,.55);line-height:1.5">Matching meals to your training days and the stuff you actually eat.</p>
+<div style="display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ buildSteps }}" as="s" hint-placeholder-count="5">
+<div style="{{ s.style }}"><div style="{{ s.dot }}"></div><span>{{ s.label }}</span></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</div>
+</sc-if>
+
+<!-- ══════ APP ══════ -->
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+
+<!-- HOME -->
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;inset:0;overflow-y:auto;padding-bottom:130px;animation:ffFade .3s ease">
+<div style="padding:58px 22px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div style="display:flex;align-items:center;gap:9px">
+<div style="width:26px;height:26px;border-radius:8px;background:#111815;display:flex;align-items:center;justify-content:center;position:relative;flex:none">
+<span style="font-size:10.5px;font-weight:900;color:#F4F2ED;letter-spacing:-.04em">A</span>
+<div style="position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#17A05E;border:2px solid #F4F2ED"></div>
+</div>
+<span style="font-size:13.5px;font-weight:900;font-stretch:125%;letter-spacing:.01em">ATHLY</span>
+</div>
+<button onClick="{{ goProfile }}" style="width:38px;height:38px;border-radius:50%;background:#111815;color:#F4F2ED;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none">{{ initial }}</button>
+</div>
+
+<div class="ffs" style="padding:0 22px 14px;display:flex;gap:7px;overflow-x:auto">
+<sc-for list="{{ weekStrip }}" as="d" hint-placeholder-count="7">
+<button onClick="{{ d.tap }}" style="{{ d.style }}">
+<span style="{{ d.dayStyle }}">{{ d.day }}</span>
+<span style="{{ d.numStyle }}">{{ d.num }}</span>
+<span style="{{ d.dot }}"></span>
+</button>
+</sc-for>
+</div>
+
+<div style="padding:0 22px 14px">
+<div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:5px">{{ todayLine }}</div>
+<h1 style="margin:0;font-size:30px;font-weight:900;font-stretch:113%;letter-spacing:-.015em;line-height:1.02">Eat this next</h1>
+</div>
+
+<sc-if value="{{ homeFocus }}" hint-placeholder-val="{{ true }}">
+<div style="padding:0 22px">
+<div style="background:#111815;border-radius:22px;overflow:hidden;color:#F4F2ED">
+<div style="display:flex;gap:15px;padding:16px 16px 14px">
+<div style="width:104px;height:104px;border-radius:18px;overflow:hidden;flex:none;position:relative">
+<div style="{{ nextMeal.fieldA }}"><span style="{{ nextMeal.wordA }}">{{ nextMeal.word }}</span></div>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center">
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#5BE3A0;margin-bottom:6px">{{ nextMeal.when }}</div>
+<div style="font-size:19px;font-weight:900;font-stretch:113%;letter-spacing:-.011em;line-height:1.15;margin-bottom:9px">{{ nextMeal.name }}</div>
+<div style="display:flex;gap:12px;font-size:12px;color:rgba(244,242,237,.6);font-weight:700">
+<span>{{ nextMeal.kcal }} cal</span><span>{{ nextMeal.protein }}</span><span>{{ nextMeal.time }}</span>
+</div>
+</div>
+</div>
+<div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ nextMeal.why }}" as="w" hint-placeholder-count="3">
+<span style="padding:5px 10px;border-radius:99px;background:rgba(91,227,160,.14);color:#5BE3A0;font-size:11px;font-weight:700">{{ w }}</span>
+</sc-for>
+</div>
+<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;border-top:2px solid rgba(244,242,237,.12)">
+<button onClick="{{ eatNext }}" style="padding:16px 18px;font-weight:800;font-size:14px;color:#5BE3A0;text-align:left;border-right:2px solid rgba(244,242,237,.12)" style-hover="background:rgba(91,227,160,.1)">Ate it</button>
+<button onClick="{{ openSwap }}" style="padding:16px 14px;font-weight:800;font-size:14px;color:#F4F2ED;text-align:left;border-right:2px solid rgba(244,242,237,.12)" style-hover="background:rgba(244,242,237,.07)">Swap</button>
+<button onClick="{{ openNext }}" style="padding:16px 14px;font-weight:800;font-size:14px;color:#F4F2ED;text-align:left" style-hover="background:rgba(244,242,237,.07)">Recipe</button>
+</div>
+</div>
+</div>
+<div style="padding:12px 22px 0">
+<button onClick="{{ goProgress }}" style="width:100%;background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:16px 17px 14px;display:flex;flex-direction:column;gap:14px;text-align:left" style-hover="background:#FBFAF8">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;width:100%">
+<div>
+<div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:5px">Still to eat today</div>
+<div style="display:flex;align-items:baseline;gap:5px">
+<div style="font-size:27px;font-weight:900;font-stretch:113%;letter-spacing:-.015em;line-height:1">{{ remain.cal }}</div>
+<div style="font-size:12px;font-weight:700;color:#8C8779">cal</div>
+<div style="font-size:27px;font-weight:900;font-stretch:113%;letter-spacing:-.015em;line-height:1;margin-left:11px;color:#17A05E">{{ remain.pro }}</div>
+<div style="font-size:12px;font-weight:700;color:#8C8779">g protein</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px;padding:5px 10px 5px 8px;border-radius:99px;background:rgba(23,160,94,.1);flex:none">
+<div style="width:7px;height:7px;border-radius:50%;background:#17A05E"></div>
+<span style="font-size:11px;font-weight:800;color:#0E7B47;letter-spacing:.01em">{{ remain.pct }}</span>
+</div>
+</div>
+<div style="display:flex;gap:10px;width:100%">
+<sc-for list="{{ macroBars }}" as="m" hint-placeholder-count="3">
+<div style="flex:1;min-width:0">
+<div style="height:6px;background:rgba(17,24,21,.09);border-radius:99px;overflow:hidden"><div style="{{ m.fill }}"></div></div>
+<div style="display:flex;justify-content:space-between;gap:4px;margin-top:7px">
+<span style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;font-weight:800;color:#8C8779">{{ m.short }}</span>
+<span style="font-size:10.5px;font-weight:800;white-space:nowrap">{{ m.text }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ homeDash }}" hint-placeholder-val="{{ true }}">
+<div style="padding:0 22px">
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:22px;padding:18px">
+<div style="display:flex;align-items:center;gap:18px">
+<div style="{{ ringStyle }}">
+<div style="width:76px;height:76px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center">
+<div style="font-size:22px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;line-height:1">{{ remain.pct }}</div>
+<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#8C8779">fueled</div>
+</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:11px">
+<sc-for list="{{ macroBars }}" as="m" hint-placeholder-count="3">
+<div>
+<div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;margin-bottom:4px"><span>{{ m.name }}</span><span style="color:#8C8779">{{ m.text }}</span></div>
+<div style="height:6px;background:rgba(17,24,21,.09);border-radius:99px;overflow:hidden"><div style="{{ m.fill }}"></div></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="height:2px;background:rgba(17,24,21,.1);margin:16px -18px 14px"></div>
+<div style="display:flex;gap:13px;align-items:center">
+<div style="width:66px;height:66px;border-radius:14px;overflow:hidden;flex:none;position:relative">
+<div style="{{ nextMeal.fieldB }}"><span style="{{ nextMeal.wordB }}">{{ nextMeal.word }}</span></div>
+</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#17A05E;margin-bottom:3px">{{ nextMeal.when }}</div>
+<div style="font-size:16.5px;font-weight:900;letter-spacing:-.02em;line-height:1.2">{{ nextMeal.name }}</div>
+</div>
+<button onClick="{{ openNext }}" style="width:38px;height:38px;border-radius:12px;background:#111815;color:#fff;display:flex;align-items:center;justify-content:center;flex:none">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+<button onClick="{{ eatNext }}" style="padding:13px 16px;border-radius:12px;background:#17A05E;color:#fff;font-weight:800;font-size:13.5px;text-align:left" style-hover="background:#0E7B47">Ate it</button>
+<button onClick="{{ openSwap }}" style="padding:13px 16px;border-radius:12px;border:2px solid rgba(17,24,21,.14);font-weight:800;font-size:13.5px;text-align:left" style-hover="border-color:#111815">Swap it</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<div style="padding:14px 22px 0">
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+<button onClick="{{ goLog }}" style="background:#fff;border:2px solid rgba(17,24,21,.1);border-radius:14px;padding:14px 12px;display:flex;flex-direction:column;gap:9px;align-items:flex-start" style-hover="border-color:#111815">
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+<span style="font-size:13px;font-weight:800;text-align:left">Log food</span>
+</button>
+<button onClick="{{ goPlan }}" style="background:#fff;border:2px solid rgba(17,24,21,.1);border-radius:14px;padding:14px 12px;display:flex;flex-direction:column;gap:9px;align-items:flex-start" style-hover="border-color:#111815">
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"></path><circle cx="12" cy="12" r="3.4"></circle></svg>
+<span style="font-size:13px;font-weight:800;text-align:left">Build a meal</span>
+</button>
+<button onClick="{{ goCalendar }}" style="background:#fff;border:2px solid rgba(17,24,21,.1);border-radius:14px;padding:14px 12px;display:flex;flex-direction:column;gap:9px;align-items:flex-start" style-hover="border-color:#111815">
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+<span style="font-size:13px;font-weight:800;text-align:left">Calendar</span>
+</button>
+</div>
+</div>
+
+<sc-if value="{{ showInsight }}" hint-placeholder-val="{{ true }}">
+<div style="padding:14px 22px 0;animation:ffIn .35s ease">
+<div style="border:2px solid #17A05E;border-radius:18px;padding:15px 16px;background:rgba(23,160,94,.07);display:flex;gap:12px;align-items:flex-start">
+<div style="width:22px;height:22px;border-radius:7px;background:#17A05E;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">
+<span style="font-size:9px;font-weight:900;color:#fff;letter-spacing:-.04em">A</span>
+</div>
+<div style="flex:1">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#0E7B47;margin-bottom:4px">Athly noticed</div>
+<div style="font-size:13.5px;line-height:1.45;font-weight:600;color:#111815">{{ insightText }}</div>
+<div style="display:flex;gap:8px;margin-top:11px">
+<button onClick="{{ learnYes }}" style="padding:8px 14px;background:#17A05E;color:#fff;font-weight:800;font-size:12.5px;border-radius:10px">Yes, drop them</button>
+<button onClick="{{ learnNo }}" style="padding:8px 14px;border:2px solid rgba(17,24,21,.14);font-weight:800;font-size:12.5px;border-radius:10px">Keep them</button>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<div style="padding:26px 22px 0">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+<h3 style="margin:0;font-size:19px;font-weight:900;font-stretch:113%;letter-spacing:-.011em">Rest of today</h3>
+<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#8C8779">{{ dayShape }}</div>
+</div>
+<div style="border-top:2px solid rgba(17,24,21,.12)">
+<sc-for list="{{ todayMeals }}" as="m" hint-placeholder-count="4">
+<button onClick="{{ m.open }}" style="{{ m.rowStyle }}" style-hover="background:rgba(17,24,21,.035)">
+<div style="{{ m.tileStyle }}"><div style="{{ m.fieldStyle }}"><span style="{{ m.wordStyle }}">{{ m.word }}</span></div></div>
+<div style="flex:1;min-width:0;text-align:left">
+<div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:3px">{{ m.slot }}</div>
+<div style="font-size:15.5px;font-weight:800;letter-spacing:-.015em;line-height:1.25;margin-bottom:4px">{{ m.name }}</div>
+<div style="font-size:12px;color:#6E6A60;font-weight:600">{{ m.macroText }}</div>
+</div>
+<div style="width:22px;height:22px;border-radius:50%;border:2px solid rgba(17,24,21,.16);flex:none"></div>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div style="padding:24px 22px 0">
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:18px;border:2px solid rgba(17,24,21,.1)">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779">Training today</div>
+<div style="{{ trainingBadgeStyle }}">{{ trainingBadge }}</div>
+</div>
+<div style="display:flex;align-items:center;gap:0">
+<sc-for list="{{ trainingRail }}" as="t" hint-placeholder-count="4">
+<div style="{{ t.wrap }}">
+<div style="{{ t.dot }}"></div>
+<div style="font-size:11px;font-weight:800;margin-top:8px">{{ t.time }}</div>
+<div style="font-size:11px;color:#6E6A60;margin-top:2px;line-height:1.3">{{ t.label }}</div>
+</div>
+</sc-for>
+</div>
+<div style="height:2px;background:rgba(17,24,21,.1);margin:16px -18px 12px"></div>
+<div style="font-size:13px;line-height:1.5;color:#4A4740;margin-bottom:13px">{{ trainingNote }}</div>
+<button onClick="{{ goCalendar }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border:2px solid rgba(17,24,21,.12);border-radius:12px;font-weight:800;font-size:13.5px" style-hover="border-color:#111815">
+<span>Edit my schedule</span>
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<!-- CALENDAR -->
+<sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;inset:0;overflow-y:auto;padding-bottom:130px;background:#F4F2ED;animation:ffFade .3s ease;z-index:20">
+<div style="padding:58px 22px 14px;display:flex;align-items:center;gap:12px">
+<button onClick="{{ goHome }}" style="width:34px;height:34px;border:2px solid rgba(17,24,21,.14);display:flex;align-items:center;justify-content:center;border-radius:10px;flex:none" style-hover="background:rgba(17,24,21,.06)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+</button>
+<h1 style="margin:0;font-size:25px;font-weight:900;font-stretch:113%;letter-spacing:-.013em">{{ calMonth }}</h1>
+</div>
+<div style="padding:0 22px">
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:16px 14px 12px">
+<div style="display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:8px">
+<sc-for list="{{ calHeads }}" as="h" hint-placeholder-count="7">
+<div style="text-align:center;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#A9A498">{{ h.label }}</div>
+</sc-for>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+<sc-for list="{{ calCells }}" as="c" hint-placeholder-count="35">
+<button onClick="{{ c.tap }}" style="{{ c.style }}">
+<span style="{{ c.numStyle }}">{{ c.num }}</span>
+<span style="{{ c.dot }}"></span>
+</button>
+</sc-for>
+</div>
+<div style="display:flex;gap:14px;justify-content:center;padding:12px 0 2px;border-top:2px solid rgba(17,24,21,.08);margin-top:10px">
+<sc-for list="{{ calLegend }}" as="l" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:6px">
+<span style="{{ l.dot }}"></span>
+<span style="font-size:10.5px;font-weight:700;color:#6E6A60">{{ l.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="padding:16px 22px 0">
+<div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:9px">{{ sel.dateLabel }}</div>
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:16px">
+<sc-if value="{{ sel.hasDur }}" hint-placeholder-val="{{ true }}">
+<div style="font-size:12px;line-height:1.5;color:#6E6A60;font-weight:600;margin-bottom:14px">{{ sel.durNote }}</div>
+</sc-if>
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:10px">What's on</div>
+<div style="display:flex;border:2px solid rgba(17,24,21,.12);border-radius:12px;overflow:hidden;margin-bottom:12px">
+<sc-for list="{{ sel.modes }}" as="m" hint-placeholder-count="3">
+<button onClick="{{ m.pick }}" style="{{ m.style }}">{{ m.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ sel.hasTime }}" hint-placeholder-val="{{ true }}">
+<div>
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:9px">{{ sel.timeLabel }}</div>
+<div class="ffs" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px">
+<sc-for list="{{ sel.times }}" as="t" hint-placeholder-count="5">
+<button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<button onClick="{{ sel.liftToggle }}" style="{{ sel.liftStyle }}">
+<span style="{{ sel.liftLabelStyle }}">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6v12M18 6v12M2 9v6M22 9v6M6 12h12"></path></svg>
+<span>Strength session</span>
+</span>
+<span style="{{ sel.liftStateStyle }}">{{ sel.liftState }}</span>
+</button>
+<sc-if value="{{ sel.liftOn }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:12px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:9px">Lift starts</div>
+<div class="ffs" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px">
+<sc-for list="{{ sel.liftTimes }}" as="t" hint-placeholder-count="6">
+<button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+<div style="padding:16px 22px 0">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+<h3 style="margin:0;font-size:17px;font-weight:900;letter-spacing:-.02em">Meals that day</h3>
+<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#8C8779">{{ sel.mealsCount }}</div>
+</div>
+<div style="border-top:2px solid rgba(17,24,21,.12)">
+<sc-for list="{{ sel.meals }}" as="m" hint-placeholder-count="5">
+<button onClick="{{ m.open }}" style="{{ m.rowStyle }}" style-hover="background:rgba(17,24,21,.035)">
+<div style="{{ m.tileStyle }}"><div style="{{ m.fieldStyle }}"><span style="{{ m.wordStyle }}">{{ m.word }}</span></div></div>
+<div style="flex:1;min-width:0;text-align:left">
+<div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:3px">{{ m.slot }}</div>
+<div style="font-size:15px;font-weight:800;letter-spacing:-.015em;line-height:1.25;margin-bottom:4px">{{ m.name }}</div>
+<div style="font-size:12px;color:#6E6A60;font-weight:600">{{ m.macroText }}</div>
+</div>
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B5B0A4" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+</button>
+</sc-for>
+</div>
+</div>
+<div style="padding:18px 22px 0">
+<div style="display:flex;gap:10px;align-items:flex-start;background:#111815;border-radius:18px;padding:16px 17px;margin-bottom:12px">
+<div style="width:19px;height:19px;border-radius:6px;background:#5BE3A0;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">
+<span style="font-size:8px;font-weight:900;color:#111815;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:13px;line-height:1.45;color:rgba(244,242,237,.82);font-weight:600">{{ sel.note }}</div>
+</div>
+<button onClick="{{ replanDay }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:16px 18px;background:#17A05E;color:#fff;border-radius:14px;font-weight:800;font-size:15px" style-hover="background:#0E7B47">
+<span>Replan this day</span>
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+</button>
+</div>
+</div>
+</sc-if>
+
+<!-- PLAN -->
+<sc-if value="{{ isPlan }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;inset:0;overflow-y:auto;padding-bottom:130px;animation:ffFade .3s ease">
+<div style="padding:58px 22px 14px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+<div style="width:20px;height:20px;border-radius:6px;background:#17A05E;display:flex;align-items:center;justify-content:center;flex:none">
+<span style="font-size:8.5px;font-weight:900;color:#fff;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#17A05E">Athly planner</div>
+</div>
+<h1 style="margin:0;font-size:29px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;line-height:1.05">What are we making?</h1>
+</div>
+<div style="padding:0 22px 14px">
+<button onClick="{{ goProfile }}" style="width:100%;text-align:left;background:#fff;border-radius:14px;padding:13px 15px" style-hover="background:#FBFAF8">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779">Every result respects</div>
+<span style="font-size:11.5px;font-weight:800;color:#17A05E">Edit</span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ constraints }}" as="c" hint-placeholder-count="8">
+<span style="{{ c.style }}">{{ c.label }}</span>
+</sc-for>
+</div>
+</button>
+</div>
+<div style="padding:0 22px 18px">
+<div style="display:flex;border:2px solid rgba(17,24,21,.14);border-radius:14px;overflow:hidden">
+<sc-for list="{{ scopes }}" as="s" hint-placeholder-count="3">
+<button onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.label }}</button>
+</sc-for>
+</div>
+</div>
+<sc-if value="{{ plannerChat }}" hint-placeholder-val="{{ true }}">
+<div style="padding:0 22px">
+<div style="background:#111815;border-radius:18px;padding:18px;color:#F4F2ED">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#5BE3A0;margin-bottom:10px">Just tell me</div>
+<textarea value="{{ planText }}" onChange="{{ planTextChange }}" placeholder="I have chicken, rice and cheese at home. Something under 20 minutes, high protein." style="width:100%;min-height:96px;resize:none;background:transparent;border:0;outline:none;color:#F4F2ED;font:inherit;font-size:15.5px;line-height:1.5;caret-color:#5BE3A0"></textarea>
+<div style="height:2px;background:rgba(244,242,237,.14);margin:6px 0 14px"></div>
+<div style="display:flex;flex-wrap:wrap;gap:7px">
+<sc-for list="{{ prompts }}" as="p" hint-placeholder-count="4">
+<button onClick="{{ p.pick }}" style="padding:7px 12px;border:1.5px solid rgba(244,242,237,.22);border-radius:99px;font-size:12px;font-weight:600;color:rgba(244,242,237,.8)" style-hover="border-color:#5BE3A0;color:#5BE3A0">{{ p.label }}</button>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ plannerForm }}" hint-placeholder-val="{{ true }}">
+<div style="padding:0 22px;display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:17px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779">Calories</div>
+<div style="font-size:19px;font-weight:900;font-stretch:113%;letter-spacing:-.008em">{{ calVal }}</div>
+</div>
+<input type="range" min="300" max="1200" step="50" value="{{ cal }}" onChange="{{ calChange }}" style="width:100%;accent-color:#17A05E"/>
+<div style="height:2px;background:rgba(17,24,21,.1);margin:16px 0 12px"></div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779">Protein floor</div>
+<div style="font-size:19px;font-weight:900;font-stretch:113%;letter-spacing:-.008em">{{ proVal }}</div>
+</div>
+<input type="range" min="10" max="80" step="5" value="{{ pro }}" onChange="{{ proChange }}" style="width:100%;accent-color:#17A05E"/>
+</div>
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:17px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:10px">Time I've got</div>
+<div style="display:flex;gap:8px;margin-bottom:16px">
+<sc-for list="{{ timeOpts }}" as="t" hint-placeholder-count="4">
+<button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+</sc-for>
+</div>
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:10px">Budget per meal</div>
+<div style="display:flex;gap:8px">
+<sc-for list="{{ budgetOpts }}" as="b" hint-placeholder-count="3">
+<button onClick="{{ b.pick }}" style="{{ b.style }}">{{ b.label }}</button>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ planError }}" hint-placeholder-val="{{ true }}">
+<div style="padding:16px 22px 0;animation:ffIn .3s ease">
+<div style="border:2px solid #C4472C;border-radius:14px;padding:15px 16px;background:rgba(196,71,44,.06)">
+<div style="font-size:13.5px;font-weight:800;color:#A03A22;margin-bottom:5px">That combo is tight.</div>
+<div style="font-size:13px;line-height:1.45;color:#6E6A60">{{ proVal }} protein under a $ budget doesn't leave much. Loosen the budget one notch and I'll find eight options.</div>
+<button onClick="{{ fixBudget }}" style="margin-top:11px;padding:8px 14px;background:#111815;color:#fff;font-weight:800;font-size:12.5px;border-radius:10px">Loosen budget</button>
+</div>
+</div>
+</sc-if>
+<div style="padding:20px 22px 0">
+<button onClick="{{ generate }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:#17A05E;color:#fff;font-weight:800;font-size:16px;border-radius:14px" style-hover="background:#0E7B47">
+<span>{{ generateLabel }}</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+</button>
+</div>
+<sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+<div style="padding:28px 22px 0;animation:ffIn .4s ease">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+<h3 style="margin:0;font-size:19px;font-weight:900;font-stretch:113%;letter-spacing:-.011em">Three that fit you</h3>
+<button onClick="{{ generate }}" style="font-size:12px;font-weight:800;color:#17A05E">Regenerate</button>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ results }}" as="r" hint-placeholder-count="3">
+<button onClick="{{ r.open }}" style="display:flex;flex-direction:column;padding:12px;background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;width:100%;text-align:left;gap:11px" style-hover="background:#FBFAF8">
+<div style="display:flex;gap:13px;align-items:center;width:100%">
+<div style="width:74px;height:74px;border-radius:14px;overflow:hidden;flex:none;position:relative">
+<div style="{{ r.fieldStyle }}"><span style="{{ r.wordStyle }}">{{ r.word }}</span></div>
+</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:15.5px;font-weight:800;letter-spacing:-.015em;line-height:1.25;margin-bottom:5px">{{ r.name }}</div>
+<div style="font-size:12px;color:#6E6A60;font-weight:700;margin-bottom:7px">{{ r.macroText }}</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<sc-for list="{{ r.tags }}" as="t" hint-placeholder-count="2">
+<span style="padding:3px 9px;border-radius:99px;background:rgba(23,160,94,.11);color:#0E7B47;font-size:10.5px;font-weight:800">{{ t }}</span>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="display:flex;gap:9px;align-items:flex-start;padding-top:11px;border-top:1px solid rgba(17,24,21,.09);width:100%">
+<div style="width:17px;height:17px;border-radius:5px;background:#111815;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">
+<span style="font-size:7px;font-weight:900;color:#F4F2ED;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:12.5px;line-height:1.4;color:#4A4740;font-weight:600">{{ r.why }}</div>
+</div>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<!-- LOG -->
+<sc-if value="{{ isLog }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;inset:0;overflow-y:auto;padding-bottom:130px;animation:ffFade .3s ease">
+<div style="padding:62px 22px 16px"><h1 style="margin:0;font-size:29px;font-weight:900;font-stretch:113%;letter-spacing:-.013em">Log food</h1></div>
+<div style="padding:0 22px 16px">
+<div style="display:flex;align-items:center;gap:10px;padding:14px 15px;background:#fff;border-radius:14px;border:2px solid rgba(17,24,21,.1)">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8C8779" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<input value="{{ search }}" onChange="{{ searchChange }}" placeholder="Search 400,000 foods" style="flex:1;border:0;outline:none;background:transparent;font:inherit;font-size:14.5px;caret-color:#17A05E"/>
+</div>
+</div>
+<div style="padding:0 22px 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<button onClick="{{ toastScan }}" style="background:#111815;color:#F4F2ED;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:flex-start" style-hover="background:#232830">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5BE3A0" stroke-width="2.2" stroke-linecap="round"><path d="M4 7V5a1 1 0 011-1h2M17 4h2a1 1 0 011 1v2M20 17v2a1 1 0 01-1 1h-2M7 20H5a1 1 0 01-1-1v-2M8 8v8M12 8v8M16 8v8"></path></svg>
+<span style="font-size:14px;font-weight:800;text-align:left">Scan barcode</span>
+</button>
+<button onClick="{{ toastPhoto }}" style="background:#17A05E;color:#fff;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:flex-start" style-hover="background:#0E7B47">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 012-2h2l1.5-2h7L17 6h2a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"></path><circle cx="12" cy="12.5" r="3.4"></circle></svg>
+<span style="font-size:14px;font-weight:800;text-align:left">Snap a photo</span>
+</button>
+</div>
+<div style="padding:0 22px">
+<div style="display:flex;gap:18px;border-bottom:2px solid rgba(17,24,21,.12);margin-bottom:4px">
+<sc-for list="{{ logTabs }}" as="t" hint-placeholder-count="3">
+<button onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ logEmpty }}" hint-placeholder-val="{{ true }}">
+<div style="padding:52px 12px;text-align:center;animation:ffIn .3s ease">
+<div style="width:52px;height:52px;border-radius:18px;border:2px dashed rgba(17,24,21,.22);margin:0 auto 16px"></div>
+<div style="font-size:16px;font-weight:900;letter-spacing:-.02em;margin-bottom:6px">No custom foods yet</div>
+<div style="font-size:13px;color:#6E6A60;line-height:1.5;max-width:230px;margin:0 auto 16px">Made something of your own? Save it once and it's a one-tap log forever.</div>
+<button onClick="{{ toastCustom }}" style="padding:11px 18px;background:#111815;color:#fff;font-weight:800;font-size:13px;border-radius:12px">Create a food</button>
+</div>
+</sc-if>
+<sc-if value="{{ logList }}" hint-placeholder-val="{{ true }}">
+<div>
+<sc-for list="{{ logItems }}" as="f" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:13px;padding:14px 2px;border-bottom:1px solid rgba(17,24,21,.1)">
+<div style="{{ f.tileStyle }}"><div style="{{ f.fieldStyle }}"><span style="{{ f.wordStyle }}">{{ f.word }}</span></div></div>
+<div style="flex:1;min-width:0">
+<div style="font-size:14.5px;font-weight:800;margin-bottom:2px">{{ f.name }}</div>
+<div style="font-size:12px;color:#6E6A60;font-weight:600">{{ f.meta }}</div>
+</div>
+<button onClick="{{ f.add }}" style="{{ f.btnStyle }}">{{ f.btnText }}</button>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<!-- RECIPES -->
+<sc-if value="{{ isRecipes }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;inset:0;overflow-y:auto;padding-bottom:130px;animation:ffFade .3s ease">
+<div style="padding:62px 22px 14px"><h1 style="margin:0;font-size:29px;font-weight:900;font-stretch:113%;letter-spacing:-.013em">Recipes</h1></div>
+<div class="ffs" style="padding:0 22px 18px;display:flex;gap:8px;overflow-x:auto">
+<sc-for list="{{ recipeCats }}" as="c" hint-placeholder-count="6">
+<button onClick="{{ c.pick }}" style="{{ c.style }}">{{ c.label }}</button>
+</sc-for>
+</div>
+<div style="padding:0 22px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<sc-for list="{{ recipes }}" as="r" hint-placeholder-count="6">
+<button onClick="{{ r.open }}" style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;overflow:hidden;text-align:left" style-hover="background:#FBFAF8">
+<div style="height:104px;position:relative"><div style="{{ r.fieldStyle }}"><span style="{{ r.wordStyle }}">{{ r.word }}</span></div></div>
+<div style="padding:12px">
+<div style="font-size:14px;font-weight:800;letter-spacing:-.015em;line-height:1.25;margin-bottom:5px">{{ r.name }}</div>
+<div style="font-size:11.5px;color:#6E6A60;font-weight:700">{{ r.macroText }}</div>
+</div>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<!-- PROFILE -->
+<sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;inset:0;overflow-y:auto;padding-bottom:130px;animation:ffFade .3s ease">
+<div style="padding:62px 22px 18px;display:flex;align-items:center;gap:14px">
+<div style="width:56px;height:56px;border-radius:50%;background:#111815;color:#F4F2ED;font-weight:900;font-stretch:113%;font-size:21px;display:flex;align-items:center;justify-content:center">{{ initial }}</div>
+<div>
+<h1 style="margin:0;font-size:24px;font-weight:900;font-stretch:113%;letter-spacing:-.013em">{{ name }}</h1>
+<div style="font-size:12.5px;color:#6E6A60;font-weight:600;margin-top:2px">{{ profileLine }}</div>
+</div>
+</div>
+<div style="padding:0 22px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<button onClick="{{ goGrocery }}" style="background:#fff;border-radius:14px;padding:15px;text-align:left" style-hover="background:#FBFAF8">
+<div style="font-size:22px;font-weight:900;font-stretch:113%;letter-spacing:-.013em">18</div>
+<div style="font-size:12px;font-weight:700;color:#6E6A60;margin-top:2px">on the grocery list</div>
+</button>
+<button onClick="{{ goProgress }}" style="background:#fff;border-radius:14px;padding:15px;text-align:left" style-hover="background:#FBFAF8">
+<div style="font-size:22px;font-weight:900;font-stretch:113%;letter-spacing:-.013em">6/7</div>
+<div style="font-size:12px;font-weight:700;color:#6E6A60;margin-top:2px">days on plan</div>
+</button>
+</div>
+<div style="padding:0 22px">
+<sc-for list="{{ profileGroups }}" as="g" hint-placeholder-count="4">
+<div style="margin-bottom:16px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:9px">{{ g.title }}</div>
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;overflow:hidden">
+<sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="4">
+<button onClick="{{ r.tap }}" style="{{ r.style }}" style-hover="background:#FBFAF8">
+<span style="font-size:14px;font-weight:700">{{ r.label }}</span>
+<span style="display:flex;align-items:center;gap:8px">
+<span style="font-size:13px;color:#6E6A60;font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.value }}</span>
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B5B0A4" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+</span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<div style="padding:6px 0 10px;font-size:12px;line-height:1.55;color:#8C8779">Athly gives general nutrition guidance to help you fuel, recover and grow. It isn't medical advice, and it won't set aggressive weight targets for anyone under 18.</div>
+<button onClick="{{ restart }}" style="width:100%;padding:15px 18px;border:2px solid rgba(17,24,21,.14);border-radius:14px;font-weight:800;font-size:14px;text-align:left" style-hover="border-color:#111815">Restart the prototype</button>
+</div>
+</div>
+</sc-if>
+
+<!-- GROCERY -->
+<sc-if value="{{ isGrocery }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;inset:0;overflow-y:auto;padding-bottom:130px;background:#F4F2ED;animation:ffFade .3s ease;z-index:20">
+<div style="padding:62px 22px 16px;display:flex;align-items:center;gap:12px">
+<button onClick="{{ goHome }}" style="width:34px;height:34px;border:2px solid rgba(17,24,21,.14);display:flex;align-items:center;justify-content:center;border-radius:10px;flex:none" style-hover="background:rgba(17,24,21,.06)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+</button>
+<h1 style="margin:0;font-size:25px;font-weight:900;font-stretch:113%;letter-spacing:-.013em">Grocery list</h1>
+</div>
+<div style="padding:0 22px">
+<sc-for list="{{ groceryGroups }}" as="g" hint-placeholder-count="4">
+<div style="margin-bottom:20px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779">{{ g.title }}</div>
+<div style="flex:1;height:2px;background:rgba(17,24,21,.12)"></div>
+</div>
+<sc-for list="{{ g.items }}" as="i" hint-placeholder-count="4">
+<button onClick="{{ i.tap }}" style="{{ i.rowStyle }}">
+<div style="{{ i.box }}"></div>
+<span style="{{ i.text }}">{{ i.name }}</span>
+<span style="font-size:12px;color:#8C8779;font-weight:600">{{ i.qty }}</span>
+</button>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<!-- PROGRESS -->
+<sc-if value="{{ isProgress }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;inset:0;overflow-y:auto;padding-bottom:130px;background:#F4F2ED;animation:ffFade .3s ease;z-index:20">
+<div style="padding:62px 22px 16px;display:flex;align-items:center;gap:12px">
+<button onClick="{{ goHome }}" style="width:34px;height:34px;border:2px solid rgba(17,24,21,.14);display:flex;align-items:center;justify-content:center;border-radius:10px;flex:none" style-hover="background:rgba(17,24,21,.06)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+</button>
+<h1 style="margin:0;font-size:25px;font-weight:900;font-stretch:113%;letter-spacing:-.013em">Progress</h1>
+</div>
+<div style="padding:0 22px 14px">
+<div style="background:#111815;border-radius:18px;padding:20px;color:#F4F2ED">
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#5BE3A0;margin-bottom:12px">Consistency, last 8 weeks</div>
+<div style="display:flex;align-items:flex-end;gap:7px;height:96px">
+<sc-for list="{{ weeks }}" as="w" hint-placeholder-count="8">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+<div style="{{ w.bar }}"></div>
+<div style="font-size:9.5px;font-weight:700;color:rgba(244,242,237,.45)">{{ w.label }}</div>
+</div>
+</sc-for>
+</div>
+<div style="height:2px;background:rgba(244,242,237,.12);margin:18px -20px 14px"></div>
+<div style="font-size:13.5px;line-height:1.5;color:rgba(244,242,237,.72)">You've hit your protein on 6 of 7 days for three weeks running. That's the part that's actually moving the needle.</div>
+</div>
+</div>
+<div style="padding:0 22px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<sc-for list="{{ progressStats }}" as="s" hint-placeholder-count="4">
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:16px">
+<div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:9px">{{ s.label }}</div>
+<div style="font-size:28px;font-weight:900;font-stretch:113%;letter-spacing:-.015em;line-height:1">{{ s.value }}</div>
+<div style="font-size:11.5px;font-weight:600;color:#6E6A60;margin-top:5px">{{ s.note }}</div>
+</div>
+</sc-for>
+</div>
+<div style="padding:16px 22px 0">
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:18px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:18px;height:18px;border-radius:5px;background:#111815;display:flex;align-items:center;justify-content:center;flex:none">
+<span style="font-size:7.5px;font-weight:900;color:#F4F2ED;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779">What Athly learned</div>
+</div>
+<sc-for list="{{ learnings }}" as="l" hint-placeholder-count="3">
+<div style="display:flex;gap:11px;padding:11px 0;border-top:1px solid rgba(17,24,21,.1)">
+<div style="width:7px;height:7px;border-radius:50%;background:#17A05E;margin-top:6px;flex:none"></div>
+<div style="font-size:13.5px;line-height:1.45;font-weight:600;color:#4A4740">{{ l }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<!-- NAV -->
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:30;padding:0 14px 26px;background:linear-gradient(to top,#F4F2ED 62%,rgba(244,242,237,0))">
+<sc-if value="{{ navEven }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(5,1fr);background:#111815;border-radius:22px;padding:9px 4px">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+<button onClick="{{ t.pick }}" style="{{ t.style }}"><div style="{{ t.mark }}"></div><span style="{{ t.text }}">{{ t.label }}</span></button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ navCenter }}" hint-placeholder-val="{{ true }}">
+<div style="position:relative;display:grid;grid-template-columns:1fr 1fr 74px 1fr 1fr;align-items:center;background:#111815;border-radius:22px;padding:9px 4px">
+<sc-for list="{{ tabsSplitL }}" as="t" hint-placeholder-count="2">
+<button onClick="{{ t.pick }}" style="{{ t.style }}"><div style="{{ t.mark }}"></div><span style="{{ t.text }}">{{ t.label }}</span></button>
+</sc-for>
+<div></div>
+<sc-for list="{{ tabsSplitR }}" as="t" hint-placeholder-count="2">
+<button onClick="{{ t.pick }}" style="{{ t.style }}"><div style="{{ t.mark }}"></div><span style="{{ t.text }}">{{ t.label }}</span></button>
+</sc-for>
+<button onClick="{{ goLog }}" style="position:absolute;left:50%;top:-24px;transform:translateX(-50%);width:64px;height:64px;border-radius:22px;background:#17A05E;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 22px rgba(23,160,94,.4)" style-hover="background:#0E7B47">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+</div>
+</sc-if>
+</div>
+
+</sc-if>
+
+<!-- MEAL DETAIL -->
+<sc-if value="{{ showMeal }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;z-index:60;background:rgba(17,24,21,.4);animation:ffFade .2s ease" onClick="{{ closeOverlay }}"></div>
+<div class="ffs" style="position:absolute;left:0;right:0;bottom:0;top:34px;z-index:61;background:#F4F2ED;border-radius:24px 24px 0 0;overflow-y:auto;animation:ffUp .34s cubic-bezier(.2,.85,.25,1)">
+<div style="position:relative;height:220px;overflow:hidden;border-radius:24px 24px 0 0">
+<div style="{{ meal.fieldStyle }}"><span style="{{ meal.wordStyle }}">{{ meal.word }}</span></div>
+<button onClick="{{ closeOverlay }}" style="position:absolute;right:16px;top:16px;width:36px;height:36px;border-radius:50%;background:rgba(244,242,237,.92);display:flex;align-items:center;justify-content:center;z-index:2">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<div style="padding:20px 22px 0">
+<div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#17A05E;margin-bottom:7px">{{ meal.slot }} · {{ meal.timeText }}</div>
+<h2 style="margin:0 0 14px;font-size:28px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;line-height:1.08">{{ meal.name }}</h2>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;overflow:hidden">
+<sc-for list="{{ meal.macros }}" as="m" hint-placeholder-count="4">
+<div style="{{ m.style }}">
+<div style="font-size:20px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;line-height:1">{{ m.value }}</div>
+<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-top:5px">{{ m.label }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="padding:14px 22px 0">
+<div style="background:#111815;border-radius:18px;padding:16px 17px;color:#F4F2ED">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
+<div style="width:19px;height:19px;border-radius:6px;background:#5BE3A0;display:flex;align-items:center;justify-content:center;flex:none">
+<span style="font-size:8px;font-weight:900;color:#111815;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#5BE3A0">Why you got this one</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px">
+<sc-for list="{{ meal.reasons }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;gap:10px;align-items:flex-start">
+<div style="width:5px;height:5px;border-radius:50%;background:#5BE3A0;margin-top:7px;flex:none"></div>
+<div style="font-size:13px;line-height:1.45;color:rgba(244,242,237,.82);font-weight:600">{{ r }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div class="ffs" style="padding:16px 22px 0;display:flex;gap:8px;overflow-x:auto">
+<sc-for list="{{ mealActions }}" as="a" hint-placeholder-count="4">
+<button onClick="{{ a.tap }}" style="{{ a.style }}">{{ a.label }}</button>
+</sc-for>
+</div>
+<div style="padding:24px 22px 0">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+<h3 style="margin:0;font-size:17px;font-weight:900;letter-spacing:-.02em">Ingredients</h3>
+<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#8C8779">Serves 1</div>
+</div>
+<div style="background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:4px 16px">
+<sc-for list="{{ meal.ingredients }}" as="i" hint-placeholder-count="5">
+<div style="{{ i.style }}">
+<span style="font-size:14px;font-weight:600">{{ i.name }}</span>
+<span style="display:flex;align-items:center;gap:8px">
+<span style="font-size:13px;color:#6E6A60;font-weight:600">{{ i.qty }}</span>
+<span style="{{ i.have }}">{{ i.haveText }}</span>
+</span>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="padding:24px 22px 0">
+<h3 style="margin:0 0 10px;font-size:17px;font-weight:900;letter-spacing:-.02em">How to make it</h3>
+<div style="display:flex;flex-direction:column;gap:2px">
+<sc-for list="{{ meal.steps }}" as="s" hint-placeholder-count="3">
+<div style="display:flex;gap:14px;padding:14px 0;border-top:2px solid rgba(17,24,21,.1)">
+<div style="width:26px;height:26px;border-radius:50%;background:#111815;color:#F4F2ED;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">{{ s.n }}</div>
+<div style="font-size:14px;line-height:1.5;color:#3B3831;padding-top:2px">{{ s.text }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="padding:22px 22px 40px">
+<button onClick="{{ addGrocery }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:17px 20px;background:#111815;color:#fff;font-weight:800;font-size:15px;border-radius:14px" style-hover="background:#232830">
+<span>Add missing items to grocery list</span>
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+</div>
+</div>
+</sc-if>
+
+<!-- SWAP -->
+<sc-if value="{{ showSwap }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;z-index:60;background:rgba(17,24,21,.5);animation:ffFade .2s ease" onClick="{{ closeOverlay }}"></div>
+<sc-if value="{{ swapSheet }}" hint-placeholder-val="{{ true }}">
+<div class="ffs" style="position:absolute;left:0;right:0;bottom:0;top:52px;z-index:61;background:#F4F2ED;border-radius:24px 24px 0 0;overflow-y:auto;animation:ffUp .34s cubic-bezier(.2,.85,.25,1)">
+<div style="background:#111815;border-radius:24px 24px 0 0;padding:20px 22px 18px;color:#F4F2ED">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="display:flex;align-items:center;gap:8px">
+<div style="width:20px;height:20px;border-radius:6px;background:#5BE3A0;display:flex;align-items:center;justify-content:center;flex:none">
+<span style="font-size:8.5px;font-weight:900;color:#111815;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#5BE3A0">Athly swap</div>
+</div>
+<button onClick="{{ closeOverlay }}" style="width:32px;height:32px;border-radius:50%;background:rgba(244,242,237,.12);display:flex;align-items:center;justify-content:center;flex:none">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F4F2ED" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<h2 style="margin:14px 0 6px;font-size:25px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;line-height:1.1">Three ways to hit the same numbers</h2>
+<p style="margin:0 0 16px;font-size:13.5px;line-height:1.45;color:rgba(244,242,237,.6)">Each one lands within 60 calories and 3g of protein of your dinner, and clears your allergies, dislikes and weeknight time.</p>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(244,242,237,.08);border-radius:12px">
+<div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:rgba(244,242,237,.45);flex:none">Out</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:14.5px;font-weight:800;letter-spacing:-.015em">Chicken pasta</div>
+<div style="font-size:12px;color:rgba(244,242,237,.55);font-weight:700;margin-top:2px">750 cal · 45g protein · 62g carbs</div>
+</div>
+</div>
+</div>
+<div style="padding:18px 22px 0;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ swapOptions }}" as="s" hint-placeholder-count="3">
+<button onClick="{{ s.pick }}" style="{{ s.cardStyle }}">
+<div style="height:132px;position:relative">
+<div style="{{ s.fieldStyle }}"><span style="{{ s.wordStyle }}">{{ s.word }}</span></div>
+<div style="{{ s.matchStyle }}">{{ s.match }}</div>
+</div>
+<div style="padding:15px 16px 16px;text-align:left">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:11px">
+<div style="font-size:18px;font-weight:900;letter-spacing:-.025em;line-height:1.15;flex:1">{{ s.name }}</div>
+<div style="{{ s.checkStyle }}"></div>
+</div>
+<div style="display:flex;gap:16px;margin-bottom:13px">
+<sc-for list="{{ s.stats }}" as="m" hint-placeholder-count="4">
+<div>
+<div style="display:flex;align-items:baseline;gap:4px">
+<div style="font-size:16px;font-weight:900;letter-spacing:-.025em">{{ m.value }}</div>
+<div style="{{ m.deltaStyle }}">{{ m.delta }}</div>
+</div>
+<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-top:3px">{{ m.label }}</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:9px;align-items:flex-start;padding-top:12px;border-top:2px solid rgba(17,24,21,.1)">
+<div style="width:18px;height:18px;border-radius:5px;background:#111815;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">
+<span style="font-size:7.5px;font-weight:900;color:#F4F2ED;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:13px;line-height:1.45;color:#3B3831;font-weight:600">{{ s.why }}</div>
+</div>
+</div>
+</button>
+</sc-for>
+<button onClick="{{ moreSwaps }}" style="padding:15px 18px;border:2px dashed rgba(17,24,21,.18);border-radius:14px;font-weight:800;font-size:13.5px;color:#6E6A60;text-align:left" style-hover="border-color:#111815;color:#111815">Show me three more</button>
+</div>
+<div style="position:sticky;bottom:0;padding:16px 22px 32px;margin-top:16px;background:linear-gradient(to top,#F4F2ED 72%,rgba(244,242,237,0))">
+<button onClick="{{ confirmSwap }}" disabled="{{ swapBlocked }}" style="{{ swapCtaStyle }}">
+<span>{{ swapCtaLabel }}</span>
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ swapDeck }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;left:0;right:0;bottom:0;top:64px;z-index:61;background:#F4F2ED;border-radius:24px 24px 0 0;animation:ffUp .34s cubic-bezier(.2,.85,.25,1);display:flex;flex-direction:column;overflow:hidden">
+<div style="padding:20px 22px 0;display:flex;align-items:flex-start;justify-content:space-between">
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+<div style="width:19px;height:19px;border-radius:6px;background:#17A05E;display:flex;align-items:center;justify-content:center;flex:none">
+<span style="font-size:8px;font-weight:900;color:#fff;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#17A05E">Athly swap</div>
+</div>
+<h2 style="margin:0;font-size:23px;font-weight:900;font-stretch:113%;letter-spacing:-.013em">Instead of chicken pasta</h2>
+<div style="font-size:12.5px;color:#6E6A60;font-weight:700;margin-top:5px">750 cal · 45g protein — everything here lands within 5%</div>
+</div>
+<button onClick="{{ closeOverlay }}" style="width:34px;height:34px;border-radius:50%;background:rgba(17,24,21,.08);display:flex;align-items:center;justify-content:center;flex:none">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111815" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;margin:14px 22px 0">
+<div style="position:relative;width:100%;height:414px">
+<sc-for list="{{ swapDeckCards }}" as="c" hint-placeholder-count="3">
+<div style="{{ c.cardStyle }}">
+<div style="height:196px;position:relative">
+<div style="{{ c.fieldStyle }}"><span style="{{ c.wordStyle }}">{{ c.word }}</span></div>
+<div style="{{ c.matchStyle }}">{{ c.match }}</div>
+</div>
+<div style="padding:16px 18px 18px">
+<div style="font-size:21px;font-weight:900;font-stretch:113%;letter-spacing:-.012em;line-height:1.12;margin-bottom:11px">{{ c.name }}</div>
+<div style="display:flex;gap:16px;margin-bottom:13px">
+<sc-for list="{{ c.stats }}" as="m" hint-placeholder-count="3">
+<div>
+<div style="display:flex;align-items:baseline;gap:4px">
+<div style="font-size:16px;font-weight:900;letter-spacing:-.025em">{{ m.value }}</div>
+<div style="{{ m.deltaStyle }}">{{ m.delta }}</div>
+</div>
+<div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-top:3px">{{ m.label }}</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:9px;align-items:flex-start;padding-top:12px;border-top:2px solid rgba(17,24,21,.1)">
+<div style="width:18px;height:18px;border-radius:5px;background:#111815;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px">
+<span style="font-size:7.5px;font-weight:900;color:#F4F2ED;letter-spacing:-.04em">A</span>
+</div>
+<div style="font-size:12.5px;line-height:1.45;color:#3B3831;font-weight:600">{{ c.why }}</div>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="padding:16px 22px 30px;display:flex;gap:12px;align-items:center">
+<button onClick="{{ deckSkip }}" style="flex:1;padding:16px;border:2px solid rgba(17,24,21,.16);border-radius:14px;font-weight:800;font-size:14.5px" style-hover="border-color:#111815">Not this one</button>
+<button onClick="{{ deckKeep }}" style="flex:1.4;padding:16px;background:#17A05E;color:#fff;border-radius:14px;font-weight:800;font-size:14.5px" style-hover="background:#0E7B47">Swap it in</button>
+</div>
+</div>
+</sc-if>
+</sc-if>
+
+<!-- GENERATING -->
+<sc-if value="{{ showGen }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;inset:0;z-index:70;background:#111815;display:flex;flex-direction:column;justify-content:center;padding:0 30px;animation:ffFade .25s ease">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:30px">
+<div style="width:30px;height:30px;border-radius:9px;background:#F4F2ED;display:flex;align-items:center;justify-content:center;position:relative;flex:none">
+<span style="font-size:12px;font-weight:900;color:#111815;letter-spacing:-.04em">A</span>
+<div style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:#5BE3A0;border:2px solid #111815;animation:ffPulse 1.1s ease infinite"></div>
+</div>
+<span style="font-size:14px;font-weight:900;color:rgba(244,242,237,.7)">ATHLY</span>
+</div>
+<h2 style="margin:0 0 8px;font-size:27px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;color:#F4F2ED">{{ genTitle }}</h2>
+<p style="margin:0 0 28px;font-size:14px;color:rgba(244,242,237,.55);line-height:1.5">{{ genSub }}</p>
+<div style="display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ genSteps }}" as="s" hint-placeholder-count="5">
+<div style="{{ s.style }}"><div style="{{ s.dot }}"></div><span>{{ s.label }}</span></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<!-- TOAST -->
+<sc-if value="{{ showToast }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;left:16px;right:16px;bottom:112px;z-index:80;background:#111815;border-radius:14px;padding:15px 17px;display:flex;align-items:center;gap:12px;box-shadow:0 14px 34px rgba(17,24,21,.3);animation:ffToast 2.6s ease forwards">
+<div style="width:24px;height:24px;border-radius:50%;background:#17A05E;display:flex;align-items:center;justify-content:center;flex:none">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"></path></svg>
+</div>
+<div style="font-size:13.5px;font-weight:700;color:#F4F2ED;line-height:1.35">{{ toast }}</div>
+</div>
+</sc-if>
+
+</div>
+</x-import>
+
+<div style="width:402px;max-width:100%;font-size:12px;line-height:1.6;color:#6E6A60">
+Tweaks switch the home layout, swap interaction, planner input and bottom nav.
+</div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:460,&quot;height&quot;:1010},&quot;homeLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Focus&quot;,&quot;Dashboard&quot;],&quot;default&quot;:&quot;Focus&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variations&quot;},&quot;swapMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Compare three&quot;,&quot;Card deck&quot;],&quot;default&quot;:&quot;Compare three&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variations&quot;},&quot;plannerInput&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Ask in words&quot;,&quot;Dial it in&quot;],&quot;default&quot;:&quot;Ask in words&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variations&quot;},&quot;navPrimary&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Center action&quot;,&quot;Even tabs&quot;],&quot;default&quot;:&quot;Center action&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Variations&quot;}}">
+const INK = '#111815', GREEN = '#17A05E', LINE = 'rgba(17,24,21,.12)';
+const T = (bg, a, b, c, ink) => ({ bg, a, b, c, ink });
+const TILES = {
+  oats: T('#EDE3D2', '#C08B4A', '#F4F2ED', '#8B5E2B', '#7A4E1E'), bowl: T('#E4EDE0', '#5B8C4A', '#E8C15C', '#2F5233', '#2F5233'),
+  snack: T('#F0E6D0', '#D9A441', '#F4F2ED', '#5BE3A0', '#8A6413'), steak: T('#E9DDD6', '#8A4B3C', '#D9C7A8', '#5B8C4A', '#6E3427'),
+  shake: T('#E2E5EC', '#6B5B4A', '#F4F2ED', '#C08B4A', '#414B59'), salmon: T('#F1E1DA', '#D4735A', '#7FA88A', '#F4F2ED', '#A33F26'),
+  taco: T('#EFE7D6', '#C9A227', '#7A9A5B', '#B4462F', '#875515'), wrap: T('#E7EAE1', '#9BAE83', '#F4F2ED', '#6B7F52', '#495837'),
+};
+const WORDS = { breakfast: 'Oats', lunch: 'Burrito bowl', snack: 'Rice cakes', dinner: 'Pasta', recovery: 'Choc milk',
+  prelift: 'Toast + jam', postlift: 'Bagel', preliftPm: 'Pretzels', postliftPm: 'Rice bowl', steakpot: 'Steak',
+  salmon: 'Salmon', taco: 'Beef bowl', wrap: 'Wrap', pregame: 'Sandwich' };
+const field = (id, fs, pad) => {
+  const t = MEALS[id].tile;
+  return { word: WORDS[id] || MEALS[id].name,
+    fieldStyle: `position:absolute;inset:0;background:${t.bg};display:flex;align-items:flex-end;padding:${pad}px;box-sizing:border-box`,
+    wordStyle: `font-size:${fs}px;font-weight:900;font-stretch:118%;letter-spacing:-.035em;line-height:.88;color:${t.ink};text-transform:uppercase;text-wrap:balance` };
+};
+const shapes = (t, s) => ({
+  tileStyle: `width:${s}px;height:${s}px;border-radius:14px;background:${t.bg};position:relative;overflow:hidden;flex:none`,
+  s1: `position:absolute;left:${s * .16}px;bottom:${s * .14}px;width:${s * .62}px;height:${s * .62}px;border-radius:50%;background:${t.a}`,
+  s2: `position:absolute;left:${s * .34}px;bottom:${s * .46}px;width:${s * .44}px;height:${s * .16}px;border-radius:99px;background:${t.b}`,
+  s3: `position:absolute;right:${s * .14}px;top:${s * .14}px;width:${s * .2}px;height:${s * .2}px;border-radius:50%;background:${t.c}`,
+});
+
+const M = (o) => o;
+const MEALS = {
+  breakfast: M({ id: 'breakfast', slot: 'Breakfast', timeText: '7:10 am', name: 'Peanut butter banana oats', kcal: 620, p: 28, c: 82, f: 21, prep: '8 min', tile: TILES.oats,
+    reasons: ['Peanut butter and oats are both on your favorites list.', 'Eight minutes total — you leave at 7:30.', 'No eggs, since you keep swapping them out.'],
+    ingredients: [['Rolled oats', '1 cup', 1], ['Whole milk', '1 cup', 1], ['Peanut butter', '2 tbsp', 1], ['Banana', '1 large', 0], ['Honey', '1 tbsp', 1]],
+    steps: ['Microwave the oats and milk for 2 minutes, stirring once.', 'Stir the peanut butter into the hot oats so it melts through.', 'Slice the banana on top and drizzle the honey.'] }),
+  lunch: M({ id: 'lunch', slot: 'Lunch', timeText: '12:20 pm', name: 'Chicken burrito bowl', kcal: 780, p: 52, c: 76, f: 24, prep: '15 min', tile: TILES.bowl,
+    reasons: ['Rice bowls are your highest-rated category.', 'Built from Sunday prep, so lunch is assembly.', 'Carbs land early on a training day.'],
+    ingredients: [['Chicken thigh', '6 oz', 1], ['White rice', '1 cup', 1], ['Black beans', '1/2 cup', 0], ['Shredded cheese', '1/4 cup', 1], ['Salsa', '3 tbsp', 0]],
+    steps: ['Season and sear the chicken 5 minutes a side.', 'Warm the rice and beans while it rests.', 'Slice, build the bowl, top with cheese and salsa.'] }),
+  snack: M({ id: 'snack', slot: 'Pre-practice', timeText: '2:30 pm', name: 'Rice cakes, honey & banana', kcal: 310, p: 8, c: 62, f: 4, prep: '5 min', tile: TILES.snack, next: 1,
+    reasons: ['Fast carbs about two hours out from practice.', 'Light on fat and fiber so it sits easy.', 'Five minutes, no cooking.'],
+    ingredients: [['Rice cakes', '3', 1], ['Honey', '1 tbsp', 1], ['Banana', '1', 0], ['Sea salt', 'pinch', 1]],
+    steps: ['Spread honey across the rice cakes.', 'Layer banana on top with a pinch of salt.', 'Eat about 90 minutes before you warm up.'] }),
+  dinner: M({ id: 'dinner', slot: 'Dinner', timeText: '7:00 pm', name: 'Chicken pasta', kcal: 750, p: 45, c: 62, f: 28, prep: '28 min', tile: TILES.steak,
+    reasons: ['Pasta and chicken are both favorites you picked.', '28 minutes — a little long for a practice night.', 'Refills carbs and protein after the session.'],
+    ingredients: [['Chicken breast', '7 oz', 1], ['Penne', '3 oz dry', 1], ['Heavy cream', '1/3 cup', 0], ['Parmesan', '1/4 cup', 0], ['Spinach', '2 handfuls', 0]],
+    steps: ['Boil the pasta a minute short and save a mug of water.', 'Sear the chicken, then soften garlic in the same pan.', 'Add cream and parmesan, loosen with pasta water.', 'Toss the sliced chicken back through.'] }),
+  recovery: M({ id: 'recovery', slot: 'Post-practice', timeText: '6:15 pm', name: 'Chocolate milk & granola', kcal: 400, p: 22, c: 58, f: 9, prep: '2 min', tile: TILES.shake,
+    reasons: ['Carbs and protein inside 30 minutes of finishing.', 'Nothing to cook — you get home at 6:05.', 'Dairy is fine for you; no restrictions on file.'],
+    ingredients: [['Chocolate milk', '16 oz', 1], ['Granola', '1/2 cup', 1], ['Greek yogurt', '1/2 cup', 0]],
+    steps: ['Drink the chocolate milk within 30 minutes.', 'Layer granola over yogurt to hold you to dinner.'] }),
+  prelift: M({ id: 'prelift', slot: 'Pre-lift', timeText: '5:50 am', name: 'Toast, jam & banana', kcal: 290, p: 6, c: 62, f: 3, prep: '3 min', tile: TILES.snack, next: 1,
+    reasons: ['Fast carbs 40 minutes out — enough to lift hard on, small enough to not sit heavy.', 'Almost no fat or fiber, which is what you want before a barbell.', 'Three minutes, because you lift at 6:30 am.'],
+    ingredients: [['White bread', '2 slices', 1], ['Strawberry jam', '1 tbsp', 1], ['Banana', '1', 0], ['Salt', 'pinch', 1]],
+    steps: ['Toast the bread and spread the jam.', 'Eat with the banana about 40 minutes before your first set.', 'Sip water on the way in.'] }),
+  postlift: M({ id: 'postlift', slot: 'Post-lift', timeText: '7:45 am', name: 'Turkey bagel & orange juice', kcal: 520, p: 34, c: 72, f: 11, prep: '4 min', tile: TILES.wrap,
+    reasons: ['Carbs and protein together inside the 30 minutes after your last set.', 'Bagels refill muscle glycogen faster than most breakfasts.', 'Handheld, so you can eat it on the way to first period.'],
+    ingredients: [['Plain bagel', '1', 1], ['Deli turkey', '4 oz', 0], ['Cheese slice', '1', 1], ['Orange juice', '10 oz', 1]],
+    steps: ['Toast the bagel while you change.', 'Layer turkey and cheese.', 'Drink the juice with it — the sugar is the point here.'] }),
+  preliftPm: M({ id: 'preliftPm', slot: 'Pre-lift', timeText: '2:45 pm', name: 'Pretzels, applesauce & sports drink', kcal: 320, p: 4, c: 74, f: 2, prep: '1 min', tile: TILES.snack, next: 1,
+    reasons: ['All fast carbs, 45 minutes before an afternoon session.', 'Nothing to cook and nothing that upsets a stomach under load.', 'Salt and fluid before you sweat through the session.'],
+    ingredients: [['Pretzels', '2 oz', 1], ['Applesauce pouch', '1', 1], ['Sports drink', '12 oz', 1]],
+    steps: ['Eat the pretzels and applesauce about 45 minutes out.', 'Drink half the bottle before you start, half during.'] }),
+  postliftPm: M({ id: 'postliftPm', slot: 'Post-lift', timeText: '5:15 pm', name: 'Chicken rice bowl & honey', kcal: 560, p: 42, c: 68, f: 12, prep: '6 min', tile: TILES.taco,
+    reasons: ['42g of protein against the carbs you just spent.', 'Built from the rice and chicken already in your kitchen.', 'Six minutes, all reheating — you get home wrecked.'],
+    ingredients: [['Cooked rice', '1.5 cups', 1], ['Chicken breast', '6 oz', 1], ['Honey', '1 tbsp', 1], ['Soy sauce', '1 tbsp', 1], ['Frozen edamame', '1/2 cup', 1]],
+    steps: ['Microwave the rice and chicken together for two minutes.', 'Steam the edamame alongside.', 'Drizzle honey and soy over the top.'] }),
+  steakpot: M({ id: 'steakpot', slot: 'Dinner', timeText: '7:00 pm', name: 'Steak & roast potatoes', kcal: 765, p: 47, c: 58, f: 31, prep: '22 min', tile: TILES.steak,
+    reasons: ['Steak is your top-rated protein.', '22 minutes, mostly hands-off while potatoes roast.', 'About $6.40, inside your range.'],
+    ingredients: [['Sirloin', '7 oz', 0], ['Baby potatoes', '10 oz', 1], ['Butter', '1 tbsp', 1], ['Garlic', '3 cloves', 1], ['Green beans', '2 cups', 0]],
+    steps: ['Halve the potatoes and roast at 425°F for 22 minutes.', 'Sear the steak 3 minutes a side, baste with butter.', 'Rest 5 minutes, then slice against the grain.'] }),
+  salmon: M({ id: 'salmon', slot: 'Dinner', timeText: '7:00 pm', name: 'Honey soy salmon & rice', kcal: 720, p: 46, c: 74, f: 26, prep: '18 min', tile: TILES.salmon,
+    reasons: ['Salmon is a favorite and you have rice at home.', '18 minutes — you rarely cook past 20 on practice days.', 'One tray, which suits your cooking level.'],
+    ingredients: [['Salmon fillet', '7 oz', 0], ['Jasmine rice', '1 cup', 1], ['Honey', '1 tbsp', 1], ['Soy sauce', '2 tbsp', 1], ['Broccolini', '1 bunch', 0]],
+    steps: ['Whisk honey and soy, brush half over the salmon.', 'Roast at 425°F for 12 minutes with the greens.', 'Spoon the rest of the glaze over and serve on rice.'] }),
+  taco: M({ id: 'taco', slot: 'Dinner', timeText: '7:00 pm', name: 'Beef & rice power bowl', kcal: 690, p: 48, c: 71, f: 21, prep: '20 min', tile: TILES.taco,
+    reasons: ['Built entirely from what you already have.', 'About $4.20 a serving.', 'No mushrooms, no tree nuts.'],
+    ingredients: [['Ground beef', '6 oz', 1], ['White rice', '1 cup', 1], ['Shredded cheese', '1/4 cup', 1], ['Corn', '1/2 cup', 1], ['Salsa', '3 tbsp', 0]],
+    steps: ['Brown the beef hard in a dry pan.', 'Warm the rice and corn, then build the bowl.', 'Top with cheese and salsa while hot.'] }),
+  wrap: M({ id: 'wrap', slot: 'Lunch', timeText: '12:20 pm', name: 'Crispy chicken caesar wrap', kcal: 640, p: 44, c: 55, f: 24, prep: '15 min', tile: TILES.wrap,
+    reasons: ['Sandwiches and chicken are both favorites.', '15 minutes, one pan.', 'About $3.80 — under budget.'],
+    ingredients: [['Chicken breast', '6 oz', 1], ['Large tortilla', '1', 0], ['Romaine', '2 cups', 0], ['Caesar dressing', '2 tbsp', 1]],
+    steps: ['Pan-fry the chicken until the crust sets, then slice.', 'Toss the romaine with dressing.', 'Fold tight and sear the seam for 30 seconds.'] }),
+  pregame: M({ id: 'pregame', slot: 'Pre-game', timeText: '3 hrs out', name: 'Turkey sandwich & fruit', kcal: 520, p: 30, c: 74, f: 12, prep: '6 min', tile: TILES.wrap,
+    reasons: ['Familiar, low-risk food three hours before kickoff.', 'Carb-forward with just enough protein.', 'Nothing new on a game day.'],
+    ingredients: [['Whole grain bread', '2 slices', 1], ['Sliced turkey', '5 oz', 0], ['Cheese', '1 slice', 1], ['Apple', '1', 0]],
+    steps: ['Build the sandwich, go light on the spread.', 'Eat about three hours before the first whistle.'] }),
+};
+
+const RECIPE_SETS = [
+  ['salmon', 'postliftPm', 'steakpot', 'lunch', 'postlift', 'dinner'],
+  ['snack', 'preliftPm', 'prelift', 'wrap', 'recovery', 'postlift'],
+  ['taco', 'wrap', 'lunch', 'preliftPm', 'breakfast', 'snack'],
+  ['recovery', 'postlift', 'pregame', 'preliftPm', 'postliftPm', 'prelift'],
+  ['breakfast', 'prelift', 'postlift', 'recovery', 'snack', 'lunch'],
+  ['steakpot', 'salmon', 'taco', 'dinner', 'postliftPm', 'wrap'],
+  ['snack', 'recovery', 'prelift', 'preliftPm', 'postlift', 'pregame'],
+  ['taco', 'wrap', 'breakfast', 'pregame', 'lunch', 'snack'],
+];
+
+const CHIPS = {
+  breakfast: ['8 min', 'Peanut butter', 'No eggs'],
+  lunch: ['From Sunday prep', 'Rice bowl', '52g protein'],
+  snack: ['5 min', 'Fast carbs', 'Tree-nut free'],
+  dinner: ['Favorite', '28 min', 'Post-practice'],
+  recovery: ['2 min', 'Within 30 min', 'Carbs + protein'],
+  prelift: ['3 min', '40 min pre-lift', 'Fast carbs'],
+  postlift: ['4 min', 'Within 30 min', '34g protein'],
+  preliftPm: ['1 min', 'No cooking', 'Fast carbs'],
+  postliftPm: ['Uses your rice', '6 min', '42g protein'],
+  steakpot: ['Top-rated', '22 min', '$6.40'],
+  salmon: ['Favorite', '18 min', 'One tray'],
+  taco: ['Uses your rice', '20 min', '$4.20'],
+  wrap: ['One pan', '15 min', '$3.80'],
+  pregame: ['3 hrs out', 'Familiar food', 'Low risk'],
+};
+
+const RESULTS = [
+  { id: 'taco', tags: ['Uses your rice', '20 min'], why: 'Everything in it is already in your kitchen, and it clears your no-mushroom rule.' },
+  { id: 'wrap', tags: ['$3.80', 'One pan'], why: 'Cheapest option that still clears 44g protein — you set budget to $4–8.' },
+  { id: 'salmon', tags: ['Favorite', '18 min'], why: 'Salmon is on your favorites and it finishes inside your weeknight window.' },
+];
+const SWAPS = [
+  { id: 'steakpot', time: '22 min', cost: '$6.40', match: '98% match', why: 'Steak is your highest-rated protein and this is the closest thing to your dinner\u2019s numbers.' },
+  { id: 'salmon', time: '18 min', cost: '$7.10', match: '95% match', why: 'Ten minutes faster. You almost never cook past 20 minutes on a practice night.' },
+  { id: 'taco', time: '20 min', cost: '$4.20', match: '93% match', why: 'Uses the beef, rice and cheese already in your kitchen, and it\u2019s the cheapest of the three.' },
+  { id: 'wrap', time: '15 min', cost: '$3.80', match: '89% match', why: 'Fastest and cheapest, but 110 calories light for a hard training day.' },
+];
+
+const LOVE = ['Chicken', 'Steak', 'Ground beef', 'Turkey', 'Pork', 'Salmon', 'Shrimp', 'Tuna', 'Eggs', 'Pasta', 'Pizza', 'Rice bowls', 'Burritos', 'Tacos', 'Burgers', 'Sandwiches', 'Wraps', 'Sushi', 'Ramen', 'Stir fry', 'Curry', 'Mac & cheese', 'Chili', 'Soup', 'Oatmeal', 'Pancakes', 'Waffles', 'Bagels', 'Cereal', 'Greek yogurt', 'Cottage cheese', 'Peanut butter', 'Protein shakes', 'Smoothies', 'Potatoes', 'Sweet potatoes', 'Salad', 'Avocado', 'Cheese', 'Beans', 'Fruit', 'Granola'];
+const HATE = ['Mushrooms', 'Fish', 'Shellfish', 'Tofu', 'Olives', 'Cottage cheese', 'Beans', 'Broccoli', 'Brussels sprouts', 'Cauliflower', 'Onions', 'Peppers', 'Tomatoes', 'Spicy food', 'Mayo', 'Pickles', 'Eggs', 'Avocado', 'Salad', 'Sweet potatoes', 'Oatmeal', 'Pork', 'Curry', 'Sushi', 'Greek yogurt', 'Cheese', 'Coconut', 'Raisins', 'Liver', 'Sardines'];
+const SPORTS = ['Soccer', 'Football', 'Basketball', 'Baseball', 'Softball', 'Track', 'Cross country', 'Swimming', 'Wrestling', 'Volleyball', 'Tennis', 'Lacrosse', 'Hockey', 'Golf', 'Rowing', 'Cheer', 'Dance', 'Weightlifting', 'CrossFit', 'Just the gym', 'Nothing right now'];
+const LIFT_TIMES = ['6:00 am', '6:30 am', '7:00 am', '3:30 pm', '5:00 pm', '7:30 pm'];
+const TIMES = ['6:00 am', '7:00 am', '3:30 pm', '4:30 pm', '5:30 pm', '6:30 pm'];
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const OB = [
+  { key: 'name', type: 'text', tag: 'Hello', title: 'What should we call you?', sub: 'First name is fine.' },
+  { key: 'goal', type: 'list', tag: 'Goal', title: "What's the mission?", sub: 'This sets your targets. You can change it any time.', options: [
+    { v: 'gain', label: 'Gain lean weight', hint: 'Eat above maintenance, protein-forward' },
+    { v: 'perform', label: 'Fuel my sport', hint: 'Eat around training, hold your weight' },
+    { v: 'lose', label: 'Lose fat', hint: 'A deficit paced to your size, protein held high' },
+    { v: 'habits', label: 'Just eat better', hint: 'More balance, less thinking about it' } ] },
+  { key: 'sex', type: 'list', tag: 'Baseline', title: 'What should we base your numbers on?', sub: 'Used only for the calorie and protein math — bodies burn energy a little differently.', options: [
+    { v: 'male', label: 'Male', hint: 'Higher baseline burn for the same size' },
+    { v: 'female', label: 'Female', hint: 'Lower baseline burn, iron and calcium emphasised' },
+    { v: 'na', label: 'Rather not say', hint: 'We use an average of the two' } ] },
+  { key: 'body', type: 'body', tag: 'You', title: 'A few numbers', sub: "So your targets aren't guesses. Nothing here is shared." },
+  { key: 'target', type: 'target', tag: 'Target', title: 'Where are you headed?', sub: 'A goal weight and a pace. Both are editable later.' },
+  { key: 'sports', type: 'chips', tag: 'Sport', title: 'What do you play?', sub: 'Pick everything that applies.', options: SPORTS, hint: 'e.g. ultimate frisbee' },
+  { key: 'week', type: 'week', tag: 'Schedule', title: 'When do you train?', sub: 'Your week is pre-filled. Tap any day to change it — times matter most, duration is optional.' },
+  { key: 'likes', type: 'chips', tag: 'Favorites', title: 'What do you actually love?', sub: 'Pick as many as you want. These show up the most.', options: LOVE, hint: "e.g. my mom's arroz con pollo" },
+  { key: 'dislikes', type: 'chips', kicker: "Step 8 · Nope", title: "What won't you eat?", sub: "No judgment. We just won't put it in front of you.", options: HATE, hint: 'e.g. anything with cilantro' },
+  { key: 'allergies', type: 'chips', tag: 'Safety', title: 'Any allergies?', sub: 'Hard blocks. Nothing containing them is ever suggested.', options: ['Peanuts', 'Tree nuts', 'Dairy', 'Gluten', 'Shellfish', 'Fish', 'Soy', 'Eggs', 'Sesame', 'None of these'], hint: 'Something else?' },
+  { key: 'cook', type: 'list', tag: 'Kitchen', title: 'How well do you cook?', sub: 'Be honest — it changes every recipe you get.', options: [
+    { v: 'micro', label: 'Microwave and toaster', hint: 'Assembly, not cooking' },
+    { v: 'basic', label: 'I can follow a recipe', hint: 'Pan, oven, the basics' },
+    { v: 'good', label: 'I know my way around', hint: 'Bring on the multi-step stuff' } ] },
+  { key: 'budget', type: 'list', tag: 'Money', title: "What's the budget?", sub: 'Roughly, per meal.', options: [
+    { v: 'low', label: 'Keep it cheap', hint: 'Under $4 a meal' },
+    { v: 'mid', label: 'Middle of the road', hint: '$4–8 a meal' },
+    { v: 'high', label: "Money isn't the issue", hint: 'Whatever tastes best' } ] },
+  { key: 'time', type: 'list', tag: 'Time', title: 'How long do you have?', sub: 'On a normal weekday.', options: [
+    { v: '10', label: '10 minutes, tops', hint: 'Fast assembly only' },
+    { v: '20', label: 'About 20 minutes', hint: 'One pan, one pot' },
+    { v: '40', label: '30–40 minutes', hint: 'Real cooking is fine' },
+    { v: 'prep', label: 'I meal prep on Sundays', hint: 'Batch it all at once' } ] },
+];
+
+class Component extends DCLogic {
+  state = {
+    stage: 'onboarding', ob: 0, a: { likes: [], dislikes: [], allergies: [], sports: [] }, draft: '', nameDraft: '',
+    age: 17, ft: 5, inch: 10, lb: 165, goalLb: null, rate: 0.75, pMode: 'rec', pCustom: null, openDay: null,
+    week: { 0: ['rest', '', '', ''], 1: ['practice', '4:30 pm', '6:30 am', '90'], 2: ['practice', '4:30 pm', '', '90'], 3: ['practice', '4:30 pm', '', '90'], 4: ['practice', '4:30 pm', '6:30 am', '90'], 5: ['rest', '', '3:30 pm', ''], 6: ['game', '11:00 am', '', ''] },
+    overrides: {}, selDay: 12,
+    tab: 'home', overlay: null, mealId: 'snack', toast: null,
+    genOn: false, genStep: 0, genDone: false, scope: 'day', buildStep: 0,
+    planText: '', cal: 700, pro: 45, timeSel: '20', budgetSel: 'mid', include: ['Chicken', 'Rice'],
+    deckIdx: 0, swapPick: null, swapSet: 0, logTab: 'recent', search: '', added: [], checked: {},
+    insight: true, nextEaten: false, swapCommitted: null, cat: 0,
+  };
+  componentWillUnmount() { clearInterval(this._t); clearInterval(this._b); clearTimeout(this._to); }
+  toast(m) { clearTimeout(this._to); this.setState({ toast: m }); this._to = setTimeout(() => this.setState({ toast: null }), 2500); }
+  runBuild = () => {
+    this.setState({ stage: 'building', buildStep: 0 }); clearInterval(this._b);
+    this._b = setInterval(() => this.setState(s => s.buildStep >= 4 ? (clearInterval(this._b), { stage: 'app', tab: 'home' }) : { buildStep: s.buildStep + 1 }), 600);
+  };
+  runGen = () => {
+    if (this.state.budgetSel === 'low' && this.state.pro > 55) { this.setState({ genErr: 1, genDone: false }); return; }
+    this.setState({ genErr: 0, genOn: true, genStep: 0, genDone: false }); clearInterval(this._t);
+    this._t = setInterval(() => this.setState(s => s.genStep >= 4 ? (clearInterval(this._t), { genOn: false, genDone: true }) : { genStep: s.genStep + 1 }), 500);
+  };
+  toggle(key, val) {
+    this.setState(s => {
+      const a = Object.assign({}, s.a);
+      const cur = a[key] || [];
+      a[key] = cur.includes(val) ? cur.filter(x => x !== val) : cur.concat(val);
+      let note = null;
+      if (!cur.includes(val)) {
+        const other = key === 'likes' ? 'dislikes' : key === 'dislikes' ? 'likes' : null;
+        if (other && (a[other] || []).includes(val)) {
+          a[other] = a[other].filter(x => x !== val);
+          note = key === 'likes' ? `Moved ${val} out of your "won't eat" list.` : `Took ${val} off your favorites.`;
+        }
+      }
+      return { a, note };
+    });
+  }
+  stepsList() { const g = this.state.a.goal; return OB.filter(x => x.key !== 'target' || g === 'gain' || g === 'lose'); }
+  advance = () => { const i = this.state.ob; if (i >= this.stepsList().length) { this.setState({ stage: 'targets' }); return; } this.setState({ ob: i + 1, draft: '', note: null }); };
+  back = () => this.setState(s => s.stage === 'targets' ? { stage: 'onboarding' } : { ob: Math.max(0, s.ob - 1), note: null });
+  pickOne(key, v) {
+    this.setState(s => {
+      const next = { a: Object.assign({}, s.a, { [key]: v }) };
+      if (key === 'goal') {
+        const set = v === 'lose' ? [0.5, 1, 1.5, 2, 2.5] : [0.5, 0.75, 1, 1.25, 1.5];
+        if (set.indexOf(s.rate) < 0) next.rate = v === 'lose' ? 1 : 0.75;
+      }
+      return next;
+    });
+    setTimeout(this.advance, 220);
+  }
+  chip(on, danger) { return `padding:10px 15px;border-radius:99px;border:2px solid ${on ? 'transparent' : 'rgba(17,24,21,.14)'};font-size:13.5px;font-weight:700;letter-spacing:-.01em;transition:all .15s;${on ? (danger ? 'background:#111815;color:#F4F2ED' : `background:${GREEN};color:#fff`) : 'background:#fff;color:#111815'}`; }
+  small(on) { return `padding:8px 13px;border-radius:99px;border:2px solid ${on ? GREEN : 'rgba(17,24,21,.13)'};font-size:12.5px;font-weight:700;background:${on ? 'rgba(23,160,94,.1)' : '#fff'};color:${on ? '#0E7B47' : INK}`; }
+
+  targets() {
+    const s = this.state, a = s.a;
+    const kg = s.lb * 0.4536, cm = (s.ft * 12 + s.inch) * 2.54;
+    const sexAdj = a.sex === 'male' ? 5 : a.sex === 'female' ? -161 : -78;
+    const bmr = Math.round(10 * kg + 6.25 * cm - 5 * s.age + sexAdj);
+    const days = Object.keys(s.week).filter(k => s.week[k][0] !== 'rest' || s.week[k][2]).length;
+    const mult = 1.34 + 0.06 * days;
+    const maint = Math.round(bmr * mult / 10) * 10;
+    const goal = a.goal || 'gain';
+    const young = s.age < 18;
+    let rate = s.rate;
+    const loseCap = Math.max(0.5, Math.min(young ? 1.5 : 2.5, Math.round(s.lb * 0.01 * 4) / 4));
+    if (goal === 'lose') rate = Math.min(rate, loseCap);
+    if (young && goal === 'gain') rate = Math.min(rate, 1);
+    const perDay = Math.round(rate * 3500 / 7 / 25) * 25;
+    const adj = goal === 'gain' ? perDay : goal === 'lose' ? -perDay : 0;
+    const cal = maint + adj;
+    const goalLb = s.goalLb != null && (goal === 'gain' || goal === 'lose') ? s.goalLb
+      : goal === 'gain' ? s.lb + 15 : goal === 'lose' ? s.lb - 15 : s.lb;
+    const paceFactor = 1 + (rate - 1) * 0.2;
+    const gPerLb = goal === 'lose' ? 1.1 * paceFactor : goal === 'gain' ? paceFactor : 0.95;
+    const recProtein = Math.round(goalLb * gPerLb / 5) * 5;
+    const pMode = s.pMode || 'rec';
+    const protein = pMode === 'gpp' ? goalLb
+      : pMode === 'custom' ? (s.pCustom != null ? s.pCustom : recProtein)
+        : recProtein;
+    const fat = Math.round(cal * 0.27 / 9 / 5) * 5;
+    const carbs = Math.round((cal - protein * 4 - fat * 9) / 4 / 5) * 5;
+    return { bmr, maint, adj, cal, protein, recProtein, gPerLb, paceFactor, pMode, fat, carbs, days, young, goal, rate, goalLb, sex: a.sex || 'na' };
+  }
+
+  dayType(dateNum) {
+    const s = this.state;
+    if (s.overrides[dateNum]) return s.overrides[dateNum];
+    const wd = new Date(2026, 7, dateNum).getDay();
+    return s.week[wd];
+  }
+  setDay(dateNum, mode, time) {
+    const cur = this.dayType(dateNum);
+    this.setState(st => ({ overrides: Object.assign({}, st.overrides, { [dateNum]: [mode, time !== undefined ? time : (mode === 'rest' ? '' : (cur[1] || '4:30 pm')), cur[2] || '', cur[3] || ''] }) }));
+  }
+  setLift(dateNum, lift) {
+    const cur = this.dayType(dateNum);
+    this.setState(st => ({ overrides: Object.assign({}, st.overrides, { [dateNum]: [cur[0], cur[1], lift, cur[3] || ''] }) }));
+  }
+  dayMeals(mode, lift) {
+    const base = mode === 'game' ? ['breakfast', 'pregame', 'recovery', 'dinner']
+      : mode === 'practice' ? ['breakfast', 'lunch', 'snack', 'recovery', 'dinner']
+      : ['breakfast', 'lunch', 'snack', 'dinner'];
+    if (!lift) return base;
+    const out = base.slice();
+    if (/am$/.test(lift)) { out.splice(0, 0, 'prelift'); out.splice(2, 0, 'postlift'); }
+    else { out.splice(out.indexOf('dinner'), 0, 'preliftPm', 'postliftPm'); }
+    return out;
+  }
+  row(id, size) {
+    const m = MEALS[id]; const sh = shapes(m.tile, size || 62); const fd = field(id, (size || 62) < 55 ? 11 : 12, 8);
+    return { slot: m.slot, name: m.name, macroText: `${m.kcal} cal · ${m.p}g protein · ${m.prep}`,
+      open: () => this.setState({ overlay: 'meal', mealId: id }),
+      rowStyle: 'display:flex;align-items:center;gap:14px;padding:14px 4px;width:100%;border-bottom:1px solid rgba(17,24,21,.1);transition:background .15s',
+      tileStyle: sh.tileStyle, s1: sh.s1, s2: sh.s2, s3: sh.s3, word: fd.word, fieldStyle: fd.fieldStyle, wordStyle: fd.wordStyle };
+  }
+  stats(id, full) {
+    const m = MEALS[id], o = SWAPS.find(x => x.id === id) || {};
+    const dc = m.kcal - 750, dp = m.p - 45;
+    const tone = ok => `font-size:11px;font-weight:800;color:${ok ? '#0E7B47' : '#B0553C'}`;
+    const base = [
+      { label: 'calories', value: m.kcal, delta: (dc >= 0 ? '+' : '') + dc, deltaStyle: tone(Math.abs(dc) <= 60) },
+      { label: 'protein', value: m.p + 'g', delta: (dp >= 0 ? '+' : '') + dp + 'g', deltaStyle: tone(Math.abs(dp) <= 3) },
+      { label: 'time', value: o.time || m.prep, delta: '', deltaStyle: 'display:none' },
+    ];
+    return full ? base.concat([{ label: 'cost', value: o.cost || '', delta: '', deltaStyle: 'display:none' }]) : base;
+  }
+
+  renderVals() {
+    const s = this.state, a = s.a, p = this.props;
+    const homeLayout = p.homeLayout ?? 'Focus', swapMode = p.swapMode ?? 'Compare three';
+    const plannerInput = p.plannerInput ?? 'Ask in words', navPrimary = p.navPrimary ?? 'Center action';
+    const STEPS = this.stepsList();
+    const step = STEPS[s.ob - 1];
+    const goalLb = s.goalLb == null ? s.lb + (a.goal === 'lose' ? -15 : 15) : s.goalLb;
+    const lbDiff = Math.abs(goalLb - s.lb);
+    const weeksOut = Math.max(1, Math.round(lbDiff / s.rate));
+    const name = (a.name || '').trim() || 'there';
+    const tg = this.targets();
+
+    const stepRow = (done, active, label) => ({ label,
+      style: `display:flex;align-items:center;gap:12px;font-size:14.5px;font-weight:600;color:${done ? '#F4F2ED' : active ? 'rgba(244,242,237,.9)' : 'rgba(244,242,237,.32)'};transition:color .3s`,
+      dot: done ? `width:18px;height:18px;border-radius:50%;background:${GREEN};flex:none`
+        : active ? 'width:18px;height:18px;border-radius:50%;background:#5BE3A0;flex:none;animation:ffPulse 1s ease infinite'
+          : 'width:18px;height:18px;border-radius:50%;border:2px solid rgba(244,242,237,.2);flex:none' });
+
+    // chips options, with love/hate exclusion
+    let chipOpts = [];
+    if (step && step.type === 'chips') {
+      let pool = step.options;
+      if (step.key === 'dislikes') pool = pool.filter(x => !(a.likes || []).includes(x));
+      if (step.key === 'likes') pool = pool.filter(x => !(a.dislikes || []).includes(x));
+      const extra = (a[step.key] || []).filter(x => pool.indexOf(x) === -1);
+      chipOpts = pool.concat(extra).map(label => ({ label, pick: () => this.toggle(step.key, label),
+        chipStyle: this.chip((a[step.key] || []).includes(label), step.key === 'dislikes' || step.key === 'allergies') }));
+    }
+
+    const listOpts = step && step.type === 'list' ? step.options.map(o => ({
+      label: o.label, hint: o.hint, pick: () => this.pickOne(step.key, o.v),
+      rowStyle: `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 17px;border:2px solid ${a[step.key] === o.v ? GREEN : 'rgba(17,24,21,.12)'};border-radius:14px;background:${a[step.key] === o.v ? 'rgba(23,160,94,.07)' : '#fff'};width:100%;transition:all .15s`,
+      dotStyle: `width:20px;height:20px;border-radius:50%;flex:none;border:2px solid ${a[step.key] === o.v ? GREEN : 'rgba(17,24,21,.2)'};background:${a[step.key] === o.v ? GREEN : 'transparent'};box-shadow:${a[step.key] === o.v ? 'inset 0 0 0 3.5px #fff' : 'none'}`,
+    })) : [];
+
+    const bodyRows = [
+      { label: 'Age', value: s.age + ' yrs', dec: () => this.setState(st => ({ age: Math.max(12, st.age - 1) })), inc: () => this.setState(st => ({ age: Math.min(60, st.age + 1) })) },
+      { label: 'Height', value: s.ft + "' " + s.inch + '"', dec: () => this.setState(st => st.inch > 0 ? { inch: st.inch - 1 } : { ft: Math.max(4, st.ft - 1), inch: 11 }), inc: () => this.setState(st => st.inch < 11 ? { inch: st.inch + 1 } : { ft: Math.min(7, st.ft + 1), inch: 0 }) },
+      { label: 'Weight', value: s.lb + ' lb', dec: () => this.setState(st => ({ lb: Math.max(70, st.lb - 5) })), inc: () => this.setState(st => ({ lb: Math.min(400, st.lb + 5) })) },
+    ];
+
+    const modeBtn = (cur, v, label, w) => ({ label,
+      style: `flex:1;padding:${w || 9}px 4px;font-size:12px;font-weight:800;background:${cur === v ? (v === 'game' ? '#B4462F' : v === 'practice' ? GREEN : INK) : 'transparent'};color:${cur === v ? '#fff' : '#6E6A60'};transition:all .15s` });
+
+    const weekRows = [1, 2, 3, 4, 5, 6, 0].map(wd => {
+      const [mode, time, lift, dur] = s.week[wd];
+      const open = s.openDay === wd;
+      const training = mode !== 'rest' || !!lift;
+      const setWd = v => this.setState(st => ({ week: Object.assign({}, st.week, { [wd]: v }) }));
+      const parts = [];
+      if (mode !== 'rest') parts.push((mode === 'game' ? 'Game' : 'Practice') + ' ' + time);
+      if (lift) parts.push('Lift ' + lift);
+      const chip = (on, extra) => `padding:8px 12px;border-radius:10px;font-size:12px;font-weight:800;white-space:nowrap;flex:none;border:2px solid ${on ? GREEN : 'rgba(17,24,21,.12)'};background:${on ? 'rgba(23,160,94,.11)' : '#fff'};color:${on ? '#0E7B47' : '#6E6A60'}` + (extra || '');
+      return { day: DAYS[wd], open, summary: parts.length ? parts.join(' · ') : 'Rest day',
+        rowStyle: `background:#fff;border-radius:14px;overflow:hidden;border:2px solid ${open ? INK : 'transparent'};box-shadow:0 1px 2px rgba(17,24,21,.045)`,
+        headStyle: 'width:100%;display:flex;align-items:center;gap:12px;padding:13px 14px;text-align:left',
+        dayStyle: `width:34px;flex:none;font-size:13px;font-weight:900;font-stretch:113%;color:${training ? INK : '#B5B0A4'}`,
+        sumStyle: `flex:1;min-width:0;font-size:12.5px;font-weight:700;color:${training ? '#4A5550' : '#B5B0A4'}`,
+        dotStyle: `width:7px;height:7px;border-radius:50%;flex:none;background:${mode === 'game' ? '#D4573A' : mode === 'practice' ? GREEN : lift ? '#8C8779' : 'transparent'}`,
+        caretStyle: `flex:none;transition:transform .2s;transform:rotate(${open ? 180 : 0}deg)`,
+        toggle: () => this.setState({ openDay: open ? null : wd }),
+        modes: [['rest', 'Rest'], ['practice', 'Practice'], ['game', 'Game']].map(([v, l]) => Object.assign(
+          modeBtn(mode, v, l), { pick: () => setWd([v, v === 'rest' ? '' : (time || '4:30 pm'), lift, dur]) })),
+        hasTime: mode !== 'rest',
+        timeLabel: mode === 'game' ? 'Game starts' : 'Practice starts',
+        times: TIMES.map(t => ({ label: t, pick: () => setWd([mode, t, lift, dur]), style: chip(time === t) })),
+        lift: !!lift,
+        liftStyle: `display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 13px;border-radius:11px;border:2px solid ${lift ? INK : 'rgba(17,24,21,.12)'};background:${lift ? INK : '#fff'};color:${lift ? '#F4F2ED' : INK}`,
+        liftState: lift ? 'On' : 'Off',
+        liftStateStyle: `font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${lift ? '#5BE3A0' : '#B5B0A4'}`,
+        liftToggle: () => setWd([mode, time, lift ? '' : '6:30 am', dur]),
+        liftTimes: LIFT_TIMES.map(t => ({ label: t, pick: () => setWd([mode, time, t, dur]), style: chip(lift === t) })),
+        durOpen: training,
+        durs: [['', 'Not set'], ['60', '1 hr'], ['90', '1.5 hr'], ['120', '2 hr']].map(([v, l]) => ({ label: l, pick: () => setWd([mode, time, lift, v]), style: chip((dur || '') === v) })) };
+    });
+    const trainCount = Object.keys(s.week).filter(k => s.week[k][0] !== 'rest' || s.week[k][2]).length;
+    const liftCount = Object.keys(s.week).filter(k => s.week[k][2]).length;
+
+    // calendar
+    const first = new Date(2026, 7, 1).getDay(), dim = 31;
+    const cells = [];
+    for (let i = 0; i < first; i++) cells.push({ num: '', blank: 1 });
+    for (let d = 1; d <= dim; d++) cells.push({ num: d });
+    const calCells = cells.map(c => {
+      if (c.blank) return { num: '', style: 'height:44px', numStyle: 'display:none', dot: 'display:none', tap: () => {} };
+      const [mode, , lift] = this.dayType(c.num);
+      const on = s.selDay === c.num, today = c.num === 12;
+      return { num: c.num, tap: () => this.setState({ selDay: c.num }),
+        style: `height:44px;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:${on ? INK : today ? 'rgba(17,24,21,.06)' : 'transparent'};transition:all .15s`,
+        numStyle: `font-size:13px;font-weight:${today || on ? 800 : 600};color:${on ? '#F4F2ED' : INK}`,
+        dot: `width:${lift && mode === 'rest' ? 9 : 5}px;height:5px;border-radius:3px;background:${mode === 'game' ? '#D4573A' : mode === 'practice' ? (on ? '#5BE3A0' : GREEN) : lift ? (on ? 'rgba(244,242,237,.55)' : '#8C8779') : 'transparent'}` };
+    });
+    const [selMode, selTime, selLift, selDur] = this.dayType(s.selDay);
+    const selDate = new Date(2026, 7, s.selDay);
+    const selMeals = this.dayMeals(selMode, selLift);
+    const sel = {
+      dateLabel: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][selDate.getDay()] + ', August ' + s.selDay,
+      modes: [['rest', 'Rest day'], ['practice', 'Practice'], ['game', 'Game']].map(([v, l]) => Object.assign(
+        modeBtn(selMode, v, l, 12), { pick: () => { this.setDay(s.selDay, v); this.toast(v === 'rest' ? 'Rest day — lighter carbs, same protein' : v === 'game' ? 'Rebuilt around a game: pre-game and recovery added' : 'Rebuilt around practice'); } })),
+      hasTime: selMode !== 'rest',
+      liftOn: !!selLift,
+      liftStyle: `display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 15px;border-radius:12px;margin-top:12px;border:2px solid ${selLift ? INK : 'rgba(17,24,21,.12)'};background:${selLift ? INK : 'transparent'};color:${selLift ? '#F4F2ED' : INK}`,
+      liftLabelStyle: 'display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:800',
+      liftState: selLift ? 'On · ' + selLift : 'Off',
+      liftStateStyle: `font-size:11.5px;font-weight:800;letter-spacing:.04em;color:${selLift ? '#5BE3A0' : 'rgba(17,24,21,.4)'}`,
+      liftToggle: () => { const v = selLift ? '' : '6:30 am'; this.setLift(s.selDay, v); this.toast(v ? 'Lift added — pre-lift carbs and a recovery snack slotted in' : 'Lift removed'); },
+      liftTimes: LIFT_TIMES.map(t => ({ label: t, pick: () => { this.setLift(s.selDay, t); this.toast('Lifting snacks moved around ' + t); }, style: this.small(selLift === t) + ';white-space:nowrap;flex:none' })),
+      timeLabel: selMode === 'game' ? 'First whistle' : 'Practice starts',
+      times: TIMES.map(t => ({ label: t, pick: () => { this.setDay(s.selDay, selMode, t); this.toast('Meals shifted around ' + t); }, style: this.small(selTime === t) + ';white-space:nowrap;flex:none' })),
+      mealsCount: selMeals.length + ' meals',
+      meals: selMeals.map(id => this.row(id, 54)),
+      durNote: selDur ? (selMode === 'game' ? 'Game' : 'Practice') + ' runs about ' + (selDur === '60' ? '1 hour' : selDur === '90' ? '1.5 hours' : '2 hours') + ', so the recovery meal lands right after.' : '',
+      hasDur: !!selDur && selMode !== 'rest',
+      note: (selLift ? `Lifting at ${selLift} — fast carbs 40 minutes before, protein and carbs inside 30 minutes after. ` : '') + (selMode === 'game' ? `Game at ${selTime}. You get a familiar pre-game meal three hours out and recovery food in the 30 minutes after.`
+        : selMode === 'practice' ? `Practice at ${selTime}. Carbs stack before it, protein lands after — that's the shape of the day.`
+          : 'Rest day. Protein stays where it is, carbs come down a little, and nothing takes longer than 20 minutes.'),
+    };
+
+    const todayMode = this.dayType(12)[0], todayTime = this.dayType(12)[1];
+    const todayIds = this.dayMeals(todayMode, this.dayType(12)[2]);
+    const eatenIdx = s.nextEaten ? 1 : 0;
+    const upcoming = todayIds.slice(2 + eatenIdx);
+    const nm = MEALS[todayIds[2 + eatenIdx - 1] && s.nextEaten ? todayIds[3] : todayIds[2]] || MEALS.snack;
+    const nfA = field(nm.id, 18, 12), nfB = field(nm.id, 13, 9);
+    const nextMeal = { name: nm.name, kcal: nm.kcal, protein: nm.p + 'g protein', time: nm.prep,
+      word: nfA.word, fieldA: nfA.fieldStyle, wordA: nfA.wordStyle, fieldB: nfB.fieldStyle, wordB: nfB.wordStyle,
+      when: `${nm.slot} · ${nm.timeText}`,
+      why: CHIPS[nm.id] || ['Matched to your macros', 'Fits your time', 'Allergy-safe'] };
+
+    const remainCal = Math.max(0, tg.cal - 1840), remainPro = Math.max(0, tg.protein - 98);
+    const pctCal = Math.min(100, Math.round(1840 / tg.cal * 100));
+
+    const weekStrip = [0, 1, 2, 3, 4, 5, 6].map(i => {
+      const d = 9 + i, [mode, , lift] = this.dayType(d), today = d === 12;
+      return { day: DAYS[new Date(2026, 7, d).getDay()][0], num: d, tap: () => this.setState({ tab: 'calendar', selDay: d }),
+        style: `flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0 8px;border-radius:14px;background:${today ? INK : '#fff'};transition:all .15s`,
+        dayStyle: `font-size:9.5px;font-weight:800;letter-spacing:.06em;color:${today ? 'rgba(244,242,237,.55)' : '#A9A498'}`,
+        numStyle: `font-size:14px;font-weight:900;letter-spacing:-.02em;color:${today ? '#F4F2ED' : INK}`,
+        dot: `width:${lift && mode === 'rest' ? 9 : 5}px;height:5px;border-radius:3px;background:${mode === 'game' ? '#D4573A' : mode === 'practice' ? (today ? '#5BE3A0' : GREEN) : lift ? (today ? 'rgba(244,242,237,.55)' : '#8C8779') : 'transparent'}` };
+    });
+
+    const activeSwaps = (s.swapSet === 0 ? SWAPS.slice(0, 3) : [SWAPS[3], SWAPS[0], SWAPS[2]]);
+    const mk = (o, pre) => Object.assign({ name: MEALS[o.id].name, why: o.why, match: o.match, stats: this.stats(o.id, pre === 'fq-swap-') },
+      field(o.id, pre === 'fq-swap-' ? 30 : 36, pre === 'fq-swap-' ? 16 : 18));
+    const swapOptions = activeSwaps.map(o => Object.assign(mk(o, 'fq-swap-'), {
+      pick: () => this.setState({ swapPick: o.id }),
+      cardStyle: `display:block;width:100%;background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;overflow:hidden;border:2px solid ${s.swapPick === o.id ? GREEN : 'transparent'};box-shadow:${s.swapPick === o.id ? '0 8px 22px rgba(23,160,94,.18)' : '0 1px 3px rgba(17,24,21,.07)'};transition:all .18s`,
+      matchStyle: 'position:absolute;left:12px;top:12px;z-index:2;padding:5px 11px;border-radius:99px;background:rgba(17,24,21,.82);color:#5BE3A0;font-size:10.5px;font-weight:800;pointer-events:none',
+      checkStyle: s.swapPick === o.id ? `width:24px;height:24px;border-radius:50%;background:${GREEN};flex:none;box-shadow:inset 0 0 0 3px #fff, inset 0 0 0 4.5px ${GREEN}` : 'width:24px;height:24px;border-radius:50%;border:2px solid rgba(17,24,21,.16);flex:none' }));
+    const deckOrder = activeSwaps.slice(s.deckIdx % 3).concat(activeSwaps.slice(0, s.deckIdx % 3));
+    const swapDeckCards = deckOrder.slice(0, 3).map((o, n) => Object.assign(mk(o, 'fq-deck-'), {
+      cardStyle: `position:absolute;left:${n * 8}px;right:${n * 8}px;top:${n * 14}px;background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:22px;overflow:hidden;box-shadow:0 ${12 - n * 3}px ${30 - n * 8}px rgba(17,24,21,${.15 - n * .04});z-index:${10 - n};transition:all .28s cubic-bezier(.2,.85,.25,1);${n ? 'opacity:.55' : ''}`,
+      matchStyle: 'position:absolute;left:14px;top:14px;z-index:2;padding:5px 11px;border-radius:99px;background:rgba(17,24,21,.82);color:#5BE3A0;font-size:10.5px;font-weight:800;pointer-events:none' })).reverse();
+
+    const cChip = t => `padding:6px 11px;border-radius:99px;font-size:11.5px;font-weight:700;${t ? 'background:rgba(17,24,21,.08);color:#6E6A60;text-decoration:line-through' : 'background:rgba(23,160,94,.1);color:#0E7B47'}`;
+    const constraints = [
+      { l: tg.cal.toLocaleString() + ' cal' }, { l: tg.protein + 'g protein' },
+      { l: (a.sports || []).slice(0, 2).join(' + ') || 'No sport' }, { l: trainCount + ' training days' },
+      { l: a.time === '10' ? '10 min' : a.time === '40' ? '30–40 min' : a.time === 'prep' ? 'Sunday prep' : '20 min' },
+      { l: a.budget === 'low' ? 'Under $4' : a.budget === 'high' ? 'Any budget' : '$4–8 a meal' },
+    ].concat((a.dislikes || []).slice(0, 2).map(x => ({ l: x, t: 1 })), (a.allergies || []).filter(x => x !== 'None of these').slice(0, 2).map(x => ({ l: x, t: 1 })))
+      .map(c => ({ label: c.l, style: cChip(c.t) }));
+
+    const logData = { recent: [['Peanut butter banana oats', '620 cal · this morning', TILES.oats], ['Chicken burrito bowl', '780 cal · yesterday', TILES.bowl], ['Chocolate milk', '210 cal · yesterday', TILES.shake], ['Rice cakes & honey', '190 cal · Monday', TILES.snack]],
+      favorites: [['Steak & roast potatoes', '765 cal · 47g protein', TILES.steak], ['Chicken burrito bowl', '780 cal · 52g protein', TILES.bowl], ['Greek yogurt & granola', '320 cal · 22g protein', TILES.shake]] };
+
+    const tabsDef = [['home', 'Home'], ['plan', 'Plan'], ['log', 'Log'], ['recipes', 'Recipes'], ['profile', 'Profile']];
+    const marks = { home: 'width:15px;height:15px;border-radius:4px', plan: 'width:15px;height:15px;border-radius:4px;border-width:2px;border-style:solid', log: 'width:15px;height:15px;border-radius:50%', recipes: 'width:15px;height:4px;border-radius:99px', profile: 'width:15px;height:15px;border-radius:50%;border-width:2px;border-style:solid' };
+    const mkTab = ([id, label]) => { const on = s.tab === id; return { label, pick: () => this.setState({ tab: id, overlay: null }),
+      style: 'display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 0',
+      mark: `${marks[id]};background:${id === 'plan' || id === 'profile' ? 'transparent' : (on ? '#5BE3A0' : 'rgba(244,242,237,.42)')};border-color:${on ? '#5BE3A0' : 'rgba(244,242,237,.42)'};transition:all .2s`,
+      text: `font-size:10px;font-weight:800;color:${on ? '#F4F2ED' : 'rgba(244,242,237,.45)'}` }; };
+
+    const mm = MEALS[s.mealId] || MEALS.snack;
+    const meal = Object.assign(field(mm.id, 46, 22), { name: mm.name, slot: mm.slot, timeText: mm.timeText, reasons: mm.reasons,
+      macros: [['calories', mm.kcal], ['protein', mm.p + 'g'], ['carbs', mm.c + 'g'], ['fat', mm.f + 'g']].map(([label, value], i) => ({ label, value, style: `padding:15px 12px;${i < 3 ? 'border-right:2px solid ' + LINE : ''}` })),
+      ingredients: mm.ingredients.map(([n, q, have], i) => ({ name: n, qty: q,
+        style: `display:flex;align-items:center;justify-content:space-between;padding:13px 0;${i ? 'border-top:1px solid rgba(17,24,21,.1)' : ''}`,
+        haveText: have ? 'have it' : 'need it',
+        have: `font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;padding:3px 8px;border-radius:99px;${have ? 'color:#0E7B47;background:rgba(23,160,94,.12)' : 'color:#8C8779;background:rgba(17,24,21,.07)'}` })),
+      steps: mm.steps.map((t, i) => ({ n: i + 1, text: t })) });
+
+    const ctaBase = 'width:100%;display:flex;align-items:center;justify-content:space-between;padding:17px 20px;font-weight:800;font-size:15.5px;border-radius:14px;transition:all .18s';
+    const answered = !step ? false : step.type === 'text' ? !!(s.nameDraft || a.name || '').trim()
+      : step.type === 'body' || step.type === 'week' || step.type === 'target' ? true
+        : step.key === 'dislikes' || step.key === 'allergies' ? true
+          : step.type === 'list' ? !!a[step.key] : (a[step.key] || []).length > 0;
+
+    return {
+      isOnboarding: s.stage === 'onboarding' || s.stage === 'building' || s.stage === 'targets',
+      isApp: s.stage === 'app',
+      obShowBar: s.stage === 'onboarding' && s.ob > 0,
+      ob0: s.stage === 'onboarding' && s.ob === 0,
+      obQuestion: s.stage === 'onboarding' && s.ob > 0,
+      obBuilding: s.stage === 'building',
+      isTargets: s.stage === 'targets',
+      obPct: `${(s.ob / STEPS.length) * 100}%`, obCount: `${Math.min(s.ob, STEPS.length)}/${STEPS.length}`,
+      obKicker: step ? 'Step ' + s.ob + ' · ' + step.tag : '', obTitle: step ? step.title : '', obSub: step ? step.sub : '',
+      obIsText: !!step && step.type === 'text', obIsList: !!step && step.type === 'list',
+      obIsBody: !!step && step.type === 'body', obIsChips: !!step && step.type === 'chips',
+      obIsWeek: !!step && step.type === 'week',
+      obIsTarget: !!step && step.type === 'target',
+      nowWeight: s.lb + ' lb', goalWeight: goalLb + ' lb',
+      goalUp: () => this.setState({ goalLb: goalLb + 5 }),
+      goalDown: () => this.setState({ goalLb: goalLb - 5 }),
+      rateLabel: a.goal === 'lose' ? 'Pounds to lose per week' : 'Pounds to gain per week',
+      rateOpts: (a.goal === 'lose' ? [0.5, 1, 1.5, 2, 2.5] : [0.5, 0.75, 1, 1.25, 1.5]).map(v => ({ label: v, pick: () => this.setState({ rate: v }),
+        style: `flex:1;padding:12px 0;border-radius:11px;border:2px solid ${s.rate === v ? GREEN : 'rgba(17,24,21,.13)'};font-size:13.5px;font-weight:800;background:${s.rate === v ? 'rgba(23,160,94,.1)' : '#fff'};color:${s.rate === v ? '#0E7B47' : INK}` })),
+      paceScope: 'Pace sets your calories, and nudges the recommended protein — 1 lb a week means 1g of protein per pound of goal weight. You can lock protein to a fixed number on the next screen.',
+      paceNote: lbDiff === 0
+        ? 'Same as where you are now — we\u2019ll hold you steady.'
+        : `${lbDiff} lb to ${a.goal === 'lose' ? 'lose' : 'gain'} at ${tg.rate} lb a week is about ${Math.max(1, Math.round(lbDiff / tg.rate))} weeks. That works out to ${a.goal === 'lose' ? '-' : '+'}${Math.round(tg.rate * 3500 / 7 / 25) * 25} calories a day.${tg.rate < s.rate
+          ? (a.goal === 'lose'
+            ? ` You picked ${s.rate}, but that\u2019s past the ceiling — about 1% of your bodyweight a week is as fast as you can go without losing muscle with it.${s.age < 18 ? ' Your age factors in too.' : ''}`
+            : ` You picked ${s.rate}, but you\u2019re ${s.age} — steady beats fast while you\u2019re still growing.`)
+          : (a.goal === 'lose' && s.rate >= 1.5 ? ` That pace is within range for your size — protein stays high so what comes off is fat.` : '')}`,
+      obOptions: step && step.type === 'list' ? listOpts : chipOpts,
+      obHasNote: !!s.note, obNote: s.note,
+      obDraft: s.draft, obDraftHint: step ? (step.hint || 'Add your own') : '',
+      obDraftChange: e => this.setState({ draft: e.target.value }),
+      obDraftKey: e => { if (e.key === 'Enter' && this.state.draft.trim()) { this.toggle(step.key, this.state.draft.trim()); this.setState({ draft: '' }); } },
+      nameDraft: s.nameDraft, nameChange: e => this.setState({ nameDraft: e.target.value }),
+      bodyRows, weekRows,
+      weekSummary: trainCount === 0 ? 'No training days yet — meals will just follow the clock.' : `${trainCount} training days${liftCount ? `, ${liftCount} with a lift` : ''}. Lift days get fast carbs before and a protein-and-carb snack inside 30 minutes after.` + ` ` + `Practice days get a pre-fuel and a recovery meal; game days get a familiar pre-game meal three hours out.`,
+      obBack: this.back,
+      obNext: () => {
+        if (s.ob === 0) { this.setState({ ob: 1 }); return; }
+        if (step.type === 'text') this.setState(st => ({ a: Object.assign({}, st.a, { name: st.nameDraft.trim() }) }));
+        this.advance();
+      },
+      obBlocked: !answered,
+      obCta: !answered ? (step && step.type === 'text' ? 'Type your name' : step && step.type === 'chips' ? 'Pick at least one' : 'Choose an option') : (s.ob === STEPS.length ? 'See my numbers' : ((step.key === 'dislikes' || step.key === 'allergies') && !(a[step.key] || []).length ? 'Nothing to avoid' : 'Next')),
+      obCtaStyle: ctaBase + (answered ? `;background:${GREEN};color:#fff` : ';background:rgba(17,24,21,.09);color:#A9A498;cursor:not-allowed'),
+      buildTitle: `Building your week, ${name}`,
+      buildSteps: ['Reading your favorites', 'Blocking your allergies', 'Fitting meals to practice', 'Balancing the week', 'Writing your grocery list'].map((l, i) => stepRow(s.buildStep > i, s.buildStep === i, l)),
+
+      targets: {
+        mode: tg.goal === 'gain' ? 'Surplus' : tg.goal === 'lose' ? (tg.rate >= 1.5 ? 'Aggressive deficit' : tg.rate >= 1 ? 'Steady deficit' : 'Gentle deficit') : 'Maintenance',
+        headline: tg.goal === 'gain' ? `Here's your surplus, ${name}` : tg.goal === 'lose' ? (tg.rate >= 1.5 ? `Time to move fast, ${name}` : `A steady deficit, ${name}`) : `Your maintenance, ${name}`,
+        sub: tg.goal === 'gain' ? 'Enough over maintenance to add lean weight without feeling stuffed.' : tg.goal === 'lose' ? (tg.rate >= 1.5 ? `${tg.rate} lb a week is a real deficit, and at ${s.lb} lb your body can carry it. Protein stays high so what you lose is fat.` : 'Small enough that training quality holds up.') : 'Enough to hold your weight and train hard.',
+        calText: tg.cal.toLocaleString(),
+        math: [
+          { label: 'Resting burn', note: `${tg.sex === 'male' ? 'Male' : tg.sex === 'female' ? 'Female' : 'Averaged'} baseline · ${s.age} yrs, ${s.ft}'${s.inch}", ${s.lb} lb`, value: tg.bmr.toLocaleString() },
+          { label: 'Training on top', note: `${tg.days} training days a week`, value: '+' + (tg.maint - tg.bmr).toLocaleString() },
+          { label: tg.adj === 0 ? 'Goal adjustment' : tg.adj > 0 ? 'Surplus for growth' : 'Deficit', note: tg.adj === 0 ? 'Holding steady' : tg.rate + ' lb a week' + (tg.rate < s.rate ? ' — eased from ' + s.rate : ''), value: (tg.adj > 0 ? '+' : '') + tg.adj },
+        ].map((m, i) => ({ label: m.label, note: m.note, value: m.value,
+          style: `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;${i ? 'border-top:1px solid rgba(244,242,237,.1)' : ''}`,
+          valueStyle: `font-size:17px;font-weight:900;letter-spacing:-.02em;color:${i === 2 && tg.adj !== 0 ? '#5BE3A0' : '#F4F2ED'}` })),
+        macros: [{ label: 'protein', value: tg.protein + 'g' }, { label: 'carbs', value: tg.carbs + 'g' }, { label: 'fat', value: tg.fat + 'g' }],
+        proteinBasis: tg.pMode === 'rec'
+          ? `${(tg.protein / tg.goalLb).toFixed(2)}g per pound of your ${tg.goalLb} lb goal weight. One pound a week sits at 1g per pound; ${tg.rate} lb a week ${tg.rate > 1 ? 'asks for more' : tg.rate < 1 ? 'needs less' : 'is the baseline'}. Lock it with one of the fixed options below if you'd rather pace didn't move it.`
+          : `Fixed at ${(tg.protein / tg.goalLb).toFixed(2)}g per pound of your ${tg.goalLb} lb goal weight. Changing your pace moves calories only — this number stays put.`,
+        pOpts: [
+          { v: 'rec', label: 'Recommended', sub: tg.recProtein + 'g · tracks pace' },
+          { v: 'gpp', label: '1g per lb of goal', sub: tg.goalLb + 'g · fixed' },
+          { v: 'custom', label: 'Custom', sub: tg.pMode === 'custom' ? tg.protein + 'g' : 'Set it' },
+        ].map(o => ({ label: o.label, sub: o.sub, pick: () => this.setState({ pMode: o.v, pCustom: o.v === 'custom' && s.pCustom == null ? tg.recProtein : s.pCustom }),
+          style: `flex:1;min-width:0;text-align:left;padding:12px 10px;border-radius:14px;border:2px solid ${tg.pMode === o.v ? '#5BE3A0' : 'rgba(244,242,237,.14)'};background:${tg.pMode === o.v ? 'rgba(91,227,160,.13)' : 'transparent'}`,
+          labelStyle: `font-size:11px;font-weight:800;line-height:1.25;letter-spacing:-.01em;color:${tg.pMode === o.v ? '#5BE3A0' : 'rgba(244,242,237,.72)'}`,
+          subStyle: `font-size:11px;font-weight:700;margin-top:4px;color:${tg.pMode === o.v ? 'rgba(91,227,160,.7)' : 'rgba(244,242,237,.38)'}` })),
+        pCustomOn: tg.pMode === 'custom',
+        pCustomVal: tg.protein + 'g',
+        pUp: () => this.setState({ pCustom: Math.min(320, tg.protein + 5) }),
+        pDown: () => this.setState({ pCustom: Math.max(60, tg.protein - 5) }),
+        tuning: tg.sex === 'female'
+          ? 'Female baseline runs lower for the same height and weight, so your calories sit below a male athlete your size. Iron-rich meals — red meat, beans, dark greens — get priority, and we keep fueling steady rather than skipping meals.'
+          : tg.sex === 'male'
+            ? 'Male baseline runs higher for the same height and weight. Protein gets spread across four or five feeds a day rather than stacked into dinner.'
+            : 'Without a baseline we average the two, so treat this number as a starting point and adjust after a couple of weeks.',
+        disclaimer: tg.goal === 'lose' && tg.rate >= 1
+          ? `Athly caps fat loss at about 1% of your bodyweight a week — ${tg.rate} lb for you — and holds protein at ${tg.protein}g so the weight you lose is fat.${tg.young ? ' Under 18, that ceiling is lower than it would be for an adult.' : ''} Worth running past a doctor or dietitian; this is general guidance, not medical advice.`
+          : tg.young
+            ? 'You\u2019re under 18, so Athly keeps things on the side of fueling, recovery and growth. No aggressive cuts. This is general guidance, not medical advice.'
+            : 'General nutrition guidance to help you fuel and recover. Not medical advice.',
+      },
+      startBuild: this.runBuild,
+
+      name: a.name || 'Athlete', initial: (a.name || 'A').trim().charAt(0).toUpperCase(),
+      profileLine: `${(a.sports || []).slice(0, 2).join(', ') || 'No sport'} · ${tg.goal === 'gain' ? 'gaining lean weight' : tg.goal === 'lose' ? (tg.rate >= 1.5 ? 'cutting fat' : 'losing steadily') : 'fueling training'}`,
+      todayLine: `Hey ${name} · ${todayMode === 'game' ? 'Game ' + todayTime : todayMode === 'practice' ? 'Practice ' + todayTime : 'Rest day'}`,
+      weekStrip,
+      isHome: s.tab === 'home', isPlan: s.tab === 'plan', isLog: s.tab === 'log', isRecipes: s.tab === 'recipes',
+      isProfile: s.tab === 'profile', isGrocery: s.tab === 'grocery', isProgress: s.tab === 'progress', isCalendar: s.tab === 'calendar',
+      goHome: () => this.setState({ tab: 'home' }), goPlan: () => this.setState({ tab: 'plan' }),
+      goLog: () => this.setState({ tab: 'log' }), goProfile: () => this.setState({ tab: 'profile' }),
+      goGrocery: () => this.setState({ tab: 'grocery' }), goProgress: () => this.setState({ tab: 'progress' }),
+      goCalendar: () => this.setState({ tab: 'calendar' }),
+      restart: () => this.setState({ stage: 'onboarding', ob: 0, a: { likes: [], dislikes: [], allergies: [], sports: [] }, nameDraft: '', tab: 'home', overlay: null, genDone: false, swapCommitted: null, insight: true, nextEaten: false, overrides: {} }),
+      noop: () => this.toast('Kitchen inventory lives in Profile'),
+
+      homeFocus: homeLayout === 'Focus', homeDash: homeLayout === 'Dashboard',
+      nextMeal, ringStyle: `width:98px;height:98px;border-radius:50%;flex:none;background:conic-gradient(${GREEN} 0 ${pctCal * 3.6}deg, rgba(17,24,21,.09) ${pctCal * 3.6}deg 360deg);display:flex;align-items:center;justify-content:center`,
+      remain: { cal: remainCal.toLocaleString(), pro: remainPro, pct: pctCal + '%',
+        calBar: `width:${pctCal}%;height:100%;background:#111815;border-radius:99px`,
+        proBar: `width:${Math.min(100, Math.round(98 / tg.protein * 100))}%;height:100%;background:${GREEN};border-radius:99px` },
+      macroBars: [['Protein', 'Pro', 98, tg.protein, GREEN], ['Carbs', 'Carb', 240, tg.carbs, '#111815'], ['Fat', 'Fat', 58, tg.fat, '#C08B4A']]
+        .map(([name, short, had, goal2, col]) => ({ name, short, text: `${had}/${goal2}g`,
+          fill: `width:${Math.min(100, had / goal2 * 100)}%;height:100%;background:${col};border-radius:99px` })),
+      eatNext: () => { this.setState({ nextEaten: true }); this.toast(`${nm.name} logged — ${remainPro}g protein to go`); },
+      openNext: () => this.setState({ overlay: 'meal', mealId: nm.id }),
+      openSwap: () => this.setState({ overlay: 'swap', deckIdx: 0, swapPick: null }),
+      todayMeals: upcoming.map(id => this.row(s.swapCommitted && id === 'dinner' ? s.swapCommitted : id)),
+      dayShape: todayMode === 'game' ? 'Game day' : todayMode === 'practice' ? 'Hard day' : 'Rest day',
+      showInsight: s.insight && s.tab === 'home',
+      insightText: (a.dislikes || []).length ? `You've swapped ${(a.dislikes[0] || 'eggs').toLowerCase()} out three times this week. Want me to stop putting it in your meals?` : "You've swapped eggs out three times this week. Want me to stop putting them in your breakfasts?",
+      learnYes: () => { this.setState({ insight: false }); this.toast('Got it — dropped from your rotation'); },
+      learnNo: () => { this.setState({ insight: false }); this.toast('Keeping them in rotation'); },
+      trainingBadge: todayMode === 'game' ? 'Game day' : todayMode === 'practice' ? 'Hard day' : 'Rest day',
+      trainingBadgeStyle: `padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;${todayMode === 'game' ? 'background:rgba(212,87,58,.14);color:#A03A22' : todayMode === 'practice' ? 'background:rgba(23,160,94,.12);color:#0E7B47' : 'background:rgba(17,24,21,.07);color:#6E6A60'}`,
+      trainingRail: (todayMode === 'rest' ? [['8:00', 'Breakfast'], ['12:30', 'Lunch'], ['3:30', 'Snack'], ['7:00', 'Dinner']] : [['2:30', 'Pre-fuel'], [todayTime.replace(' pm', '').replace(' am', ''), todayMode === 'game' ? 'Game' : 'Practice'], ['6:15', 'Recovery'], ['7:00', 'Dinner']])
+        .map(([time, label], i) => ({ time, label,
+          wrap: `flex:1;text-align:center;${i ? 'border-left:2px solid rgba(17,24,21,.1)' : ''}`,
+          dot: i === 1 && todayMode !== 'rest' ? `width:12px;height:12px;border-radius:50%;background:${todayMode === 'game' ? '#D4573A' : GREEN};margin:0 auto;box-shadow:0 0 0 5px ${todayMode === 'game' ? 'rgba(212,87,58,.15)' : 'rgba(23,160,94,.15)'}` : 'width:9px;height:9px;border-radius:50%;background:rgba(17,24,21,.2);margin:0 auto' })),
+      trainingNote: todayMode === 'game' ? `Game at ${todayTime}. Nothing new today — the pre-game meal is food you've eaten before.` : todayMode === 'practice' ? `Practice at ${todayTime}. Carbs are stacked before it and protein lands after.` : 'No training today, so carbs come down a little and protein holds.',
+
+      calMonth: 'August 2026',
+      calHeads: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => ({ label: label + (i === 0 ? '' : '') })),
+      calCells,
+      calLegend: [['Practice', GREEN], ['Game', '#D4573A'], ['Lift', '#8C8779'], ['Rest', 'rgba(17,24,21,.18)']].map(([label, c], i) => ({ label, dot: `width:${i === 2 ? 11 : 7}px;height:${i === 2 ? 5 : 7}px;border-radius:3px;background:${c}` })),
+      sel,
+      replanDay: () => this.toast(`August ${s.selDay} rebuilt — ${selMeals.length} meals around your ${selMode === 'rest' ? 'rest day' : selMode}`),
+
+      constraints,
+      scopes: [['meal', 'One meal'], ['day', 'A day'], ['week', 'A week']].map(([v, label]) => ({ label, pick: () => this.setState({ scope: v }),
+        style: `flex:1;padding:12px;font-size:13.5px;font-weight:800;background:${s.scope === v ? INK : 'transparent'};color:${s.scope === v ? '#F4F2ED' : INK};transition:all .15s` })),
+      plannerChat: plannerInput === 'Ask in words', plannerForm: plannerInput === 'Dial it in',
+      planText: s.planText, planTextChange: e => this.setState({ planText: e.target.value }),
+      prompts: ['Use what I have', 'Under 15 minutes', 'High protein', 'Cheap week'].map(label => ({ label, pick: () => this.setState({ planText: label === 'Use what I have' ? 'I have chicken, rice and cheese at home.' : label }) })),
+      cal: s.cal, calVal: s.cal + ' cal', calChange: e => this.setState({ cal: +e.target.value }),
+      pro: s.pro, proVal: s.pro + 'g', proChange: e => this.setState({ pro: +e.target.value, genErr: 0 }),
+      timeOpts: [['10', '10 min'], ['20', '20 min'], ['40', '40 min'], ['prep', 'Prep']].map(([v, label]) => ({ label, pick: () => this.setState({ timeSel: v }), style: this.small(s.timeSel === v) })),
+      budgetOpts: [['low', '$'], ['mid', '$$'], ['high', '$$$']].map(([v, label]) => ({ label, pick: () => this.setState({ budgetSel: v, genErr: 0 }), style: this.small(s.budgetSel === v) })),
+      includeChips: ['Chicken', 'Rice', 'Cheese', 'Pasta', 'Beef'].map(label => ({ label, pick: () => this.setState(st => ({ include: st.include.includes(label) ? st.include.filter(x => x !== label) : st.include.concat(label) })), style: this.small(s.include.includes(label)) })),
+      planError: !!s.genErr, fixBudget: () => this.setState({ budgetSel: 'mid', genErr: 0 }),
+      generate: this.runGen,
+      generateLabel: s.scope === 'week' ? 'Generate my week' : s.scope === 'day' ? 'Generate my day' : 'Generate a meal',
+      hasResults: !!s.genDone,
+      results: RESULTS.map(r => Object.assign(field(r.id, 13, 9), { name: MEALS[r.id].name, macroText: `${MEALS[r.id].kcal} cal · ${MEALS[r.id].p}g protein · ${MEALS[r.id].c}g carbs`, tags: r.tags, why: r.why, slotId: 'fq-res-' + r.id, open: () => this.setState({ overlay: 'meal', mealId: r.id }) })),
+
+      search: s.search, searchChange: e => this.setState({ search: e.target.value }),
+      toastScan: () => this.toast('Point at a barcode — camera would open here'),
+      toastPhoto: () => this.toast('Snap the plate, we estimate the macros'),
+      toastCustom: () => this.toast('Custom food builder would open'),
+      logTabs: [['recent', 'Recent'], ['favorites', 'Favorites'], ['custom', 'My foods']].map(([v, label]) => ({ label, pick: () => this.setState({ logTab: v }),
+        style: `padding:12px 0;font-size:13.5px;font-weight:800;color:${s.logTab === v ? INK : '#A9A498'};border-bottom:3px solid ${s.logTab === v ? GREEN : 'transparent'};margin-bottom:-2px` })),
+      logEmpty: s.logTab === 'custom', logList: s.logTab !== 'custom',
+      logItems: (logData[s.logTab] || []).map(([nm2, meta, t], i) => { const sh = shapes(t, 46), on = s.added.includes(s.logTab + i);
+        return { name: nm2, meta, tileStyle: sh.tileStyle, s1: sh.s1, s2: sh.s2, btnText: on ? 'Logged' : 'Log',
+          btnStyle: `padding:8px 15px;border-radius:99px;font-size:12.5px;font-weight:800;${on ? 'background:rgba(23,160,94,.13);color:#0E7B47' : `background:${INK};color:#F4F2ED`}`,
+          add: () => { if (!on) { this.setState(st => ({ added: st.added.concat(st.logTab + i) })); this.toast(`${nm2} logged`); } } }; }),
+
+      recipeCats: ['High protein', 'Quick', 'Budget', 'Athlete', 'Breakfast', 'Dinner', 'Snacks', 'Picky eater'].map((label, i) => ({ label, pick: () => this.setState({ cat: i }),
+        style: `padding:9px 15px;border-radius:99px;white-space:nowrap;font-size:12.5px;font-weight:800;flex:none;border:2px solid ${s.cat === i ? INK : 'rgba(17,24,21,.13)'};background:${s.cat === i ? INK : 'transparent'};color:${s.cat === i ? '#F4F2ED' : INK}`, })),
+      recipes: (RECIPE_SETS[s.cat] || RECIPE_SETS[0]).map(id => Object.assign(field(id, 21, 12), { name: MEALS[id].name, macroText: `${MEALS[id].kcal} cal · ${MEALS[id].p}g protein`, open: () => this.setState({ overlay: 'meal', mealId: id }) })),
+
+      profileGroups: [
+        { title: 'You', rows: [['Name', a.name || '—'], ['Age', s.age + ' years'], ['Height', s.ft + "' " + s.inch + '"'], ['Weight', s.lb + ' lb'], ['Baseline', tg.sex === 'male' ? 'Male' : tg.sex === 'female' ? 'Female' : 'Averaged']] },
+        { title: 'Targets', rows: [['Daily calories', tg.cal.toLocaleString()], ['Protein', tg.protein + 'g · ' + (tg.pMode === 'gpp' ? '1g per lb of goal' : tg.pMode === 'custom' ? 'Custom' : 'Recommended')], ['Goal weight', tg.goal === 'perform' || tg.goal === 'habits' ? 'Holding ' + s.lb + ' lb' : goalLb + ' lb'], ['Pace', tg.goal === 'perform' || tg.goal === 'habits' ? 'Maintain' : tg.rate + ' lb / week'], ['Goal', tg.goal === 'gain' ? 'Gain lean weight' : tg.goal === 'lose' ? 'Lose fat steadily' : 'Fuel my sport']] },
+        { title: 'Training', rows: [['Sports', (a.sports || []).join(', ') || '—'], ['Training days', trainCount + ' a week'], ['Schedule', 'Open the calendar']] },
+        { title: 'Food', rows: [['Favorites', (a.likes || []).slice(0, 3).join(', ') || '—'], ["Won't eat", (a.dislikes || []).slice(0, 3).join(', ') || '—'], ['Allergies', (a.allergies || []).join(', ') || 'None']] },
+        { title: 'Kitchen', rows: [['Cooking level', a.cook === 'micro' ? 'Microwave and toaster' : a.cook === 'good' ? 'I know my way around' : 'Can follow a recipe'], ['Weekday time', a.time === '10' ? '10 minutes' : a.time === '40' ? '30–40 minutes' : a.time === 'prep' ? 'Sunday prep' : '20 minutes'], ['Budget', a.budget === 'low' ? 'Under $4' : a.budget === 'high' ? 'Any budget' : '$4–8 a meal']] },
+      ].map(g => ({ title: g.title, rows: g.rows.map(([label, value], i) => ({ label, value,
+        tap: () => label === 'Schedule' ? this.setState({ tab: 'calendar' }) : this.toast(`${label} — editor would open`),
+        style: `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;width:100%;text-align:left;${i ? 'border-top:1px solid rgba(17,24,21,.09)' : ''}` })) })),
+
+      groceryGroups: [
+        ['Produce', [['Bananas', '6'], ['Baby potatoes', '2 lb'], ['Spinach', '1 bag'], ['Green beans', '1 lb']]],
+        ['Meat', [['Chicken breast', '3 lb'], ['Sirloin', '2 steaks'], ['Ground beef', '1 lb']]],
+        ['Dairy', [['Whole milk', '1 gal'], ['Greek yogurt', '32 oz'], ['Shredded cheese', '8 oz']]],
+        ['Grains & pantry', [['Rolled oats', '1 canister'], ['Jasmine rice', '2 lb'], ['Penne', '1 box'], ['Honey', '1 jar']]],
+      ].map(([title, items]) => ({ title, items: items.map(([nm3, qty]) => { const key = title + nm3, on = !!s.checked[key];
+        return { name: nm3, qty, tap: () => this.setState(st => ({ checked: Object.assign({}, st.checked, { [key]: !st.checked[key] }) })),
+          rowStyle: 'display:flex;align-items:center;gap:12px;padding:12px 2px;width:100%;text-align:left;border-bottom:1px solid rgba(17,24,21,.08)',
+          box: on ? `width:21px;height:21px;border-radius:7px;background:${GREEN};flex:none;box-shadow:inset 0 0 0 3px #fff, inset 0 0 0 4px ${GREEN}` : 'width:21px;height:21px;border-radius:7px;border:2px solid rgba(17,24,21,.18);flex:none',
+          text: `flex:1;font-size:14.5px;font-weight:700;${on ? 'color:#B5B0A4;text-decoration:line-through' : ''}` }; }) })),
+
+      weeks: [58, 66, 71, 64, 79, 84, 88, 92].map((v, i) => ({ label: 'W' + (i + 1), bar: `width:100%;height:${v}%;border-radius:6px;background:${i === 7 ? '#5BE3A0' : 'rgba(244,242,237,' + (.18 + i * .04) + ')'}` })),
+      progressStats: [['Protein days hit', '6/7', 'Third week running'], ['Plan adherence', '86%', 'Up from 71%'], ['Training days fueled', trainCount + '/' + trainCount, 'Pre and post, every session'], ['Avg cook time', '17m', 'You pick fast meals']].map(([label, value, note]) => ({ label, value, note })),
+      learnings: ['You swap eggs out most mornings — breakfasts now lean oats and yogurt.', 'You almost never cook past 20 minutes on practice days.', 'Steak and rice bowls get rated highest, so they come up more often.'],
+
+      navEven: navPrimary === 'Even tabs', navCenter: navPrimary === 'Center action',
+      tabs: tabsDef.map(mkTab), tabsSplitL: tabsDef.slice(0, 2).map(mkTab), tabsSplitR: tabsDef.slice(3).map(mkTab),
+
+      showMeal: s.overlay === 'meal', showSwap: s.overlay === 'swap',
+      closeOverlay: () => this.setState({ overlay: null }), meal,
+      mealActions: [['Swap meal', () => this.setState({ overlay: 'swap', deckIdx: 0, swapPick: null }), 1], ['Make it faster', () => this.toast('Rebuilt at 12 minutes')], ['Make it cheaper', () => this.toast('Swapped to thighs — now $4.20')], ['Use what I have', () => this.toast('Rebuilt around chicken, rice, cheese')]]
+        .map(([label, tap, primary]) => ({ label, tap, style: `padding:11px 16px;border-radius:99px;white-space:nowrap;flex:none;font-size:13px;font-weight:800;border:2px solid ${primary ? GREEN : 'rgba(17,24,21,.14)'};background:${primary ? GREEN : 'transparent'};color:${primary ? '#fff' : INK}` })),
+      addGrocery: () => { this.setState({ overlay: null, tab: 'grocery' }); this.toast('4 items added to your grocery list'); },
+
+      swapSheet: swapMode === 'Compare three', swapDeck: swapMode === 'Card deck',
+      swapOptions, swapDeckCards,
+      moreSwaps: () => { this.setState(st => ({ swapSet: (st.swapSet + 1) % 2, swapPick: null })); this.toast('Three more, same numbers'); },
+      deckSkip: () => this.setState(st => ({ deckIdx: st.deckIdx + 1 })),
+      deckKeep: () => { const pick = deckOrder[0]; this.setState({ overlay: null, swapCommitted: pick.id }); this.toast(`Swapped in ${MEALS[pick.id].name}`); },
+      swapBlocked: !s.swapPick,
+      swapCtaLabel: s.swapPick ? 'Swap it into tonight' : 'Pick a replacement',
+      swapCtaStyle: ctaBase + (s.swapPick ? `;background:${GREEN};color:#fff;box-shadow:0 8px 20px rgba(23,160,94,.28)` : ';background:rgba(17,24,21,.09);color:#A9A498;cursor:not-allowed'),
+      confirmSwap: () => { if (!s.swapPick) return; this.setState({ overlay: null, swapCommitted: s.swapPick }); this.toast(`Swapped in ${MEALS[s.swapPick].name}`); },
+
+      showGen: s.genOn,
+      genTitle: s.scope === 'week' ? 'Planning your week' : s.scope === 'day' ? 'Planning your day' : 'Finding your meal',
+      genSub: 'Working around your allergies, your kitchen and your training days.',
+      genSteps: ['Reading your preferences', 'Checking your kitchen', 'Matching your macros', 'Costing it out', 'Picking the best three'].map((l, i) => stepRow(s.genStep > i, s.genStep === i, l)),
+      showToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

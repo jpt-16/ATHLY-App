@@ -1,0 +1,17 @@
+{
+  "name": "ATHLY",
+  "short_name": "ATHLY",
+  "description": "Nutrition planning built around what an athlete likes to eat and when they train.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#E8E5DE",
+  "theme_color": "#111815",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
