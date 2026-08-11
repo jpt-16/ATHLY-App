@@ -1,0 +1,25 @@
+{
+  "_README": [
+    "Ingredient name -> the USDA FoodData Central food a person confirmed for it.",
+    "",
+    "This file is the whole point of the two-step ingest. `ingest.mjs` searches FDC",
+    "and writes its suggestions to candidates.json; nothing is used until an fdcId",
+    "appears here, put there by someone who read the candidates and chose. A search",
+    "ranking is not evidence: 'Cheese' returns forty foods and the first and fourth",
+    "differ by a hundred calories an ounce.",
+    "",
+    "  \"Rolled oats\": { \"fdcId\": 169705 }",
+    "",
+    "`portions` is the escape hatch for a quantity USDA cannot weigh — a recipe",
+    "says '1 cup' and the food publishes no cup portion. Put the gram weight you",
+    "chose here, so it is a number with an author rather than one this script",
+    "inferred:",
+    "",
+    "  \"Rolled oats\": { \"fdcId\": 169705, \"portions\": { \"cup\": 81 } }",
+    "",
+    "Verify any fdcId at https://fdc.nal.usda.gov/fdc-app.html#/food-details/<fdcId>",
+    "",
+    "Empty on purpose. Nobody has run the ingest against the live API yet, and a",
+    "seeded guess here would be exactly the unverified number this work removes."
+  ]
+}

@@ -58,7 +58,10 @@ export default defineConfig(({ mode }) => ({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // `tools/` is in here because the USDA ingest parses this repo's own recipe
+    // data, and the assertion that it reads all 44 meals rather than six is only
+    // useful if it runs with everything else.
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'tools/**/*.{test,spec}.mjs'],
     css: false,
   },
 }));

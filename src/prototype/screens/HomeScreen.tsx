@@ -433,55 +433,15 @@ export function HomeScreen({ v }: { v: ViewModel }) {
             </button>
           </div>
         </div>
-        {v.showInsight ? (
-          <>
-            <div style={S('padding:14px 22px 0;animation:ffIn .35s ease')}>
-              <div
-                style={S(
-                  'border:2px solid #17A05E;border-radius:18px;padding:15px 16px;background:rgba(23,160,94,.07);display:flex;gap:12px;align-items:flex-start',
-                )}
-              >
-                <div
-                  style={S(
-                    'width:22px;height:22px;border-radius:7px;background:#17A05E;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px',
-                  )}
-                >
-                  <span style={S('font-size:9px;font-weight:900;color:#fff;letter-spacing:-.04em')}>A</span>
-                </div>
-                <div style={S('flex:1')}>
-                  <div
-                    style={S(
-                      'font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#0E7B47;margin-bottom:4px',
-                    )}
-                  >
-                    Athly noticed
-                  </div>
-                  <div style={S('font-size:13.5px;line-height:1.45;font-weight:600;color:#111815')}>
-                    {v.insightText}
-                  </div>
-                  <div style={S('display:flex;gap:8px;margin-top:11px')}>
-                    <button
-                      onClick={v.learnYes}
-                      style={S(
-                        'padding:8px 14px;background:#17A05E;color:#fff;font-weight:800;font-size:12.5px;border-radius:10px',
-                      )}
-                    >
-                      Yes, drop them
-                    </button>
-                    <button
-                      onClick={v.learnNo}
-                      style={S(
-                        'padding:8px 14px;border:2px solid rgba(17,24,21,.14);font-weight:800;font-size:12.5px;border-radius:10px',
-                      )}
-                    >
-                      Keep them
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        ) : null}
+        {/*
+          An "Athly noticed" card sat here, telling every athlete they had
+          "swapped mushrooms out three times this week" and offering to drop the
+          ingredient for them. Nothing in the app records a swap: the count was a
+          literal, the ingredient came from whatever they had listed as a
+          dislike, and the two buttons dismissed a prompt about something that
+          never happened. Same call as the Progress tab's "What Athly learned" —
+          it can come back when there is swap history to draw it from.
+        */}
         <div style={S('padding:26px 22px 0')}>
           <div
             style={S('display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px')}

@@ -39,7 +39,7 @@ export function LogScreen({ v }: { v: ViewModel }) {
             <input
               value={v.search}
               onChange={v.searchChange}
-              placeholder="Search 400,000 foods"
+              placeholder="Search your foods"
               style={S(
                 'flex:1;border:0;outline:none;background:transparent;font:inherit;font-size:14.5px;caret-color:#17A05E',
               )}
@@ -111,21 +111,23 @@ export function LogScreen({ v }: { v: ViewModel }) {
                   )}
                 />
                 <div style={S('font-size:16px;font-weight:900;letter-spacing:-.02em;margin-bottom:6px')}>
-                  No custom foods yet
+                  {v.logEmptyTitle}
                 </div>
                 <div
                   style={S('font-size:13px;color:#6E6A60;line-height:1.5;max-width:230px;margin:0 auto 16px')}
                 >
-                  Made something of your own? Save it once and it's a one-tap log forever.
+                  {v.logEmptyBody}
                 </div>
-                <button
-                  onClick={v.toastCustom}
-                  style={S(
-                    'padding:11px 18px;background:#111815;color:#fff;font-weight:800;font-size:13px;border-radius:12px',
-                  )}
-                >
-                  Create a food
-                </button>
+                {v.logEmptyCta ? (
+                  <button
+                    onClick={v.logEmptyAction}
+                    style={S(
+                      'padding:11px 18px;background:#111815;color:#fff;font-weight:800;font-size:13px;border-radius:12px',
+                    )}
+                  >
+                    {v.logEmptyCta}
+                  </button>
+                ) : null}
               </div>
             </>
           ) : null}

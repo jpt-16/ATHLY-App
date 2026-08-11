@@ -33,3 +33,8 @@ tools/visual/diffs-auth/
 # supabase cli local state
 supabase/.branches/
 supabase/.temp/
+
+# usda ingest working file — regenerated on every run and only useful while you
+# are picking matches. The choices themselves live in matches.json, which is
+# committed, because those are the numbers anyone would want to audit.
+tools/usda/candidates.json

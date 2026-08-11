@@ -20,6 +20,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 
+import { TIMEZONE, pinClock } from './clock.mjs';
+
 const OUT = process.argv[2];
 const URL = process.argv[3] || 'http://localhost:4173/';
 if (!OUT) {
@@ -36,8 +38,13 @@ const fontFile = path.join(
 const fontB64 = fs.readFileSync(fontFile).toString('base64');
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
-const page = await browser.newPage({ viewport: { width: 520, height: 1050 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({
+  viewport: { width: 520, height: 1050 },
+  deviceScaleFactor: 2,
+  timezoneId: TIMEZONE,
+});
 page.on('pageerror', (e) => console.log('  [pageerror]', e.message));
+await pinClock(page);
 
 await page.route('https://fonts.googleapis.com/**', (route) =>
   route.fulfill({

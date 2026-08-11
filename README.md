@@ -59,16 +59,40 @@ the visual harness use.
   [Accounts and data](#accounts-and-data).
 - **Targets** — calories and macros derived from those answers, with the
   arithmetic shown: resting burn, training on top, the goal adjustment.
-- **Home** — the next meal, what's left of the day's calories and protein, and
-  the shape of a training day.
+- **Home** — the next meal, what's left of the day's calories and protein
+  measured against what was actually logged, and the shape of a training day.
 - **Plan** — ask in words or dial in constraints, then generate meals.
-- **Calendar, Log, Recipes, Grocery, Progress, Profile** — the rest of the tabs.
+- **Log** — record what was eaten; the ring on Home moves with it.
+- **Calendar, Recipes, Grocery, Progress, Profile** — the rest of the tabs.
 - **Meal and swap sheets** — why a meal was chosen, its recipe, and three
   alternatives with the same numbers.
 
-Everything after Targets still runs on prototype data: the day's totals are
-hardcoded, the meal plan is the same slots every day, and macros are authored
-estimates rather than computed. Real nutrition data is the next phase.
+### What is real, and what is not
+
+The distinction is worth stating plainly, because an app that reports on a
+teenager's eating should not be vague about which of its numbers are
+measurements.
+
+**Real:** the targets, the allergy filter, the calendar, and — since the food log
+landed — everything on Home and Progress. Log a meal and the ring moves; log
+nothing and it says nothing. A fresh account sees an empty ring and empty stats,
+which is the truth about a fresh account.
+
+**Not yet:** the meal _plan_ is still the same slots every day, the grocery list
+is a fixed list rather than one built from the week, and barcode and photo
+logging are still buttons that raise a toast.
+
+**Estimates, not measurements:** every recipe's calories and macros were authored
+by hand for the design prototype. They are plausible and unverified.
+[`tools/usda/`](#nutrition-data) exists to check them against USDA FoodData
+Central; until someone has run it and read the diff, treat those four numbers per
+meal as the estimates they are.
+
+Several things were **removed** rather than kept: a Progress tab whose adherence
+percentages and "what Athly learned" bullets were literals shown identically to
+every user, and a Home card that told everyone they had "swapped mushrooms out
+three times this week". Nothing records a swap, so nothing could have noticed
+one. They come back when there is data behind them.
 
 ## Accounts and data
 
@@ -93,6 +117,20 @@ so the database refuses to return another athlete's rows rather than trusting th
 client not to ask. `supabase/tests/rls.test.ts` proves it against a real
 Postgres: an anonymous client and a wrong-user client are both denied on every
 table, and a table added later without policies fails the suite by construction.
+
+**Views need their own guard, and it is easy to miss.** `daily_totals` sums
+`meal_logs` per day. A Postgres view runs with its _owner's_ privileges unless it
+is declared `security_invoker`, and the owner is the migration role, which RLS
+does not constrain — so a view over a perfectly protected table will hand every
+athlete every other athlete's totals. The migration sets the flag, and
+`rls_coverage()` was rewritten to report views as well as tables so the test
+catches the next one from the catalog rather than from a list somebody remembered
+to update.
+
+Food logs are the most sensitive rows here: what a named minor ate, by day. The
+macros are copied onto each log row rather than referenced, so editing a recipe —
+or revising its numbers after the USDA pass — cannot rewrite someone's history
+underneath them.
 
 The `service_role` key bypasses all of that. It never appears in `.env`, in the
 bundle, or in this repository — Supabase injects it into Edge Functions, which is
@@ -193,6 +231,51 @@ granola marked gluten, granola marked tree nuts, soy sauce marked gluten, Caesar
 dressing marked fish and egg and dairy — the reasoning is written down beside
 each entry. A tag that is too broad costs someone a meal; one that is too narrow
 costs them a reaction.
+
+## Nutrition data
+
+Every recipe's four numbers — 620 calories, 28g of protein, and so on — were
+written by hand for the design prototype. They look right. Nobody has checked
+them, and the app now does arithmetic on them and shows the result to a
+sixteen-year-old as a fact about their day.
+
+`tools/usda/` closes that gap against USDA FoodData Central. It runs locally,
+against your own key, and its output is committed data — **the app ships no key
+and makes no request to USDA.**
+
+```bash
+FDC_API_KEY=… node tools/usda/ingest.mjs   # propose matches, then build
+node tools/usda/report.mjs                 # computed vs authored, per meal
+```
+
+A key is free and instant from
+[api-key-signup](https://fdc.nal.usda.gov/api-key-signup.html). Keep it in your
+shell; it does not belong in this repo.
+
+Three rules, each because the alternative is a number nobody can defend:
+
+1. **No auto-accepted match.** The ingest _proposes_ FDC foods for each of the 88
+   ingredients and writes them to `candidates.json`. Nothing is used until an
+   `fdcId` appears in `matches.json`, put there by a person who read the
+   candidates. "Cheese" returns forty foods and the first and fourth differ by a
+   hundred calories an ounce; a search ranking is not evidence.
+2. **No invented gram weights.** Recipe quantities are free text — `1 cup`,
+   `2 tbsp`, `1 large`. Grams come from the matched food's own USDA portions,
+   because a cup of oats is 81g and a cup of rice is 185g and no general rule
+   gets you between them. A pair that cannot be resolved is _reported_, with the
+   portions USDA does publish, so you can add a weight you chose deliberately.
+3. **The switchover is a separate decision.** `report.mjs` prints computed
+   against authored for all 44 meals. Discrepancies are findings about the
+   authored numbers, not bugs to tune away — and the app keeps showing the
+   authored figures until someone has read the diff and decided.
+
+**One honest limitation.** These scripts were written against the FDC
+documentation, not against a live response: the environment they were built in
+cannot reach `api.nal.usda.gov`. The tests run on hand-written fixtures whose
+_shapes_ are researched and whose _numbers_ are invented (see
+`tools/usda/fixtures/README.md`). They validate hard and fail loudly with the raw
+payload rather than writing zeros, so expect the first real run to want a
+fix-up — that is the cheap failure, and the one worth designing for.
 
 ## Two presentations
 
@@ -329,6 +412,17 @@ backend, which is the app those twenty screens are of. The account screens have
 their own five-screen baseline, captured from a second build with credentials
 that point nowhere — `npm run test:visual:auth`.
 
+**Three baselines changed when the food log landed**, and only three: Home, the
+Log tab and Profile. Those screens used to show numbers nobody had measured — a
+ring fixed at `target − 1840`, a list of four meals ending in "Rice cakes & honey
+· Monday", `6/7 days on plan` — and now show an athlete's own, which for a fresh
+account means an empty ring and an empty list. The other seventeen are unchanged
+to the pixel.
+
+The harness freezes the browser clock (`tools/visual/clock.mjs`) before the app
+loads. The calendar and the week strip are drawn from the real date now, so
+without the pin every baseline would expire at midnight and again every month.
+
 ### What changed underneath
 
 The prototype ran on the design tool's runtime: it fetched React and Babel from
@@ -392,6 +486,28 @@ on once an error tracker exists to consume them.
 **Note for Vercel:** this repository has no `main` branch. Set the production
 branch to the one you are deploying, or Vercel will look for `main` and find
 nothing.
+
+## Before this is public
+
+Three things are outstanding, and none of them is a code change.
+
+**This is not medical or dietary advice, and the app does not say so anywhere
+yet.** It computes calorie and protein targets for 13–17-year-olds and now keeps
+a record of what they eat. A Registered Dietitian should review the targets
+arithmetic in `nutrition.ts` and the under-18 guardrails before anyone follows
+them — particularly the deficit path, where the interesting question is what the
+app should refuse to recommend.
+
+**The privacy posture needs a lawyer, not a developer's reading of a blog post.**
+Logged food intake tied to a named minor is health data about a child. Whatever
+that requires — parental consent, retention limits, a Privacy Policy and Terms,
+regional rules like COPPA or GDPR-K — is a question for someone qualified to
+answer it. Nothing in this repository should be read as a compliance claim. What
+it does have is the technical groundwork: RLS on every table, an audited
+deletion path, and no analytics or third-party trackers.
+
+**The macros are estimates.** See [Nutrition data](#nutrition-data). Shipping
+authored figures to people making decisions from them is the part to fix first.
 
 ## License
 

@@ -6,6 +6,8 @@
  * nutrition math can be checked at compile time.
  */
 
+import type { IsoDate } from '../lib/clock';
+
 export type Goal = 'gain' | 'perform' | 'lose' | 'habits';
 export type Sex = 'male' | 'female' | 'na';
 export type ProteinMode = 'rec' | 'gpp' | 'custom';
@@ -30,6 +32,36 @@ export type DaySpec = [DayMode, string, string, string];
 
 /** Day-of-week (0 = Sunday) to that day's training shape. */
 export type Week = Record<number, DaySpec>;
+
+/**
+ * Where a logged meal came from. Kept because "I tapped the meal the plan gave
+ * me" and "I typed something in myself" are different claims about the numbers
+ * that follow, and Phase 4 has to be able to tell them apart.
+ */
+export type LogSource = 'plan' | 'recent' | 'favorite' | 'custom' | 'swap';
+
+/**
+ * One thing an athlete ate.
+ *
+ * The macros are values on the log, not a pointer to a recipe. A log is a record
+ * of what happened; when a recipe is edited, or when the USDA pass revises its
+ * numbers, last Tuesday must not quietly become a different Tuesday.
+ */
+export interface MealLog {
+  id: string;
+  date: IsoDate;
+  /** Timestamp, for ordering within a day and for "this morning" style copy. */
+  loggedAt: string;
+  source: LogSource;
+  /** The recipe it came from, when it came from one. */
+  mealId: string | null;
+  name: string;
+  servings: number;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
 
 /**
  * Onboarding answers. Questions are addressed by key at runtime (`a[step.key]`),
@@ -70,9 +102,10 @@ export interface AppState {
   /** Day-of-week whose editor is expanded on the schedule question. */
   openDay: number | null;
   week: Week;
-  /** Per-date overrides of the weekly pattern, keyed by day of month. */
-  overrides: Record<number, DaySpec>;
-  selDay: number;
+  /** Per-date overrides of the weekly pattern, keyed by ISO date. */
+  overrides: Record<IsoDate, DaySpec>;
+  /** The calendar day being viewed or edited. */
+  selDate: IsoDate;
   tab: Tab;
   overlay: 'meal' | 'swap' | null;
   mealId: string;
@@ -95,10 +128,7 @@ export interface AppState {
   swapSet: number;
   logTab: string;
   search: string;
-  added: string[];
   checked: Record<string, boolean>;
-  insight: boolean;
-  nextEaten: boolean;
   swapCommitted: string | null;
   cat: number;
   /** Transient note shown when a pick moved an item between lists. */
@@ -114,6 +144,19 @@ export interface AppState {
   authBusy: boolean;
   /** True while onboarding answers are being read back for a returning athlete. */
   hydrating: boolean;
+
+  // --- food log -----------------------------------------------------------
+  /**
+   * Everything logged in the loaded window — the last four weeks, including
+   * today. One array rather than one per screen: Home totals today's entries,
+   * the Log tab reads the most recent, and Progress rolls the window up by week.
+   *
+   * With no backend configured these live here and nowhere else, which is the
+   * same bargain the rest of the app strikes: no account, no persistence.
+   */
+  logs: MealLog[];
+  /** True while that window is being read back. */
+  logsLoading: boolean;
 }
 
 /** What the app needs to know about who is signed in. */

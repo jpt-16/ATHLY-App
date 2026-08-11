@@ -49,22 +49,23 @@ export function ProgressScreen({ v }: { v: ViewModel }) {
             >
               Consistency, last 8 weeks
             </div>
-            <div style={S('display:flex;align-items:flex-end;gap:7px;height:96px')}>
-              {(v.weeks ?? []).map((w: VmRow, i: number) => (
-                <React.Fragment key={i}>
-                  <div style={S('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px')}>
-                    <div style={S(w.bar)} />
-                    <div style={S('font-size:9.5px;font-weight:700;color:rgba(244,242,237,.45)')}>
-                      {w.label}
+            {v.progressHasData ? (
+              <div style={S('display:flex;align-items:flex-end;gap:7px;height:96px')}>
+                {(v.weeks ?? []).map((w: VmRow, i: number) => (
+                  <React.Fragment key={i}>
+                    <div style={S('flex:1;display:flex;flex-direction:column;align-items:center;gap:8px')}>
+                      <div style={S(w.bar)} />
+                      <div style={S('font-size:9.5px;font-weight:700;color:rgba(244,242,237,.45)')}>
+                        {w.label}
+                      </div>
                     </div>
-                  </div>
-                </React.Fragment>
-              ))}
-            </div>
+                  </React.Fragment>
+                ))}
+              </div>
+            ) : null}
             <div style={S('height:2px;background:rgba(244,242,237,.12);margin:18px -20px 14px')} />
             <div style={S('font-size:13.5px;line-height:1.5;color:rgba(244,242,237,.72)')}>
-              You've hit your protein on 6 of 7 days for three weeks running. That's the part that's actually
-              moving the needle.
+              {v.progressSummary}
             </div>
           </div>
         </div>
@@ -95,44 +96,15 @@ export function ProgressScreen({ v }: { v: ViewModel }) {
             </React.Fragment>
           ))}
         </div>
-        <div style={S('padding:16px 22px 0')}>
-          <div
-            style={S(
-              'background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:18px',
-            )}
-          >
-            <div style={S('display:flex;align-items:center;gap:8px;margin-bottom:12px')}>
-              <div
-                style={S(
-                  'width:18px;height:18px;border-radius:5px;background:#111815;display:flex;align-items:center;justify-content:center;flex:none',
-                )}
-              >
-                <span style={S('font-size:7.5px;font-weight:900;color:#F4F2ED;letter-spacing:-.04em')}>
-                  A
-                </span>
-              </div>
-              <div
-                style={S(
-                  'font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779',
-                )}
-              >
-                What Athly learned
-              </div>
-            </div>
-            {(v.learnings ?? []).map((l: VmRow, i: number) => (
-              <React.Fragment key={i}>
-                <div style={S('display:flex;gap:11px;padding:11px 0;border-top:1px solid rgba(17,24,21,.1)')}>
-                  <div
-                    style={S(
-                      'width:7px;height:7px;border-radius:50%;background:#17A05E;margin-top:6px;flex:none',
-                    )}
-                  />
-                  <div style={S('font-size:13.5px;line-height:1.45;font-weight:600;color:#4A4740')}>{l}</div>
-                </div>
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
+        {/*
+          A "What Athly learned" card used to sit here, listing three things the
+          app had noticed about the athlete — which foods they swapped out, how
+          long they were willing to cook. It had noticed none of them: the three
+          lines were literals, identical for every user. Nothing in the app
+          tracks swaps or cook time yet, so there is nothing honest to put in
+          its place, and a card that makes things up about someone is worse than
+          no card. It comes back when the data behind it exists.
+        */}
       </div>
     </>
   );

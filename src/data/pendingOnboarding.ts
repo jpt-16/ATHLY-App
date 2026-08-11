@@ -1,5 +1,8 @@
 import type { PersistedState } from './profileRepo';
 import { withEveryWeekday } from './week';
+import { isIsoDate } from '../lib/clock';
+import type { IsoDate } from '../lib/clock';
+import type { DaySpec } from '../prototype/types';
 
 /**
  * Onboarding answers, parked across a page load.
@@ -69,12 +72,29 @@ export function readOnboarding(): PersistedState | null {
     }
     // This came out of storage the athlete can edit, and may have been written
     // by an older version of the app. A week missing a day crashes the render.
-    return { ...stash.state, week: withEveryWeekday(stash.state.week) };
+    return {
+      ...stash.state,
+      week: withEveryWeekday(stash.state.week),
+      // Overrides were keyed by day-of-month before the app knew what day it
+      // was. A `12` reaching the calendar becomes `Invalid Date`, so anything
+      // that is not a real date is dropped rather than guessed at — it costs a
+      // training-day tweak, not the thirteen answers this stash exists for.
+      overrides: onlyDatedOverrides(stash.state.overrides),
+    };
   } catch {
     // Corrupt or from an older shape. Drop it rather than reason about it.
     clearOnboarding();
     return null;
   }
+}
+
+function onlyDatedOverrides(overrides: unknown): Record<IsoDate, DaySpec> {
+  if (!overrides || typeof overrides !== 'object') return {};
+  const out: Record<IsoDate, DaySpec> = {};
+  for (const [key, spec] of Object.entries(overrides as Record<string, DaySpec>)) {
+    if (isIsoDate(key) && Array.isArray(spec)) out[key] = spec;
+  }
+  return out;
 }
 
 export function clearOnboarding(): void {

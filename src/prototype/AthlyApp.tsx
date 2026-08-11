@@ -32,12 +32,38 @@ import type {
   AuthView,
   DayMode,
   DaySpec,
+  LogSource,
+  MealLog,
   PlanScope,
   ProteinMode,
   Tab,
   Targets,
 } from './types';
 import { isAppleEnabled, isBackendConfigured } from '../lib/env';
+import {
+  addDays,
+  daysInMonth,
+  longDateLabel,
+  monthLabel,
+  relativeDayLabel,
+  shortDateLabel,
+  startOfMonth,
+  today as rightNow,
+  todayIso,
+  weekAround,
+  weekdayOf,
+} from '../lib/clock';
+import type { IsoDate } from '../lib/clock';
+import {
+  EMPTY_TOTALS,
+  adherence,
+  favoriteItems,
+  recentItems,
+  totalsFor,
+  weeklyCalories,
+} from '../data/dailyTotals';
+import { deleteLog, loadWindow, localLog, logMeal } from '../data/logRepo';
+import type { NewLog } from '../data/logRepo';
 import {
   deleteAccount,
   sendPasswordReset,
@@ -50,6 +76,79 @@ import {
 import { loadAccount, saveAccount } from '../data/profileRepo';
 import type { PersistedState } from '../data/profileRepo';
 import { clearOnboarding, readOnboarding, stashOnboarding } from '../data/pendingOnboarding';
+
+/**
+ * A tile for a food the app has no recipe for.
+ *
+ * Hashed from the name rather than picked at random, so a food someone types in
+ * looks the same every time they see it. `TILES.blocked` is not in the list: it
+ * means "the allergy filter emptied this slot" everywhere else, and reusing it
+ * for a hand-entered food would say something untrue.
+ */
+const FOOD_TILES: Tile[] = [
+  TILES.oats,
+  TILES.bowl,
+  TILES.snack,
+  TILES.steak,
+  TILES.shake,
+  TILES.salmon,
+  TILES.taco,
+  TILES.wrap,
+];
+
+/**
+ * The grocery list.
+ *
+ * Still a fixed list rather than one derived from the week's meals — building it
+ * from the plan is Phase 4 work, and it is a missing feature rather than a false
+ * claim. Named here so the count on the Profile screen can be taken from it: that
+ * card read `18` beside a list of fourteen items, which is the kind of number
+ * nobody can check and everybody believes.
+ */
+const GROCERY_LIST: [string, [string, string][]][] = [
+  [
+    'Produce',
+    [
+      ['Bananas', '6'],
+      ['Baby potatoes', '2 lb'],
+      ['Spinach', '1 bag'],
+      ['Green beans', '1 lb'],
+    ],
+  ],
+  [
+    'Meat',
+    [
+      ['Chicken breast', '3 lb'],
+      ['Sirloin', '2 steaks'],
+      ['Ground beef', '1 lb'],
+    ],
+  ],
+  [
+    'Dairy',
+    [
+      ['Whole milk', '1 gal'],
+      ['Greek yogurt', '32 oz'],
+      ['Shredded cheese', '8 oz'],
+    ],
+  ],
+  [
+    'Grains & pantry',
+    [
+      ['Rolled oats', '1 canister'],
+      ['Jasmine rice', '2 lb'],
+      ['Penne', '1 box'],
+      ['Honey', '1 jar'],
+    ],
+  ],
+];
+
+const GROCERY_COUNT = GROCERY_LIST.reduce((n, [, items]) => n + items.length, 0);
+
+function tileForName(name: string): Tile {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return FOOD_TILES[h % FOOD_TILES.length];
+}
 
 /**
  * Copy for each account screen, in one table.
@@ -178,7 +277,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       6: ['game', '11:00 am', '', ''],
     },
     overrides: {},
-    selDay: 12,
+    selDate: todayIso(),
     tab: 'home',
     overlay: null,
     mealId: 'snack',
@@ -199,10 +298,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     swapSet: 0,
     logTab: 'recent',
     search: '',
-    added: [],
     checked: {},
-    insight: true,
-    nextEaten: false,
     swapCommitted: null,
     cat: 0,
     authView: 'gate',
@@ -214,6 +310,8 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     // final one — the same reasoning as `useSession`, and the reason the pixel
     // baselines are unaffected by any of this.
     hydrating: isBackendConfigured,
+    logs: [],
+    logsLoading: isBackendConfigured,
   };
 
   /** Planner "generating…" ticker. */
@@ -315,6 +413,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     }
     if (!this._alive) return;
 
+    // The food log is loaded either way and never blocks the app: an athlete
+    // whose history fails to arrive should still see today's plan, with an empty
+    // ring, rather than a spinner.
+    void this.loadLogs();
+
     if (saved) {
       clearOnboarding();
       this.update({ ...saved, stage: 'app', tab: 'home', hydrating: false, authBusy: false });
@@ -361,7 +464,92 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       authPassword: '',
       authError: null,
       authBusy: false,
+      // Somebody else may be about to use this phone. What they ate is not the
+      // next person's business.
+      logs: [],
+      logsLoading: false,
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // The food log
+  // -------------------------------------------------------------------------
+
+  /** Read back the window the Home ring and the Progress tab are drawn from. */
+  private async loadLogs() {
+    if (!isBackendConfigured) return;
+    this.update({ logsLoading: true });
+    try {
+      const logs = await loadWindow(todayIso());
+      if (!this._alive) return;
+      this.update({ logs, logsLoading: false });
+    } catch {
+      // An unreadable log is an empty log rather than a broken screen. The ring
+      // shows nothing eaten, which is wrong but visibly so, and the next write
+      // reloads the window.
+      if (!this._alive) return;
+      this.update({ logsLoading: false });
+    }
+  }
+
+  /**
+   * Record something eaten.
+   *
+   * Optimistic: the entry goes into state immediately so the ring moves under
+   * the athlete's thumb, and is reconciled with the stored row when it lands. A
+   * failed write is taken back out and said out loud — a log that silently did
+   * not save is worse than one that visibly did not, because the athlete plans
+   * the rest of their day around the number.
+   */
+  private async addLog(entry: NewLog, toast: (l: MealLog) => string) {
+    const userId = this.props.userId;
+    const optimistic = localLog(entry, rightNow());
+    this.update((st) => ({ logs: st.logs.concat(optimistic) }));
+    this.toast(toast(optimistic));
+
+    if (!isBackendConfigured || !userId) return;
+    try {
+      const stored = await logMeal(userId, entry);
+      if (!this._alive) return;
+      this.update((st) => ({ logs: st.logs.map((l) => (l.id === optimistic.id ? stored : l)) }));
+    } catch {
+      if (!this._alive) return;
+      this.update((st) => ({ logs: st.logs.filter((l) => l.id !== optimistic.id) }));
+      this.toast("That didn't save — check your connection and log it again.");
+    }
+  }
+
+  /** Take an entry back out, in both places it lives. */
+  private async removeLog(id: string) {
+    const gone = this.state.logs.find((l) => l.id === id);
+    if (!gone) return;
+    this.update((st) => ({ logs: st.logs.filter((l) => l.id !== id) }));
+    this.toast(`${gone.name} removed`);
+
+    if (!isBackendConfigured || !this.props.userId) return;
+    try {
+      await deleteLog(id);
+    } catch {
+      if (!this._alive) return;
+      this.update((st) => ({ logs: st.logs.concat(gone) }));
+      this.toast("That didn't delete — try again.");
+    }
+  }
+
+  /** One log entry from a recipe in the plan. */
+  private mealEntry(mealId: string, source: LogSource): NewLog {
+    const m = MEALS[mealId];
+    return {
+      date: todayIso(),
+      source,
+      mealId,
+      name: m.name,
+      servings: 1,
+      kcal: m.kcal,
+      protein: m.p,
+      carbs: m.c,
+      fat: m.f,
+    };
   }
 
   /**
@@ -596,17 +784,20 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     return computeTargets(this.state);
   }
 
-  dayType(dateNum: number): DaySpec {
+  /**
+   * What a given date looks like: its own override if one was set, otherwise
+   * the weekly pattern for that weekday.
+   */
+  dayType(date: IsoDate): DaySpec {
     const s = this.state;
-    if (s.overrides[dateNum]) return s.overrides[dateNum];
-    const wd = new Date(2026, 7, dateNum).getDay();
-    return s.week[wd];
+    if (s.overrides[date]) return s.overrides[date];
+    return s.week[weekdayOf(date)];
   }
-  setDay(dateNum: number, mode: DayMode, time?: string) {
-    const cur = this.dayType(dateNum);
+  setDay(date: IsoDate, mode: DayMode, time?: string) {
+    const cur = this.dayType(date);
     this.update((st) => ({
       overrides: Object.assign({}, st.overrides, {
-        [dateNum]: [
+        [date]: [
           mode,
           time !== undefined ? time : mode === 'rest' ? '' : cur[1] || '4:30 pm',
           cur[2] || '',
@@ -615,10 +806,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       }),
     }));
   }
-  setLift(dateNum: number, lift: string) {
-    const cur = this.dayType(dateNum);
+  setLift(date: IsoDate, lift: string) {
+    const cur = this.dayType(date);
     this.update((st) => ({
-      overrides: Object.assign({}, st.overrides, { [dateNum]: [cur[0], cur[1], lift, cur[3] || ''] }),
+      overrides: Object.assign({}, st.overrides, { [date]: [cur[0], cur[1], lift, cur[3] || ''] }),
     }));
   }
   /** The athlete's declared constraints, in the shape the filter expects. */
@@ -751,6 +942,20 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const lbDiff = Math.abs(goalLb - s.lb);
     const name = (a.name || '').trim() || 'there';
     const tg = this.targets();
+    // Today, read once. Every date on every screen is derived from this, so a
+    // render that straddles midnight is still internally consistent.
+    const iso = todayIso();
+    // What has actually been eaten today. `1840` used to live here.
+    const logsToday = s.logs.filter((l) => l.date === iso);
+    const eaten = s.logs.length ? totalsFor(s.logs, iso) : EMPTY_TOTALS;
+    const weekBars = weeklyCalories(s.logs, tg.cal, iso, 8);
+    const adhere = adherence(s.logs, {
+      today: iso,
+      window: 7,
+      targetCal: tg.cal,
+      targetProtein: tg.protein,
+      week: s.week,
+    });
 
     const stepRow = (done: boolean, active: boolean, label: string) => ({
       label,
@@ -890,9 +1095,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const trainCount = Object.keys(s.week).filter((k) => s.week[+k][0] !== 'rest' || s.week[+k][2]).length;
     const liftCount = Object.keys(s.week).filter((k) => s.week[+k][2]).length;
 
-    // calendar
-    const first = new Date(2026, 7, 1).getDay(),
-      dim = 31;
+    // calendar — the month `selDate` falls in, not a month the app made up
+    const monthStart = startOfMonth(s.selDate);
+    const first = weekdayOf(monthStart),
+      dim = daysInMonth(s.selDate);
     const cells: { num: number | ''; blank?: number }[] = [];
     for (let i = 0; i < first; i++) cells.push({ num: '', blank: 1 });
     for (let d = 1; d <= dim; d++) cells.push({ num: d });
@@ -906,25 +1112,22 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           tap: () => {},
         };
       const num = c.num;
-      const [mode, , lift] = this.dayType(num);
-      const on = s.selDay === num,
-        today = num === 12;
+      const date = addDays(monthStart, num - 1);
+      const [mode, , lift] = this.dayType(date);
+      const on = s.selDate === date,
+        today = date === iso;
       return {
         num,
-        tap: () => this.update({ selDay: num }),
+        tap: () => this.update({ selDate: date }),
         style: `height:44px;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:${on ? INK : today ? 'rgba(17,24,21,.06)' : 'transparent'};transition:all .15s`,
         numStyle: `font-size:13px;font-weight:${today || on ? 800 : 600};color:${on ? '#F4F2ED' : INK}`,
         dot: `width:${lift && mode === 'rest' ? 9 : 5}px;height:5px;border-radius:3px;background:${mode === 'game' ? '#D4573A' : mode === 'practice' ? (on ? '#5BE3A0' : GREEN) : lift ? (on ? 'rgba(244,242,237,.55)' : '#8C8779') : 'transparent'}`,
       };
     });
-    const [selMode, selTime, selLift, selDur] = this.dayType(s.selDay);
-    const selDate = new Date(2026, 7, s.selDay);
+    const [selMode, selTime, selLift, selDur] = this.dayType(s.selDate);
     const selMeals = this.resolveSlots(dayMeals(selMode, selLift));
     const sel = {
-      dateLabel:
-        ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][selDate.getDay()] +
-        ', August ' +
-        s.selDay,
+      dateLabel: longDateLabel(s.selDate),
       modes: (
         [
           ['rest', 'Rest day'],
@@ -934,7 +1137,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       ).map(([v, l]) =>
         Object.assign(modeBtn(selMode, v, l, 12), {
           pick: () => {
-            this.setDay(s.selDay, v);
+            this.setDay(s.selDate, v);
             this.toast(
               v === 'rest'
                 ? 'Rest day — lighter carbs, same protein'
@@ -953,13 +1156,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       liftStateStyle: `font-size:11.5px;font-weight:800;letter-spacing:.04em;color:${selLift ? '#5BE3A0' : 'rgba(17,24,21,.4)'}`,
       liftToggle: () => {
         const v = selLift ? '' : '6:30 am';
-        this.setLift(s.selDay, v);
+        this.setLift(s.selDate, v);
         this.toast(v ? 'Lift added — pre-lift carbs and a recovery snack slotted in' : 'Lift removed');
       },
       liftTimes: LIFT_TIMES.map((t) => ({
         label: t,
         pick: () => {
-          this.setLift(s.selDay, t);
+          this.setLift(s.selDate, t);
           this.toast('Lifting snacks moved around ' + t);
         },
         style: this.small(selLift === t) + ';white-space:nowrap;flex:none',
@@ -968,7 +1171,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       times: TIMES.map((t) => ({
         label: t,
         pick: () => {
-          this.setDay(s.selDay, selMode, t);
+          this.setDay(s.selDate, selMode, t);
           this.toast('Meals shifted around ' + t);
         },
         style: this.small(selTime === t) + ';white-space:nowrap;flex:none',
@@ -993,19 +1196,26 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             : 'Rest day. Protein stays where it is, carbs come down a little, and nothing takes longer than 20 minutes.'),
     };
 
-    const todayMode = this.dayType(12)[0],
-      todayTime = this.dayType(12)[1];
-    const todaySlots = this.resolveSlots(dayMeals(todayMode, this.dayType(12)[2]));
-    const eatenIdx = s.nextEaten ? 1 : 0;
-    const upcoming = todaySlots.slice(2 + eatenIdx);
-    // The hero shows the next meal the athlete can actually eat. If the slot the
+    const todayMode = this.dayType(iso)[0],
+      todayTime = this.dayType(iso)[1];
+    const todaySlots = this.resolveSlots(dayMeals(todayMode, this.dayType(iso)[2]));
+
+    // What is left of today, decided by what has actually been logged.
+    //
+    // The prototype assumed the first two meals of the day were already eaten
+    // and started the list at index 2 — which was fine for a screenshot taken at
+    // lunchtime and wrong every other hour. A slot drops off this list when
+    // something logged today came from it, so logging lunch first moves lunch
+    // out of the way rather than breakfast.
+    const eatenIds = new Set(logsToday.map((l) => l.mealId).filter((id): id is string => !!id));
+    const remaining = todaySlots.filter((r) => !r.mealId || !eatenIds.has(r.mealId));
+    // The hero is the next meal the athlete can actually eat. If the slot the
     // day called for was emptied by an allergy, skip past it rather than lead
     // with a hole; only an entirely blocked day falls through to `null`.
-    const heroIdx = 2 + eatenIdx;
-    const heroSlot =
-      todaySlots.slice(heroIdx).find((r) => r.mealId) ?? todaySlots.find((r) => r.mealId) ?? null;
+    const heroSlot = remaining.find((r) => r.mealId) ?? todaySlots.find((r) => r.mealId) ?? null;
     const nm = heroSlot?.mealId ? MEALS[heroSlot.mealId] : null;
-    const blockedHero = todaySlots[heroIdx] ?? todaySlots[todaySlots.length - 1];
+    const upcoming = remaining.filter((r) => r !== heroSlot);
+    const blockedHero = remaining[0] ?? todaySlots[todaySlots.length - 1];
     const nfA = nm ? field(nm.id, 18, 12) : null;
     const nfB = nm ? field(nm.id, 13, 9) : null;
     const heroField = (fs: number, pad: number) =>
@@ -1038,18 +1248,17 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           why: ['Check your allergies in Profile', 'Add more favourites'],
         };
 
-    const remainCal = Math.max(0, tg.cal - 1840),
-      remainPro = Math.max(0, tg.protein - 98);
-    const pctCal = Math.min(100, Math.round((1840 / tg.cal) * 100));
+    const remainCal = Math.max(0, tg.cal - eaten.kcal),
+      remainPro = Math.max(0, tg.protein - eaten.protein);
+    const pctCal = tg.cal > 0 ? Math.min(100, Math.round((eaten.kcal / tg.cal) * 100)) : 0;
 
-    const weekStrip = [0, 1, 2, 3, 4, 5, 6].map((i) => {
-      const d = 9 + i,
-        [mode, , lift] = this.dayType(d),
-        today = d === 12;
+    const weekStrip = weekAround(iso).map((date) => {
+      const [mode, , lift] = this.dayType(date),
+        today = date === iso;
       return {
-        day: DAYS[new Date(2026, 7, d).getDay()][0],
-        num: d,
-        tap: () => this.update({ tab: 'calendar', selDay: d }),
+        day: DAYS[weekdayOf(date)][0],
+        num: Number(date.slice(8, 10)),
+        tap: () => this.update({ tab: 'calendar', selDate: date }),
         style: `flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0 8px;border-radius:14px;background:${today ? INK : '#fff'};transition:all .15s`,
         dayStyle: `font-size:9.5px;font-weight:800;letter-spacing:.06em;color:${today ? 'rgba(244,242,237,.55)' : '#A9A498'}`,
         numStyle: `font-size:14px;font-weight:900;letter-spacing:-.02em;color:${today ? '#F4F2ED' : INK}`,
@@ -1122,19 +1331,27 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       )
       .map((c) => ({ label: c.l, style: cChip(c.t) }));
 
-    const logData: Record<string, [string, string, Tile][]> = {
-      recent: [
-        ['Peanut butter banana oats', '620 cal · this morning', TILES.oats],
-        ['Chicken burrito bowl', '780 cal · yesterday', TILES.bowl],
-        ['Chocolate milk', '210 cal · yesterday', TILES.shake],
-        ['Rice cakes & honey', '190 cal · Monday', TILES.snack],
-      ],
-      favorites: [
-        ['Steak & roast potatoes', '765 cal · 47g protein', TILES.steak],
-        ['Chicken burrito bowl', '780 cal · 52g protein', TILES.bowl],
-        ['Greek yogurt & granola', '320 cal · 22g protein', TILES.shake],
-      ],
-    };
+    // The Log tab, from the athlete's own entries.
+    //
+    // These four lines used to be a fixed list ending in "Rice cakes & honey ·
+    // Monday", shown to everyone on every Monday and every other day. Recent is
+    // what they last logged; Favorites is what they log repeatedly — a fact the
+    // app can observe, unlike a rating it never asked for.
+    //
+    // The search field filters these. It was bound to state and filtered nothing,
+    // under a placeholder promising "Search 400,000 foods" — a database that does
+    // not exist. It searches what the athlete has actually logged, and says so.
+    const logSearch = s.search.trim().toLowerCase();
+    const logItems = (
+      s.logTab === 'favorites'
+        ? favoriteItems(s.logs, 40)
+        : s.logTab === 'recent'
+          ? recentItems(s.logs, 40)
+          : []
+    )
+      .filter((item) => !logSearch || item.name.toLowerCase().includes(logSearch))
+      .slice(0, 8);
+    const nowHour = rightNow().getHours();
 
     const tabsDef: [Tab, string][] = [
       ['home', 'Home'],
@@ -1535,9 +1752,12 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           overlay: null,
           genDone: false,
           swapCommitted: null,
-          insight: true,
-          nextEaten: false,
           overrides: {},
+          selDate: iso,
+          // Local-only restart. With an account the rows stay in the database —
+          // "restart the prototype" is a demo control, not account deletion,
+          // which lives in Profile and says so.
+          logs: isBackendConfigured ? s.logs : [],
         }),
       noop: () => this.toast('Kitchen inventory lives in Profile'),
 
@@ -1550,24 +1770,26 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         pro: remainPro,
         pct: pctCal + '%',
         calBar: `width:${pctCal}%;height:100%;background:#111815;border-radius:99px`,
-        proBar: `width:${Math.min(100, Math.round((98 / tg.protein) * 100))}%;height:100%;background:${GREEN};border-radius:99px`,
+        proBar: `width:${tg.protein > 0 ? Math.min(100, Math.round((eaten.protein / tg.protein) * 100)) : 0}%;height:100%;background:${GREEN};border-radius:99px`,
       },
       macroBars: (
         [
-          ['Protein', 'Pro', 98, tg.protein, GREEN],
-          ['Carbs', 'Carb', 240, tg.carbs, '#111815'],
-          ['Fat', 'Fat', 58, tg.fat, '#C08B4A'],
+          ['Protein', 'Pro', eaten.protein, tg.protein, GREEN],
+          ['Carbs', 'Carb', eaten.carbs, tg.carbs, '#111815'],
+          ['Fat', 'Fat', eaten.fat, tg.fat, '#C08B4A'],
         ] as [string, string, number, number, string][]
       ).map(([name, short, had, goal2, col]) => ({
         name,
         short,
         text: `${had}/${goal2}g`,
-        fill: `width:${Math.min(100, (had / goal2) * 100)}%;height:100%;background:${col};border-radius:99px`,
+        fill: `width:${goal2 > 0 ? Math.min(100, (had / goal2) * 100) : 0}%;height:100%;background:${col};border-radius:99px`,
       })),
       eatNext: () => {
         if (!nm) return;
-        this.update({ nextEaten: true });
-        this.toast(`${nm.name} logged — ${remainPro}g protein to go`);
+        const left = Math.max(0, tg.protein - eaten.protein - nm.p);
+        void this.addLog(this.mealEntry(nm.id, 'plan'), () =>
+          left ? `${nm.name} logged — ${left}g protein to go` : `${nm.name} logged — protein target hit`,
+        );
       },
       openNext: () => {
         if (!nm) {
@@ -1584,18 +1806,6 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           : this.slotRow(r),
       ),
       dayShape: todayMode === 'game' ? 'Game day' : todayMode === 'practice' ? 'Hard day' : 'Rest day',
-      showInsight: s.insight && s.tab === 'home',
-      insightText: (a.dislikes || []).length
-        ? `You've swapped ${(a.dislikes[0] || 'eggs').toLowerCase()} out three times this week. Want me to stop putting it in your meals?`
-        : "You've swapped eggs out three times this week. Want me to stop putting them in your breakfasts?",
-      learnYes: () => {
-        this.update({ insight: false });
-        this.toast('Got it — dropped from your rotation');
-      },
-      learnNo: () => {
-        this.update({ insight: false });
-        this.toast('Keeping them in rotation');
-      },
       trainingBadge: todayMode === 'game' ? 'Game day' : todayMode === 'practice' ? 'Hard day' : 'Rest day',
       trainingBadgeStyle: `padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;${todayMode === 'game' ? 'background:rgba(212,87,58,.14);color:#A03A22' : todayMode === 'practice' ? 'background:rgba(23,160,94,.12);color:#0E7B47' : 'background:rgba(17,24,21,.07);color:#6E6A60'}`,
       trainingRail: (todayMode === 'rest'
@@ -1627,7 +1837,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             ? `Practice at ${todayTime}. Carbs are stacked before it and protein lands after.`
             : 'No training today, so carbs come down a little and protein holds.',
 
-      calMonth: 'August 2026',
+      calMonth: monthLabel(s.selDate),
       calHeads: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => ({
         label: label + (i === 0 ? '' : ''),
       })),
@@ -1644,7 +1854,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       sel,
       replanDay: () =>
         this.toast(
-          `August ${s.selDay} rebuilt — ${selMeals.length} meals around your ${selMode === 'rest' ? 'rest day' : selMode}`,
+          `${shortDateLabel(s.selDate)} rebuilt — ${selMeals.length} meals around your ${selMode === 'rest' ? 'rest day' : selMode}`,
         ),
 
       constraints,
@@ -1742,24 +1952,71 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         pick: () => this.update({ logTab: v }),
         style: `padding:12px 0;font-size:13.5px;font-weight:800;color:${s.logTab === v ? INK : '#A9A498'};border-bottom:3px solid ${s.logTab === v ? GREEN : 'transparent'};margin-bottom:-2px`,
       })),
-      logEmpty: s.logTab === 'custom',
-      logList: s.logTab !== 'custom',
-      logItems: (logData[s.logTab] || []).map(([nm2, meta, t], i) => {
-        const sh = shapes(t, 46),
-          on = s.added.includes(s.logTab + i);
+      logEmpty: s.logTab === 'custom' || logItems.length === 0,
+      logList: s.logTab !== 'custom' && logItems.length > 0,
+      // The empty states were three strings baked into the screen, which was
+      // fine while only one list could be empty. All three can be now.
+      ...(s.logTab === 'custom'
+        ? {
+            logEmptyTitle: 'No custom foods yet',
+            logEmptyBody: "Made something of your own? Save it once and it's a one-tap log forever.",
+            logEmptyCta: 'Create a food',
+            logEmptyAction: () => this.toast('Custom food builder would open'),
+          }
+        : s.logTab === 'favorites'
+          ? {
+              logEmptyTitle: 'No favourites yet',
+              // Deliberately explains the rule rather than inventing entries:
+              // a favourite here means something logged more than once.
+              logEmptyBody: 'Log a meal more than once and it turns up here, ready to tap.',
+              logEmptyCta: '',
+              logEmptyAction: () => {},
+            }
+          : {
+              logEmptyTitle: 'Nothing logged yet',
+              logEmptyBody: 'Log what you eat and it lands here, along with your rings on Home.',
+              logEmptyCta: 'Back to today',
+              logEmptyAction: () => this.update({ tab: 'home' }),
+            }),
+      logItems: logItems.map((item) => {
+        const sh = shapes(item.mealId ? MEALS[item.mealId].tile : tileForName(item.name), 46);
+        const loggedToday = logsToday.filter((l) =>
+          item.mealId ? l.mealId === item.mealId : l.name.toLowerCase() === item.name.toLowerCase(),
+        );
+        const on = loggedToday.length > 0;
         return {
-          name: nm2,
-          meta,
+          name: item.name,
+          meta:
+            s.logTab === 'favorites'
+              ? `${item.kcal} cal · ${item.protein}g protein`
+              : `${item.kcal} cal · ${relativeDayLabel(item.lastLogged.date, iso, nowHour)}`,
           tileStyle: sh.tileStyle,
           s1: sh.s1,
           s2: sh.s2,
           btnText: on ? 'Logged' : 'Log',
           btnStyle: `padding:8px 15px;border-radius:99px;font-size:12.5px;font-weight:800;${on ? 'background:rgba(23,160,94,.13);color:#0E7B47' : `background:${INK};color:#F4F2ED`}`,
           add: () => {
-            if (!on) {
-              this.update((st) => ({ added: st.added.concat(st.logTab + i) }));
-              this.toast(`${nm2} logged`);
+            // The same button undoes it. A mis-tap here is 780 calories the
+            // athlete did not eat, sitting on their ring for the rest of the
+            // day, and the design has nowhere else to put an undo.
+            if (on) {
+              void this.removeLog(loggedToday[loggedToday.length - 1].id);
+              return;
             }
+            void this.addLog(
+              {
+                date: iso,
+                source: s.logTab === 'favorites' ? 'favorite' : 'recent',
+                mealId: item.mealId,
+                name: item.name,
+                servings: 1,
+                kcal: item.kcal,
+                protein: item.protein,
+                carbs: item.carbs,
+                fat: item.fat,
+              },
+              () => `${item.name} logged`,
+            );
           },
         };
       }),
@@ -1893,44 +2150,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         })),
       })),
 
-      groceryGroups: (
-        [
-          [
-            'Produce',
-            [
-              ['Bananas', '6'],
-              ['Baby potatoes', '2 lb'],
-              ['Spinach', '1 bag'],
-              ['Green beans', '1 lb'],
-            ],
-          ],
-          [
-            'Meat',
-            [
-              ['Chicken breast', '3 lb'],
-              ['Sirloin', '2 steaks'],
-              ['Ground beef', '1 lb'],
-            ],
-          ],
-          [
-            'Dairy',
-            [
-              ['Whole milk', '1 gal'],
-              ['Greek yogurt', '32 oz'],
-              ['Shredded cheese', '8 oz'],
-            ],
-          ],
-          [
-            'Grains & pantry',
-            [
-              ['Rolled oats', '1 canister'],
-              ['Jasmine rice', '2 lb'],
-              ['Penne', '1 box'],
-              ['Honey', '1 jar'],
-            ],
-          ],
-        ] as [string, [string, string][]][]
-      ).map(([title, items]) => ({
+      groceryGroups: GROCERY_LIST.map(([title, items]) => ({
         title,
         items: items.map(([nm3, qty]) => {
           const key = title + nm3,
@@ -1950,23 +2170,43 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         }),
       })),
 
-      weeks: [58, 66, 71, 64, 79, 84, 88, 92].map((v, i) => ({
-        label: 'W' + (i + 1),
-        bar: `width:100%;height:${v}%;border-radius:6px;background:${i === 7 ? '#5BE3A0' : 'rgba(244,242,237,' + (0.18 + i * 0.04) + ')'}`,
+      // Progress, entirely from the logs.
+      //
+      // Every number on this screen used to be a literal — `86%` adherence, `up
+      // from 71%`, `17m` average cook time — shown identically to everyone. They
+      // read as facts about the person looking at them, which is exactly what
+      // they were not. What survives is what the app can actually observe.
+      // Profile's second stat card said `6/7 days on plan` to everyone, forever.
+      daysLogged: `${adhere.daysLogged}/${adhere.window}`,
+      groceryCount: GROCERY_COUNT,
+      progressHasData: weekBars.some((w) => w.hasData),
+      weeks: weekBars.map((w, i) => ({
+        label: w.label,
+        // Uncapped percentages would run off the top of a 96px row, so the bar
+        // stops at 100 while the stat cards below still tell the truth.
+        bar: `width:100%;height:${Math.min(100, w.pct)}%;border-radius:6px;background:${i === weekBars.length - 1 ? '#5BE3A0' : 'rgba(244,242,237,' + (0.18 + i * 0.04) + ')'}`,
       })),
+      progressSummary: !weekBars.some((w) => w.hasData)
+        ? 'Nothing logged yet. Log what you eat and this fills in — one bar a week, and the numbers below start counting.'
+        : `You logged food on ${adhere.daysLogged} of the last ${adhere.window} days${
+            adhere.proteinDays ? `, and hit your protein target on ${adhere.proteinDays} of them` : ''
+          }.`,
       progressStats: (
         [
-          ['Protein days hit', '6/7', 'Third week running'],
-          ['Plan adherence', '86%', 'Up from 71%'],
-          ['Training days fueled', trainCount + '/' + trainCount, 'Pre and post, every session'],
-          ['Avg cook time', '17m', 'You pick fast meals'],
+          ['Days logged', `${adhere.daysLogged}/${adhere.window}`, 'Last seven days'],
+          ['Protein hit', `${adhere.proteinDays}/${adhere.window}`, `Target is ${tg.protein}g a day`],
+          [
+            'Calories on target',
+            `${adhere.calorieDays}/${adhere.window}`,
+            `Within 10% of ${tg.cal.toLocaleString()}`,
+          ],
+          [
+            'Training days fueled',
+            `${adhere.trainingFueled}/${adhere.trainingDays}`,
+            adhere.trainingDays ? 'Training days with food logged' : 'No training this week',
+          ],
         ] as [string, string, string][]
       ).map(([label, value, note]) => ({ label, value, note })),
-      learnings: [
-        'You swap eggs out most mornings — breakfasts now lean oats and yogurt.',
-        'You almost never cook past 20 minutes on practice days.',
-        'Steak and rice bowls get rated highest, so they come up more often.',
-      ],
 
       navEven: navPrimary === 'Even tabs',
       navCenter: navPrimary === 'Center action',

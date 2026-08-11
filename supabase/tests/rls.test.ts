@@ -53,6 +53,7 @@ const OWNED_TABLES = [
   'user_allergens',
   'training_week',
   'training_overrides',
+  'meal_logs',
 ] as const;
 
 type Owned = (typeof OWNED_TABLES)[number];
@@ -88,6 +89,19 @@ function sampleRow(table: Owned, userId: string): Record<string, unknown> {
       return { user_id: userId, weekday: 1, mode: 'practice', session_time: '4:30 pm' };
     case 'training_overrides':
       return { user_id: userId, override_date: '2026-08-12', mode: 'game' };
+    case 'meal_logs':
+      return {
+        user_id: userId,
+        log_date: '2026-08-12',
+        source: 'plan',
+        meal_id: 'breakfast',
+        name: 'Peanut butter banana oats',
+        servings: 1,
+        kcal: 620,
+        protein_g: 28,
+        carbs_g: 82,
+        fat_g: 21,
+      };
   }
 }
 
@@ -95,6 +109,16 @@ interface Actor {
   id: string;
   email: string;
   client: SupabaseClient;
+}
+
+/** One row of `rls_coverage()`: a table or a view, and how it is protected. */
+interface CoverageRow {
+  object_name: string;
+  kind: 'table' | 'view';
+  rls_enabled: boolean;
+  policy_count: number;
+  /** Null for tables; false is the dangerous value for a view. */
+  security_invoker: boolean | null;
 }
 
 const admin = createClient(URL, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -154,23 +178,46 @@ describe('coverage', () => {
     const { data, error } = await admin.rpc('rls_coverage');
     expect(error).toBeNull();
 
-    const tables = (data ?? []) as { table_name: string; rls_enabled: boolean; policy_count: number }[];
-    expect(tables.length).toBeGreaterThan(0);
+    const objects = (data ?? []) as CoverageRow[];
+    expect(objects.length).toBeGreaterThan(0);
 
-    const unprotected = tables.filter((t) => !t.rls_enabled).map((t) => t.table_name);
+    const unprotected = objects.filter((o) => o.kind === 'table' && !o.rls_enabled).map((o) => o.object_name);
     expect(unprotected).toEqual([]);
   });
 
   it('gives every athlete-facing table at least one policy', async () => {
     const { data } = await admin.rpc('rls_coverage');
-    const tables = (data ?? []) as { table_name: string; rls_enabled: boolean; policy_count: number }[];
+    const objects = (data ?? []) as CoverageRow[];
 
     // `deleted_accounts` is the deliberate exception: RLS on, no policies at
     // all, which makes it unreachable to every client but the service role.
-    const silent = tables
-      .filter((t) => t.table_name !== 'deleted_accounts' && Number(t.policy_count) === 0)
-      .map((t) => t.table_name);
+    const silent = objects
+      .filter(
+        (o) => o.kind === 'table' && o.object_name !== 'deleted_accounts' && Number(o.policy_count) === 0,
+      )
+      .map((o) => o.object_name);
     expect(silent).toEqual([]);
+  });
+
+  /**
+   * The one that would have shipped the leak.
+   *
+   * A Postgres view runs with its *owner's* privileges unless it is declared
+   * `security_invoker`, and the owner here is the migration role, which RLS does
+   * not constrain. `daily_totals` sums a table whose policies are airtight —
+   * and without this flag it would hand every athlete every other athlete's
+   * totals anyway. The table is not the hole; the view is.
+   *
+   * Asked of the catalog rather than of a list, so the next view somebody adds
+   * is covered on the day it appears.
+   */
+  it('runs every view as its invoker, not as its owner', async () => {
+    const { data } = await admin.rpc('rls_coverage');
+    const views = (data ?? []).filter((o: CoverageRow) => o.kind === 'view') as CoverageRow[];
+
+    expect(views.length).toBeGreaterThan(0);
+    const ownerRights = views.filter((v) => !v.security_invoker).map((v) => v.object_name);
+    expect(ownerRights).toEqual([]);
   });
 
   it('does not expose the coverage function to ordinary clients', async () => {
@@ -234,6 +281,48 @@ describe.each(OWNED_TABLES)('%s', (table) => {
     const { error } = await bob.client.from(table).insert(sampleRow(table, bob.id));
     expect(error).toBeNull();
     await bob.client.from(table).delete().eq('user_id', bob.id);
+  });
+});
+
+/**
+ * The view, exercised the way a client uses it.
+ *
+ * The catalog test above proves `security_invoker` is set. These prove what that
+ * setting buys: an aggregate that leaks nothing an athlete could not already
+ * read from `meal_logs` itself.
+ */
+describe('daily_totals', () => {
+  it('adds up only the caller’s own day', async () => {
+    const { data, error } = await alice.client.from('daily_totals').select('*');
+    expect(error).toBeNull();
+    expect((data ?? []).length).toBeGreaterThan(0);
+    for (const row of data ?? []) {
+      expect((row as { user_id: string }).user_id).toBe(alice.id);
+    }
+
+    const seeded = (data ?? []).find((r) => (r as { log_date: string }).log_date === '2026-08-12');
+    // The one seeded entry, summed: 620 calories, 28g of protein.
+    expect(seeded).toMatchObject({ kcal: 620, protein_g: 28, entries: 1 });
+  });
+
+  it("shows user B nothing of user A's totals", async () => {
+    const { data } = await bob.client.from('daily_totals').select('*');
+    const foreign = (data ?? []).filter((row) => (row as { user_id: string }).user_id === alice.id);
+    expect(foreign).toEqual([]);
+  });
+
+  it('is invisible to an anonymous client', async () => {
+    const { data } = await anon.from('daily_totals').select('*');
+    expect(data ?? []).toEqual([]);
+  });
+
+  it('cannot be written through', async () => {
+    // Not a security boundary — Postgres refuses an insert into a grouped view
+    // outright — but worth pinning: nothing should ever treat this as a table.
+    const { error } = await alice.client
+      .from('daily_totals')
+      .insert({ user_id: alice.id, log_date: '2026-08-13', kcal: 1, protein_g: 1, carbs_g: 1, fat_g: 1 });
+    expect(error).not.toBeNull();
   });
 });
 

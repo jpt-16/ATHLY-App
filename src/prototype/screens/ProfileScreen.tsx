@@ -36,7 +36,9 @@ export function ProfileScreen({ v }: { v: ViewModel }) {
             onClick={v.goGrocery}
             style={S('background:#fff;border-radius:14px;padding:15px;text-align:left')}
           >
-            <div style={S('font-size:22px;font-weight:900;font-stretch:113%;letter-spacing:-.013em')}>18</div>
+            <div style={S('font-size:22px;font-weight:900;font-stretch:113%;letter-spacing:-.013em')}>
+              {v.groceryCount}
+            </div>
             <div style={S('font-size:12px;font-weight:700;color:#6E6A60;margin-top:2px')}>
               on the grocery list
             </div>
@@ -47,9 +49,9 @@ export function ProfileScreen({ v }: { v: ViewModel }) {
             style={S('background:#fff;border-radius:14px;padding:15px;text-align:left')}
           >
             <div style={S('font-size:22px;font-weight:900;font-stretch:113%;letter-spacing:-.013em')}>
-              6/7
+              {v.daysLogged}
             </div>
-            <div style={S('font-size:12px;font-weight:700;color:#6E6A60;margin-top:2px')}>days on plan</div>
+            <div style={S('font-size:12px;font-weight:700;color:#6E6A60;margin-top:2px')}>days logged</div>
           </button>
         </div>
         <div style={S('padding:0 22px')}>

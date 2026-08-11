@@ -19,11 +19,16 @@
  *   on.
  * - **Only the frame is captured**, via the `data-om-starter` marker, so page
  *   chrome and scrollbar differences stay out of the comparison.
+ * - **The clock is frozen**, because the app renders a real calendar. Without
+ *   the pin, `16-home` — which carries the week strip and today's date — would
+ *   differ from its baseline every single day.
  */
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+
+import { TIMEZONE, pinClock } from './clock.mjs';
 
 const OUT = process.argv[2];
 const URL = process.argv[3] || 'http://localhost:4173/';
@@ -43,8 +48,13 @@ const fontB64 = fs.readFileSync(fontFile).toString('base64');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 // Wide enough that the shell renders its desktop branch — the compact branch
 // has no frame to photograph, and the baselines are of the framed layout.
-const page = await browser.newPage({ viewport: { width: 520, height: 1050 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({
+  viewport: { width: 520, height: 1050 },
+  deviceScaleFactor: 2,
+  timezoneId: TIMEZONE,
+});
 page.on('pageerror', (e) => console.log('  [pageerror]', e.message));
+await pinClock(page);
 
 await page.route('https://fonts.googleapis.com/**', (route) =>
   route.fulfill({

@@ -1,0 +1,50 @@
+{
+  "fdcId": 169705,
+  "description": "Cereals, oats, regular and quick, not fortified, dry",
+  "dataType": "SR Legacy",
+  "foodNutrients": [
+    {
+      "type": "FoodNutrient",
+      "nutrient": { "id": 1003, "name": "Protein", "unitName": "G" },
+      "amount": 13.2
+    },
+    {
+      "type": "FoodNutrient",
+      "nutrient": { "id": 1004, "name": "Total lipid (fat)", "unitName": "G" },
+      "amount": 6.5
+    },
+    {
+      "type": "FoodNutrient",
+      "nutrient": { "id": 1005, "name": "Carbohydrate, by difference", "unitName": "G" },
+      "amount": 67.7
+    },
+    {
+      "type": "FoodNutrient",
+      "nutrient": { "id": 1008, "name": "Energy", "unitName": "KJ" },
+      "amount": 1628
+    },
+    {
+      "type": "FoodNutrient",
+      "nutrient": { "id": 1008, "name": "Energy", "unitName": "KCAL" },
+      "amount": 380
+    }
+  ],
+  "foodPortions": [
+    {
+      "id": 1,
+      "amount": 1,
+      "gramWeight": 81,
+      "modifier": "cup",
+      "measureUnit": { "id": 1000, "name": "cup", "abbreviation": "cup" },
+      "portionDescription": "1 cup"
+    },
+    {
+      "id": 2,
+      "amount": 4,
+      "gramWeight": 20,
+      "modifier": "tbsp",
+      "measureUnit": { "id": 9999, "name": "undetermined", "abbreviation": "undetermined" },
+      "portionDescription": "4 tbsp"
+    }
+  ]
+}

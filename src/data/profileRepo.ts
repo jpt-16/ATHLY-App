@@ -11,6 +11,8 @@ import type {
   TrainingWeekRow,
 } from '../lib/database.types';
 import { withEveryWeekday } from './week';
+import { isIsoDate } from '../lib/clock';
+import type { IsoDate } from '../lib/clock';
 import { ALLERGEN_BY_LABEL } from '../prototype/foodFacts';
 import { computeTargets } from '../prototype/nutrition';
 import type { AppState, DayMode, DaySpec, ProteinMode, Sex, Week } from '../prototype/types';
@@ -34,29 +36,6 @@ export type PersistedState = Pick<
   AppState,
   'a' | 'age' | 'ft' | 'inch' | 'lb' | 'goalLb' | 'rate' | 'pMode' | 'pCustom' | 'week' | 'overrides'
 >;
-
-/**
- * The month the prototype's calendar is anchored to.
- *
- * The app's `overrides` are keyed by day-of-month against a hard-coded August
- * 2026 (`AthlyApp.tsx:227` and friends), which is prototype scaffolding, not a
- * design decision. The database stores real dates, because that is what a date
- * is; the conversion lives here so the wart stays in one file and disappears the
- * day the calendar becomes real, without a migration.
- */
-const ANCHOR_YEAR = 2026;
-/** Zero-based, as `Date` wants it. August. */
-const ANCHOR_MONTH = 7;
-
-function dayToDate(day: number): string {
-  const mm = String(ANCHOR_MONTH + 1).padStart(2, '0');
-  const dd = String(day).padStart(2, '0');
-  return `${ANCHOR_YEAR}-${mm}-${dd}`;
-}
-
-function dateToDay(iso: string): number {
-  return Number(iso.slice(8, 10));
-}
 
 /** Chip label → enum, and back. Derived, so the two can never disagree. */
 const LABEL_BY_ALLERGEN: Record<string, string> = Object.fromEntries(
@@ -184,9 +163,13 @@ export async function saveAccount(userId: string, s: PersistedState): Promise<vo
     .upsert(weekRows, { onConflict: 'user_id,weekday' });
   if (weekError) throw weekError;
 
-  const overrideRows: TrainingOverrideRow[] = Object.entries(s.overrides).map(([day, spec]) => ({
+  // `override_date` was always a real `date` column; until this phase the app
+  // keyed its overrides by day-of-month against a hardcoded August 2026 and a
+  // shim here converted between the two. The app keeps ISO dates now, so the
+  // conversion is gone and these are simply the same string on both sides.
+  const overrideRows: TrainingOverrideRow[] = Object.entries(s.overrides).map(([date, spec]) => ({
     user_id: userId,
-    override_date: dayToDate(Number(day)),
+    override_date: date,
     mode: spec[0] as DayModeDb,
     session_time: spec[1] ?? '',
     lift_time: spec[2] ?? '',
@@ -236,9 +219,12 @@ export async function loadAccount(): Promise<PersistedState | null> {
     ] as DaySpec;
   }
 
-  const overridesOut: Record<number, DaySpec> = {};
+  const overridesOut: Record<IsoDate, DaySpec> = {};
   for (const row of overrides.data ?? []) {
-    overridesOut[dateToDay(row.override_date)] = [
+    // A row whose date the app cannot parse would key an override that never
+    // matches a day, and would be handed to `fromIsoDate` by the calendar.
+    if (!isIsoDate(row.override_date)) continue;
+    overridesOut[row.override_date] = [
       oneOf(DAY_MODES, row.mode, 'rest'),
       row.session_time ?? '',
       row.lift_time ?? '',

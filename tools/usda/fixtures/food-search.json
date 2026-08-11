@@ -1,0 +1,30 @@
+{
+  "totalHits": 3,
+  "currentPage": 1,
+  "foods": [
+    {
+      "fdcId": 169705,
+      "description": "Cereals, oats, regular and quick, not fortified, dry",
+      "dataType": "SR Legacy",
+      "foodNutrients": [
+        { "nutrientId": 1008, "nutrientName": "Energy", "unitName": "KCAL", "value": 380 },
+        { "nutrientId": 1003, "nutrientName": "Protein", "unitName": "G", "value": 13.2 }
+      ]
+    },
+    {
+      "fdcId": 173904,
+      "description": "Oats, whole grain, rolled, old fashioned",
+      "dataType": "Foundation",
+      "foodNutrients": [
+        { "nutrientId": 2048, "nutrientName": "Energy (Atwater Specific)", "unitName": "KCAL", "value": 371 },
+        { "nutrientId": 1003, "nutrientName": "Protein", "unitName": "G", "value": 13.5 }
+      ]
+    },
+    {
+      "fdcId": 999999,
+      "description": "Oat beverage, unsweetened",
+      "dataType": "SR Legacy",
+      "foodNutrients": [{ "nutrientId": 1003, "nutrientName": "Protein", "unitName": "G", "value": 1.1 }]
+    }
+  ]
+}

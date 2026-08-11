@@ -99,8 +99,41 @@ export type EntitlementRow = {
   updated_at: string;
 };
 
+export type LogSourceDb = 'plan' | 'recent' | 'favorite' | 'custom' | 'swap';
+
+export type MealLogRow = {
+  id: string;
+  user_id: string;
+  /** `YYYY-MM-DD`, in the athlete's own timezone. */
+  log_date: string;
+  logged_at: string;
+  source: LogSourceDb;
+  meal_id: string | null;
+  name: string;
+  servings: number;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+};
+
+/**
+ * The `daily_totals` view. Read-only from here — `Insert` and `Update` exist
+ * only because the client's table type demands them, and Postgres will refuse
+ * either way.
+ */
+export type DailyTotalsRow = {
+  user_id: string;
+  log_date: string;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  entries: number;
+};
+
 /** Columns the database fills in for us, and so are not required on insert. */
-type Generated = 'created_at' | 'updated_at' | 'computed_at' | 'declared_at';
+type Generated = 'created_at' | 'updated_at' | 'computed_at' | 'declared_at' | 'id' | 'logged_at';
 
 type Table<Row> = {
   Row: Row;
@@ -119,8 +152,11 @@ export interface Database {
       training_week: Table<TrainingWeekRow>;
       training_overrides: Table<TrainingOverrideRow>;
       entitlements: Table<EntitlementRow>;
+      meal_logs: Table<MealLogRow>;
     };
-    Views: Record<never, never>;
+    Views: {
+      daily_totals: Table<DailyTotalsRow>;
+    };
     Functions: Record<never, never>;
     Enums: {
       goal_kind: GoalKind;
@@ -128,6 +164,7 @@ export interface Database {
       protein_mode: ProteinModeDb;
       day_mode: DayModeDb;
       allergen: AllergenDb;
+      log_source: LogSourceDb;
     };
     CompositeTypes: Record<never, never>;
   };
@@ -147,6 +184,7 @@ export const USER_TABLES = [
   'user_allergens',
   'training_week',
   'training_overrides',
+  'meal_logs',
 ] as const;
 
 export type UserTable = (typeof USER_TABLES)[number];
