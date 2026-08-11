@@ -179,7 +179,7 @@ export function SwapSheet({ v }: { v: ViewModel }) {
             </div>
             <div
               style={S(
-                'position:sticky;bottom:0;padding:16px 22px 32px;margin-top:16px;background:linear-gradient(to top,#F4F2ED 72%,rgba(244,242,237,0))',
+                'position:sticky;bottom:0;padding:16px 22px calc(32px + env(safe-area-inset-bottom, 0px));margin-top:16px;background:linear-gradient(to top,#F4F2ED 72%,rgba(244,242,237,0))',
               )}
             >
               <button onClick={v.confirmSwap} disabled={v.swapBlocked} style={S(v.swapCtaStyle)}>
@@ -328,7 +328,11 @@ export function SwapSheet({ v }: { v: ViewModel }) {
                 ))}
               </div>
             </div>
-            <div style={S('padding:16px 22px 30px;display:flex;gap:12px;align-items:center')}>
+            <div
+              style={S(
+                'padding:16px 22px calc(30px + env(safe-area-inset-bottom, 0px));display:flex;gap:12px;align-items:center',
+              )}
+            >
               <button
                 className={'dc-ho3'}
                 onClick={v.deckSkip}

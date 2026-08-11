@@ -419,7 +419,9 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       {
         label: 'Age',
         value: s.age + ' yrs',
-        dec: () => this.update((st) => ({ age: Math.max(12, st.age - 1) })),
+        // Floor is 13, not 12: under-13s put the app inside COPPA, which brings
+        // verifiable parental consent and a separate data regime with it.
+        dec: () => this.update((st) => ({ age: Math.max(13, st.age - 1) })),
         inc: () => this.update((st) => ({ age: Math.min(60, st.age + 1) })),
       },
       {

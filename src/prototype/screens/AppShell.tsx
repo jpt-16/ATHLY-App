@@ -27,7 +27,11 @@ export function AppShell({ v }: { v: ViewModel }) {
       {v.isProgress ? <ProgressScreen v={v} /> : null}
       <div
         style={S(
-          'position:absolute;left:0;right:0;bottom:0;z-index:30;padding:0 14px 26px;background:linear-gradient(to top,#F4F2ED 62%,rgba(244,242,237,0))',
+          // The `env()` addition is the only departure from the design's string.
+          // Running full-bleed on a phone, the tab bar's 26px of bottom padding
+          // sits under the home indicator; on a desktop and inside the drawn
+          // frame the inset is 0 and this resolves to the original 26px.
+          'position:absolute;left:0;right:0;bottom:0;z-index:30;padding:0 14px calc(26px + env(safe-area-inset-bottom, 0px));background:linear-gradient(to top,#F4F2ED 62%,rgba(244,242,237,0))',
         )}
       >
         {v.navEven ? (

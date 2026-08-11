@@ -51,3 +51,41 @@ jobs:
           name: dist
           path: dist
           retention-days: 7
+
+  visual:
+    # The design is the asset this project was built to preserve, so the pixel
+    # comparison that proved the port is a gate, not a one-off. Separate job: it
+    # needs a browser, and the rest of CI should not wait for that download.
+    name: Visual regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npx vite build
+
+      - name: Compare against baseline
+        run: npm run test:visual
+
+      - name: Upload diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: |
+            tools/visual/diffs
+            tools/visual/.capture
+          retention-days: 7

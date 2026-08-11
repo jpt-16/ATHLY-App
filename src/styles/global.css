@@ -20,6 +20,32 @@ body {
   box-sizing: border-box;
 }
 
+/* ── compact (phone) presentation ────────────────────────────────── */
+/*
+ * Below 500px the page chrome and the drawn bezel are gone (see
+ * `PrototypeShell`), so the app is the whole page: the ground behind it should
+ * be the app's own, not the desktop page's, or an overscroll bounce flashes the
+ * wrong colour. `overscroll-behavior` suppresses pull-to-refresh, which
+ * otherwise fires on any downward drag once the app is on the home screen.
+ */
+@media (max-width: 500px) {
+  html,
+  body {
+    background: #f4f2ed;
+    overscroll-behavior-y: none;
+  }
+}
+
+/*
+ * `100dvh` tracks Safari's collapsing URL bar; `100vh` does not, and leaves the
+ * bottom nav hidden behind it. The `100vh` line first is the fallback for
+ * browsers that do not know `dvh` — they ignore the second declaration.
+ */
+.athly-fill {
+  height: 100vh;
+  height: 100dvh;
+}
+
 a {
   color: #17a05e;
 }

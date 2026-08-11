@@ -21,3 +21,7 @@ coverage/
 .idea/
 .DS_Store
 *.swp
+
+# visual harness working files (the baseline is committed; these are not)
+tools/visual/.capture/
+tools/visual/diffs/

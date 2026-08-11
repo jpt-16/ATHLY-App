@@ -12,7 +12,7 @@ export function TargetsScreen({ v }: { v: ViewModel }) {
       <div
         className={'ffs'}
         style={S(
-          'position:absolute;inset:0;background:#111815;overflow-y:auto;padding:0 26px 34px;animation:ffFade .35s ease',
+          'position:absolute;inset:0;background:#111815;overflow-y:auto;padding:0 26px calc(34px + env(safe-area-inset-bottom, 0px));animation:ffFade .35s ease',
         )}
       >
         <div style={S('padding-top:62px;display:flex;align-items:center;gap:10px;margin-bottom:24px')}>

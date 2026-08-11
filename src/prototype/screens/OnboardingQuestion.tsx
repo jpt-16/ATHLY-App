@@ -472,7 +472,11 @@ export function OnboardingQuestion({ v }: { v: ViewModel }) {
           </>
         ) : null}
       </div>
-      <div style={S('padding:14px 22px 30px;border-top:2px solid rgba(17,24,21,.1);background:#F4F2ED')}>
+      <div
+        style={S(
+          'padding:14px 22px calc(30px + env(safe-area-inset-bottom, 0px));border-top:2px solid rgba(17,24,21,.1);background:#F4F2ED',
+        )}
+      >
         <button onClick={v.obNext} disabled={v.obBlocked} style={S(v.obCtaStyle)}>
           <span>{v.obCta}</span>
           <svg

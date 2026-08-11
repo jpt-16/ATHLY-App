@@ -10,7 +10,7 @@ export function OnboardingIntro({ v }: { v: ViewModel }) {
     <>
       <div
         style={S(
-          'position:absolute;inset:0;background:#111815;display:flex;flex-direction:column;justify-content:flex-end;padding:0 26px 46px;animation:ffFade .4s ease',
+          'position:absolute;inset:0;background:#111815;display:flex;flex-direction:column;justify-content:flex-end;padding:0 26px calc(46px + env(safe-area-inset-bottom, 0px));animation:ffFade .4s ease',
         )}
       >
         <div style={S('position:absolute;top:0;left:0;right:0;height:430px;overflow:hidden')}>

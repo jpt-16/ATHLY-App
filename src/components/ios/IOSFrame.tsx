@@ -367,6 +367,7 @@ export function IOSDevice({
   dark = false,
   title,
   keyboard = false,
+  bare = false,
 }: {
   children?: ReactNode;
   width?: number;
@@ -374,42 +375,69 @@ export function IOSDevice({
   dark?: boolean;
   title?: string;
   keyboard?: boolean;
+  /**
+   * Drop the drawn hardware and fill the viewport instead.
+   *
+   * On a real phone the OS already draws a status bar, a dynamic island and a
+   * home indicator. Drawing ours on top doubles every one of them — two clocks,
+   * two home bars — so in bare mode the frame reduces to a plain full-height
+   * box and the screens run edge to edge. Everything else about the app is
+   * unchanged; this component is the only thing that knows the difference.
+   */
+  bare?: boolean;
 }) {
   return (
     // data-om-starter: inert presence marker — Claude Design's starter-usage
-    // probe reads it; it renders nothing. Keep it on this root element.
+    // probe reads it; it renders nothing. Keep it on this root element in both
+    // modes: the test suite and the visual harness both key off it.
     <div
       data-om-starter="ios-frame"
-      style={{
-        width,
-        height,
-        borderRadius: 48,
-        overflow: 'hidden',
-        position: 'relative',
-        background: dark ? '#000' : '#F2F2F7',
-        boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
-        fontFamily: '-apple-system, system-ui, sans-serif',
-        WebkitFontSmoothing: 'antialiased',
-      }}
+      className={bare ? 'athly-fill' : undefined}
+      style={
+        bare
+          ? {
+              width: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              background: dark ? '#000' : '#F2F2F7',
+              fontFamily: '-apple-system, system-ui, sans-serif',
+              WebkitFontSmoothing: 'antialiased',
+            }
+          : {
+              width,
+              height,
+              borderRadius: 48,
+              overflow: 'hidden',
+              position: 'relative',
+              background: dark ? '#000' : '#F2F2F7',
+              boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
+              fontFamily: '-apple-system, system-ui, sans-serif',
+              WebkitFontSmoothing: 'antialiased',
+            }
+      }
     >
       {/* dynamic island */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 11,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 126,
-          height: 37,
-          borderRadius: 24,
-          background: '#000',
-          zIndex: 50,
-        }}
-      />
+      {!bare && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 11,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 126,
+            height: 37,
+            borderRadius: 24,
+            background: '#000',
+            zIndex: 50,
+          }}
+        />
+      )}
       {/* status bar (absolute) */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
-        <IOSStatusBar dark={dark} />
-      </div>
+      {!bare && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+          <IOSStatusBar dark={dark} />
+        </div>
+      )}
       {/* nav + content */}
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         {title !== undefined && <IOSNavBar title={title} dark={dark} />}
@@ -417,30 +445,32 @@ export function IOSDevice({
         {keyboard && <IOSKeyboard dark={dark} />}
       </div>
       {/* home indicator — always on top */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 60,
-          height: 34,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'flex-end',
-          paddingBottom: 8,
-          pointerEvents: 'none',
-        }}
-      >
+      {!bare && (
         <div
           style={{
-            width: 139,
-            height: 5,
-            borderRadius: 100,
-            background: dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)',
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 60,
+            height: 34,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
+            paddingBottom: 8,
+            pointerEvents: 'none',
           }}
-        />
-      </div>
+        >
+          <div
+            style={{
+              width: 139,
+              height: 5,
+              borderRadius: 100,
+              background: dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)',
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

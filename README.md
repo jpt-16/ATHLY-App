@@ -28,6 +28,14 @@ npm run dev        # http://localhost:5173
 | `npm run format`  | Prettier (`format:check` in CI)                |
 | `npm run verify`  | Everything CI runs, in one command             |
 
+Two more, both needing a build first and a Chromium
+(`npx playwright install chromium`):
+
+| Script                | What it does                                           |
+| --------------------- | ------------------------------------------------------ |
+| `npm run test:visual` | Pixel-diffs the app against the baseline — see below   |
+| `npm run icons`       | Regenerates the PNG app icons from the mark's geometry |
+
 ## What is in the app
 
 A complete, self-contained walkthrough of the product, with no backend:
@@ -82,6 +90,35 @@ dressing marked fish and egg and dairy — the reasoning is written down beside
 each entry. A tag that is too broad costs someone a meal; one that is too narrow
 costs them a reaction.
 
+## Two presentations
+
+The design draws a phone: a bezel, a dynamic island, a status bar reading 9:41,
+a home indicator. On a desktop that framing is the point. On an actual phone it
+is a 402px bezel crammed into a 390px viewport with a fake clock above the real
+one.
+
+So below 500px — the frame's own width plus its page padding, so the crossover
+is where the bezel stops fitting rather than a guess at a device size — the page
+chrome and the drawn hardware go away and the screens fill the viewport. The app
+is untouched by this; `IOSDevice` is the only component that knows the
+difference, and `useIsCompact` is the only thing that decides.
+
+The compact branch needs `matchMedia` to say so. Where it is missing, or cannot
+evaluate a query — jsdom, which is every test — the answer is the framed branch,
+which is what the suite and the visual baselines are written against.
+
+**Safe areas.** Added to the Home Screen the app runs under the status bar and
+over the home indicator, so anything anchored to the bottom edge — the tab bar,
+the onboarding CTA, the swap sheet's commit button — carries
+`calc(Npx + env(safe-area-inset-bottom, 0px))`. Where there is no inset that is
+exactly the design's original value, which is why none of it moved a pixel.
+`env()` reads 0 without `viewport-fit=cover` in `index.html`; the two go
+together.
+
+The top edge needed nothing: the design already opens each screen 60–62px down,
+which is where it put its own drawn status bar, and that clears the real one on
+every iPhone since the notch.
+
 ## Architecture
 
 ```
@@ -91,6 +128,8 @@ src/
 ├── components/
 │   ├── ErrorBoundary.tsx        keeps a render failure off the whole page
 │   └── ios/IOSFrame.tsx         the iOS 26 device shell the screens sit in
+├── hooks/
+│   └── useIsCompact.ts          phone viewport, or desktop
 ├── prototype/
 │   ├── AthlyApp.tsx             all state; derives the view model
 │   ├── viewModel.ts             ViewModel type, inferred from AthlyApp
@@ -134,10 +173,15 @@ a backend.
 
 ## Fidelity
 
-The port is checked, not assumed. The original prototype and this build were
-driven through the same twenty-step walkthrough in Chromium — onboarding start
-to finish, then each app tab — and the phone frame was captured at 2× on both
-and compared pixel by pixel.
+The port is checked, not assumed, and the check is a gate rather than a one-off:
+`npm run test:visual` drives the app through a twenty-step walkthrough in
+Chromium — onboarding start to finish, then each app tab — captures the phone
+frame at 2×, and pixel-diffs it against a committed baseline. CI runs it on
+every push. See [`tools/visual/`](./tools/visual/README.md).
+
+The baseline was itself verified against the original prototype running under
+the design tool's runtime, driven through that same walkthrough and compared the
+same way.
 
 **Nineteen of twenty screens are byte-identical. The twentieth differs by one
 word, on purpose:** the "what won't you eat" step shipped without a `tag`, so its
@@ -149,8 +193,11 @@ deliberate visual change in the port.
 That comparison still passes after allergy filtering was added, and it is meant
 to: an athlete who declares nothing sees exactly the meals the design shipped,
 because each slot's candidate list is ordered with the original first. The
-screens change only once an allergy is declared — which is the point. Re-run the
-comparison after any change that touches rendering.
+screens change only once an allergy is declared — which is the point.
+
+It passes after the compact and safe-area work too, and for a similar reason:
+every inset is `calc(Npx + env(…, 0px))`, which is the design's own value
+wherever there is no inset.
 
 ### What changed underneath
 
@@ -166,7 +213,7 @@ survives here.
 | `style="…"` parsed by the tool's runtime        | same strings, parsed by `S()` and memoised        |
 | `style-hover="…"` → classes injected at runtime | static CSS classes in `global.css`                |
 | One 2,000-line HTML file                        | typed modules, one file per screen                |
-| No types, no tests, no build                    | strict TypeScript, 69 tests, ESLint, Prettier, CI |
+| No types, no tests, no build                    | strict TypeScript, 77 tests, ESLint, Prettier, CI |
 
 Hover rules carry `!important` because the elements they apply to have inline
 styles — that is how the design tool did it too, and dropping it would silently
@@ -193,10 +240,22 @@ comparison over rather than a free swap.
 
 ## Deployment
 
-The build is a static bundle in `dist/` — any static host will serve it
-(Vercel, Netlify, Cloudflare Pages, S3 + CloudFront, nginx). There is no server,
-no API and no runtime configuration. CI builds every push and uploads `dist/` as
-an artifact.
+The build is a static bundle in `dist/` — any static host will serve it (Vercel,
+Netlify, Cloudflare Pages, S3 + CloudFront, nginx). There is no server, no API
+and no runtime configuration. CI builds every push and uploads `dist/` as an
+artifact.
+
+`vercel.json` carries the build config and four security headers. It has no SPA
+rewrite: with a single route, a catch-all rewrite would turn genuine 404s into
+200s. That lands with routing.
+
+Source maps are off. `'hidden'` still writes the `.map` into `dist/`, where a
+public host serves it at a guessable path — obscurity, not privacy. It goes back
+on once an error tracker exists to consume them.
+
+**Note for Vercel:** this repository has no `main` branch. Set the production
+branch to the one you are deploying, or Vercel will look for `main` and find
+nothing.
 
 ## License
 
