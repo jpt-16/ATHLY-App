@@ -13,7 +13,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Off entirely: `'hidden'` still writes the .map into dist, where a public
+    // host serves it at a guessable path — obscurity, not privacy. Switch to
+    // `'hidden'` once an error tracker is wired up to consume and strip them.
+    sourcemap: false,
     target: 'es2022',
   },
   test: {
