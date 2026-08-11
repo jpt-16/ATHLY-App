@@ -42,8 +42,12 @@ jobs:
       - name: Test
         run: npm test
 
+      # `build:local`, not `build`. A production build refuses to run without
+      # Supabase credentials, deliberately — a bundle with none looks like a
+      # working product and saves nothing. CI checks that the code compiles, and
+      # has no business holding deploy credentials to do it.
       - name: Build
-        run: npx vite build
+        run: npm run build:local
 
       - name: Upload build
         uses: actions/upload-artifact@v4
@@ -74,11 +78,20 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      # The local-only app is the one the twenty baselines are of: with no
+      # backend configured there is no account gate, and the walkthrough is the
+      # one the design shipped.
       - name: Build
-        run: npx vite build
+        run: npm run build:local
 
       - name: Compare against baseline
         run: npm run test:visual
+
+      # The account screens exist only with a backend configured, so this builds
+      # a second time against a host that does not resolve. Every screen it
+      # photographs renders before any request is made.
+      - name: Compare account screens against baseline
+        run: npm run test:visual:auth
 
       - name: Upload diffs
         if: failure()
@@ -87,5 +100,7 @@ jobs:
           name: visual-diffs
           path: |
             tools/visual/diffs
+            tools/visual/diffs-auth
             tools/visual/.capture
+            tools/visual/.capture-auth
           retention-days: 7

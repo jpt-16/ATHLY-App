@@ -4,5 +4,8 @@ node_modules
 package-lock.json
 design
 tools/visual/baseline
+tools/visual/baseline-auth
 tools/visual/.capture
+tools/visual/.capture-auth
 tools/visual/diffs
+tools/visual/diffs-auth

@@ -14,6 +14,8 @@ coverage/
 # environment
 .env
 .env.*
+# ...but the template carries no values, and someone cloning this needs it.
+!.env.example
 
 # editors
 .vscode/*
@@ -22,6 +24,12 @@ coverage/
 .DS_Store
 *.swp
 
-# visual harness working files (the baseline is committed; these are not)
+# visual harness working files (the baselines are committed; these are not)
 tools/visual/.capture/
+tools/visual/.capture-auth/
 tools/visual/diffs/
+tools/visual/diffs-auth/
+
+# supabase cli local state
+supabase/.branches/
+supabase/.temp/

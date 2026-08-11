@@ -26,7 +26,107 @@ import type { SlotConstraints } from './filtering';
 import { ALLERGEN_LABEL } from './foodFacts';
 import type { Allergen } from './foodFacts';
 import { PrototypeShell } from './PrototypeShell';
-import type { AppState, AthlyProps, DayMode, DaySpec, PlanScope, ProteinMode, Tab, Targets } from './types';
+import type {
+  AppState,
+  AthlyProps,
+  AuthView,
+  DayMode,
+  DaySpec,
+  PlanScope,
+  ProteinMode,
+  Tab,
+  Targets,
+} from './types';
+import { isAppleEnabled, isBackendConfigured } from '../lib/env';
+import {
+  deleteAccount,
+  sendPasswordReset,
+  signInWithEmail,
+  signInWithProvider,
+  signOut,
+  signUpWithEmail,
+  updatePassword,
+} from '../auth/authActions';
+import { loadAccount, saveAccount } from '../data/profileRepo';
+import type { PersistedState } from '../data/profileRepo';
+import { clearOnboarding, readOnboarding, stashOnboarding } from '../data/pendingOnboarding';
+
+/**
+ * Copy for each account screen, in one table.
+ *
+ * Six screens differing only in their words is six screens' worth of markup if
+ * the words live in the markup. Here it is one component and a lookup, which is
+ * also why they cannot drift apart visually.
+ */
+const AUTH_COPY: Record<
+  AuthView,
+  Record<'stepLabel' | 'kicker' | 'title' | 'sub' | 'hint' | 'cta' | 'busy', string>
+> = {
+  gate: { stepLabel: '', kicker: '', title: '', sub: '', hint: '', cta: '', busy: '' },
+  signUp: {
+    stepLabel: 'Last',
+    kicker: 'Last step · Account',
+    title: 'Make it yours.',
+    sub: 'An email and a password, and your plan is saved for good.',
+    hint: 'We send one email to confirm it is you. At least 8 characters for the password.',
+    cta: 'Create my account',
+    busy: 'Creating…',
+  },
+  signIn: {
+    stepLabel: '',
+    kicker: 'Account',
+    title: 'Welcome back.',
+    sub: 'Sign in and everything you set up comes with you.',
+    hint: 'Signing in on a new device pulls down your targets, schedule and food preferences.',
+    cta: 'Sign in',
+    busy: 'Signing in…',
+  },
+  forgot: {
+    stepLabel: '',
+    kicker: 'Account',
+    title: 'Reset your password.',
+    sub: 'Tell us the email on the account and we will send a link.',
+    hint: 'If there is an account with that address, the link is on its way. It is good for one hour.',
+    cta: 'Send the link',
+    busy: 'Sending…',
+  },
+  setPassword: {
+    stepLabel: '',
+    kicker: 'Account',
+    title: 'Choose a new password.',
+    sub: 'Pick something you have not used here before.',
+    hint: 'At least 8 characters.',
+    cta: 'Save it',
+    busy: 'Saving…',
+  },
+  checkEmail: {
+    stepLabel: '',
+    kicker: 'Account',
+    title: 'Check your email.',
+    sub: 'We sent a link to confirm your address. Open it and your plan is saved.',
+    hint: 'Nothing there? Look in spam. Your answers are safe on this device until you confirm.',
+    cta: 'Back to sign in',
+    busy: '',
+  },
+  resetSent: {
+    stepLabel: '',
+    kicker: 'Account',
+    title: 'Link sent.',
+    sub: 'If that address has an account, a reset link is in the inbox now.',
+    hint: 'The link expires in an hour. You can ask for another one if it does.',
+    cta: 'Back to sign in',
+    busy: '',
+  },
+  confirmDelete: {
+    stepLabel: '',
+    kicker: 'Account',
+    title: 'Delete your account?',
+    sub: 'Your targets, schedule, food preferences and allergies are removed. This cannot be undone.',
+    hint: 'You can make a new account any time, but nothing from this one comes back.',
+    cta: 'Delete it',
+    busy: 'Deleting…',
+  },
+};
 
 /** One slot of a day after the allergy filter has had its say. */
 interface ResolvedSlot {
@@ -105,6 +205,15 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     nextEaten: false,
     swapCommitted: null,
     cat: 0,
+    authView: 'gate',
+    authEmail: '',
+    authPassword: '',
+    authError: null,
+    authBusy: false,
+    // With no backend there is nothing to read back, so the first paint is the
+    // final one — the same reasoning as `useSession`, and the reason the pixel
+    // baselines are unaffected by any of this.
+    hydrating: isBackendConfigured,
   };
 
   /** Planner "generating…" ticker. */
@@ -124,11 +233,277 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     this.setState(patch as Pick<AppState, keyof AppState>);
   }
 
+  componentDidMount() {
+    this.syncSession(null);
+  }
+
+  componentDidUpdate(prev: AthlyProps) {
+    this.syncSession(prev);
+  }
+
   componentWillUnmount() {
+    this._alive = false;
     clearInterval(this._t);
     clearInterval(this._b);
     clearTimeout(this._to);
   }
+
+  /** False after unmount, so an in-flight request cannot set state on a dead tree. */
+  private _alive = true;
+
+  // -------------------------------------------------------------------------
+  // Account
+  // -------------------------------------------------------------------------
+
+  /**
+   * React to who is signed in.
+   *
+   * Called on mount and on every prop change, and deliberately written as a
+   * comparison of "who was signed in" against "who is signed in" rather than as
+   * a set of event handlers: the session arrives by four different routes — a
+   * fresh page load, an OAuth redirect, an email link, a sign-out — and only one
+   * of them is a click this component saw.
+   */
+  private syncSession(prev: AthlyProps | null) {
+    if (!isBackendConfigured) return;
+    if (this.props.sessionLoading) return;
+
+    const was = prev?.userId ?? null;
+    const now = this.props.userId ?? null;
+
+    if (now && now !== was) {
+      void this.onSignedIn(now);
+      return;
+    }
+    if (!now && was) {
+      this.onSignedOut();
+      return;
+    }
+    // Signed out and staying that way: the session is known, so stop waiting.
+    if (!now && this.state.hydrating) this.update({ hydrating: false });
+  }
+
+  /**
+   * Someone just became signed in.
+   *
+   * Three ways to arrive: a returning athlete whose answers are in the database,
+   * a new one whose answers are parked in local storage from before the redirect,
+   * or someone with an account who has not finished onboarding.
+   *
+   * **The saved account always wins over the parked answers**, and the order of
+   * these two reads is the whole reason why. Everyone reaching the gate has just
+   * answered thirteen questions, so a stash exists even for someone choosing
+   * "already have an account". Writing it first would overwrite a real profile —
+   * schedule, preferences, allergies — with whatever was typed on this device, in
+   * a way nobody would see happen and nobody could undo. Preferring the saved
+   * account risks the opposite and much smaller error: freshly typed answers are
+   * discarded, which is visible on the next screen and fixable in Profile. So the
+   * database is read first, and the athlete is told which way it went.
+   */
+  private async onSignedIn(userId: string) {
+    const pending = readOnboarding();
+    // Whatever brought them here, the typed password has done its job. No reason
+    // for it to sit in a React tree for the rest of the session.
+    if (this.state.authPassword) this.update({ authPassword: '' });
+
+    let saved: Awaited<ReturnType<typeof loadAccount>> = null;
+    try {
+      saved = await loadAccount();
+    } catch {
+      // An unreadable account is treated as no account rather than a dead end.
+      saved = null;
+    }
+    if (!this._alive) return;
+
+    if (saved) {
+      clearOnboarding();
+      this.update({ ...saved, stage: 'app', tab: 'home', hydrating: false, authBusy: false });
+      if (pending) this.toast('Signed in — kept the plan already on your account.');
+      return;
+    }
+
+    if (pending) {
+      try {
+        await saveAccount(userId, pending);
+        clearOnboarding();
+      } catch {
+        // The account exists but its answers did not land. Say so rather than
+        // dropping them into an app built on defaults, and keep the stash so a
+        // retry still has something to send.
+        if (!this._alive) return;
+        this.update({
+          stage: 'auth',
+          authView: 'gate',
+          authBusy: false,
+          hydrating: false,
+          authError: "You're signed in, but saving your answers failed. Try once more.",
+        });
+        return;
+      }
+      if (!this._alive) return;
+      this.update({ ...pending, hydrating: false, authError: null, authBusy: false });
+      this.runBuild();
+      return;
+    }
+
+    // Signed in with nothing saved and nothing parked — an account made but
+    // onboarding abandoned.
+    this.update({ stage: 'onboarding', ob: 0, hydrating: false, authBusy: false });
+  }
+
+  private onSignedOut() {
+    this.update({
+      stage: 'onboarding',
+      ob: 0,
+      hydrating: false,
+      authView: 'gate',
+      authEmail: '',
+      authPassword: '',
+      authError: null,
+      authBusy: false,
+    });
+  }
+
+  /**
+   * Run an account request, with the busy flag and error handling around it.
+   *
+   * Every one of these follows the same shape, and the shape matters: the CTA is
+   * disabled while a request is in flight, so a second tap cannot create a
+   * second account, and a failure always clears the flag — otherwise a dropped
+   * connection leaves a button that never works again.
+   */
+  private async runAuth(action: () => Promise<{ error: string | null }>, onSuccess?: () => void) {
+    if (this.state.authBusy) return;
+    this.update({ authBusy: true, authError: null });
+    let error: string | null = null;
+    try {
+      ({ error } = await action());
+    } catch {
+      error = 'Something went wrong. Try again in a moment.';
+    }
+    if (!this._alive) return;
+    this.update({ authBusy: false, authError: error });
+    if (!error) onSuccess?.();
+  }
+
+  /** The account's own slice of state, ready for the database. */
+  private persistable(): PersistedState {
+    const s = this.state;
+    return {
+      a: s.a,
+      age: s.age,
+      ft: s.ft,
+      inch: s.inch,
+      lb: s.lb,
+      goalLb: s.goalLb,
+      rate: s.rate,
+      pMode: s.pMode,
+      pCustom: s.pCustom,
+      week: s.week,
+      overrides: s.overrides,
+    };
+  }
+
+  /**
+   * Finish onboarding.
+   *
+   * With no backend, or already signed in, this is what it always was: build the
+   * week and go. Otherwise the answers are parked and the account gate opens —
+   * the one new step, and it comes after the work rather than before it, so
+   * nobody is asked to make an account before they have seen what it is for.
+   */
+  finishOnboarding = () => {
+    if (!isBackendConfigured) {
+      this.runBuild();
+      return;
+    }
+    const userId = this.props.userId;
+    if (userId) {
+      const state = this.persistable();
+      void saveAccount(userId, state).catch(() => this.toast("Couldn't save your answers."));
+      this.runBuild();
+      return;
+    }
+    stashOnboarding(this.persistable());
+    this.update({ stage: 'auth', authView: 'gate', authError: null, authBusy: false });
+  };
+
+  /** Where the back arrow goes from each account screen. */
+  private authBack = () => {
+    const view = this.state.authView;
+    if (view === 'gate') {
+      this.update({ stage: 'targets', authError: null });
+      return;
+    }
+    if (view === 'signIn' || view === 'signUp') {
+      this.update({ authView: 'gate', authError: null, authPassword: '' });
+      return;
+    }
+    if (view === 'forgot') {
+      this.update({ authView: 'signIn', authError: null });
+      return;
+    }
+    this.update({ authView: 'gate', authError: null });
+  };
+
+  private setAuthView = (authView: AuthView) => this.update({ authView, authError: null });
+
+  private submitAuth = () => {
+    const { authView, authEmail, authPassword } = this.state;
+    switch (authView) {
+      case 'signUp':
+        void this.runAuth(
+          () => signUpWithEmail(authEmail.trim(), authPassword),
+          // No session yet — Supabase sends a confirmation link first, and the
+          // answers stay parked until it is followed.
+          () => this.update({ authView: 'checkEmail', authPassword: '' }),
+        );
+        return;
+      case 'signIn':
+        // Success needs no follow-up here: the session change arrives as a prop
+        // and `syncSession` takes it from there.
+        void this.runAuth(() => signInWithEmail(authEmail.trim(), authPassword));
+        return;
+      case 'forgot':
+        void this.runAuth(
+          () => sendPasswordReset(authEmail.trim()),
+          () => this.update({ authView: 'resetSent' }),
+        );
+        return;
+      case 'setPassword':
+        void this.runAuth(
+          () => updatePassword(authPassword),
+          () => this.finishRecovery(),
+        );
+        return;
+      case 'checkEmail':
+      case 'resetSent':
+        this.update({ authView: 'signIn', authPassword: '' });
+        return;
+      default:
+        this.update({ authView: 'signUp' });
+    }
+  };
+
+  private finishRecovery = () => {
+    this.update({ authPassword: '', authError: null });
+    this.props.onRecoveryHandled?.();
+    // The session is real, so the ordinary signed-in path can take over from
+    // here: load the account if there is one, or start onboarding if not.
+    const userId = this.props.userId;
+    if (userId) void this.onSignedIn(userId);
+  };
+
+  private doSignOut = () => {
+    void this.runAuth(() => signOut());
+  };
+
+  private doDeleteAccount = () => {
+    void this.runAuth(
+      () => deleteAccount(),
+      () => clearOnboarding(),
+    );
+  };
   toast(m: string) {
     clearTimeout(this._to);
     this.update({ toast: m });
@@ -826,9 +1201,110 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
               ? !!a[step.key]
               : (a[step.key] || []).length > 0;
 
+    // A password-reset link overrides whatever stage the app would otherwise be
+    // in: the link grants a real session, so without this the athlete lands in
+    // the app still holding the password they came here to change.
+    const recovering = !!this.props.recovering;
+    const authView: AuthView = recovering ? 'setPassword' : s.authView;
+    const inAuth = recovering || s.stage === 'auth';
+    const copy = AUTH_COPY[authView];
+    const canSubmit =
+      authView === 'signUp' || authView === 'signIn'
+        ? s.authEmail.trim().length > 2 && s.authPassword.length > 0
+        : authView === 'forgot'
+          ? s.authEmail.trim().length > 2
+          : authView === 'setPassword'
+            ? s.authPassword.length > 0
+            : true;
+
     return {
-      isOnboarding: s.stage === 'onboarding' || s.stage === 'building' || s.stage === 'targets',
-      isApp: s.stage === 'app',
+      // Nothing renders until the session is known. Without this the app shows
+      // the intro screen for a frame to someone who is already signed in, then
+      // yanks it away — worse than a beat of nothing.
+      isHydrating: s.hydrating,
+      isOnboarding:
+        !inAuth &&
+        !s.hydrating &&
+        (s.stage === 'onboarding' || s.stage === 'building' || s.stage === 'targets'),
+      isApp: !inAuth && !s.hydrating && s.stage === 'app',
+
+      // --- account ---------------------------------------------------------
+      isAuth: inAuth && !s.hydrating,
+      authIsGate: authView === 'gate',
+      authIsForm:
+        authView === 'signUp' || authView === 'signIn' || authView === 'forgot' || authView === 'setPassword',
+      authIsNotice: authView === 'checkEmail' || authView === 'resetSent',
+      // The gate paints its own dark ground edge to edge; the rail belongs to
+      // the cream screens behind it.
+      authShowBar: authView !== 'gate',
+      authStepLabel: copy.stepLabel,
+      authGateTitle: authView === 'signIn' ? 'Welcome back.' : 'Save your plan.',
+      authGateSub:
+        authView === 'signIn'
+          ? 'Sign in and your targets, schedule and food preferences come with you.'
+          : 'Your targets are ready. Make an account to keep them — and to pick up where you left off on any device.',
+      authEmailCta: authView === 'signIn' ? 'Sign in with email' : 'Sign up with email',
+      authSwapLabel:
+        authView === 'signIn' ? 'New here? Create an account' : 'Already have an account? Sign in',
+      authSwapMode: () => this.setAuthView(authView === 'signIn' ? 'gate' : 'signIn'),
+      authFootnote: 'Athly keeps your answers to build your plan. Nothing else.',
+      authShowApple: isAppleEnabled,
+      authKicker: copy.kicker,
+      authTitle: copy.title,
+      authSub: copy.sub,
+      authHint: copy.hint,
+      authCta: s.authBusy ? copy.busy : copy.cta,
+      authNeedsEmail: authView !== 'setPassword',
+      authNeedsPassword: authView !== 'forgot',
+      authPasswordAutocomplete:
+        authView === 'signUp' || authView === 'setPassword' ? 'new-password' : 'current-password',
+      authShowForgot: authView === 'signIn',
+      authEmail: s.authEmail,
+      authPassword: s.authPassword,
+      authError: s.authError,
+      authBusy: s.authBusy,
+      authSubmitBlocked: s.authBusy || !canSubmit,
+      authCtaStyle:
+        ctaBase +
+        (!s.authBusy && canSubmit
+          ? `;background:${GREEN};color:#fff`
+          : ';background:rgba(17,24,21,.09);color:#A9A498;cursor:not-allowed'),
+      authEmailChange: (e: ChangeEvent<HTMLInputElement>) =>
+        this.update({ authEmail: e.target.value, authError: null }),
+      authPasswordChange: (e: ChangeEvent<HTMLInputElement>) =>
+        this.update({ authPassword: e.target.value, authError: null }),
+      authKeyDown: (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !s.authBusy && canSubmit) this.submitAuth();
+      },
+      authSubmit: this.submitAuth,
+      authBack: this.authBack,
+
+      // Deletion, from the Profile screen. Apple requires this to be reachable
+      // from inside the app: Profile tab, "Delete account", confirm — three
+      // taps, which is their limit.
+      showDeleteAccount: !!this.props.userId,
+      deleteConfirming: s.authView === 'confirmDelete',
+      deleteTitle: AUTH_COPY.confirmDelete.title,
+      deleteSub: AUTH_COPY.confirmDelete.sub,
+      deleteCta: s.authBusy ? AUTH_COPY.confirmDelete.busy : AUTH_COPY.confirmDelete.cta,
+      deleteStart: () => this.update({ authView: 'confirmDelete', authError: null }),
+      deleteCancel: () => this.update({ authView: 'gate', authError: null }),
+      deleteConfirm: this.doDeleteAccount,
+      authForgot: () => this.setAuthView('forgot'),
+      authEmailStart: () => this.setAuthView(authView === 'signIn' ? 'signIn' : 'signUp'),
+      authGoogle: () =>
+        void this.runAuth(() => {
+          // Parked before we navigate away, because navigating away is exactly
+          // what loses them.
+          if (s.stage === 'auth') stashOnboarding(this.persistable());
+          return signInWithProvider('google');
+        }),
+      authApple: () =>
+        void this.runAuth(() => {
+          if (s.stage === 'auth') stashOnboarding(this.persistable());
+          return signInWithProvider('apple');
+        }),
+
       obShowBar: s.stage === 'onboarding' && s.ob > 0,
       ob0: s.stage === 'onboarding' && s.ob === 0,
       obQuestion: s.stage === 'onboarding' && s.ob > 0,
@@ -1027,7 +1503,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
               ? 'You\u2019re under 18, so Athly keeps things on the side of fueling, recovery and growth. No aggressive cuts. This is general guidance, not medical advice.'
               : 'General nutrition guidance to help you fuel and recover. Not medical advice.',
       },
-      startBuild: this.runBuild,
+      startBuild: this.finishOnboarding,
 
       name: a.name || 'Athlete',
       initial: (a.name || 'A').trim().charAt(0).toUpperCase(),
@@ -1386,6 +1862,20 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             ['Budget', a.budget === 'low' ? 'Under $4' : a.budget === 'high' ? 'Any budget' : '$4–8 a meal'],
           ],
         },
+        // Only when there is an account to manage. With no backend configured
+        // there is no session, no email and nothing to sign out of, so the group
+        // is absent rather than present and inert.
+        ...(this.props.userId
+          ? [
+              {
+                title: 'Account',
+                rows: [
+                  ['Email', this.props.userEmail || '—'],
+                  ['Sign out', ''],
+                ] as [string, string][],
+              },
+            ]
+          : []),
       ].map((g) => ({
         title: g.title,
         rows: g.rows.map(([label, value], i) => ({
@@ -1394,7 +1884,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           tap: () =>
             label === 'Schedule'
               ? this.update({ tab: 'calendar' })
-              : this.toast(`${label} — editor would open`),
+              : label === 'Sign out'
+                ? this.doSignOut()
+                : label === 'Email'
+                  ? undefined
+                  : this.toast(`${label} — editor would open`),
           style: `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;width:100%;text-align:left;${i ? 'border-top:1px solid rgba(17,24,21,.09)' : ''}`,
         })),
       })),

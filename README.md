@@ -18,31 +18,45 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-| Script            | What it does                                   |
-| ----------------- | ---------------------------------------------- |
-| `npm run dev`     | Vite dev server with fast refresh              |
-| `npm run build`   | Typecheck, then build to `dist/`               |
-| `npm run preview` | Serve the production build locally             |
-| `npm test`        | Vitest suite (`npm run test:watch` to iterate) |
-| `npm run lint`    | ESLint (`lint:fix` to autofix)                 |
-| `npm run format`  | Prettier (`format:check` in CI)                |
-| `npm run verify`  | Everything CI runs, in one command             |
+No configuration needed. With no Supabase project set up the app runs
+local-only: every screen works, nothing is saved, and no account is asked for.
+See [Accounts and data](#accounts-and-data) to connect a backend.
+
+| Script                | What it does                                      |
+| --------------------- | ------------------------------------------------- |
+| `npm run dev`         | Vite dev server with fast refresh                 |
+| `npm run build`       | Typecheck, then build to `dist/` — needs config   |
+| `npm run build:local` | Same, but builds the local-only app deliberately  |
+| `npm run preview`     | Serve the production build locally                |
+| `npm test`            | Vitest suite (`npm run test:watch` to iterate)    |
+| `npm run test:rls`    | Row Level Security suite — needs a local Supabase |
+| `npm run lint`        | ESLint (`lint:fix` to autofix)                    |
+| `npm run format`      | Prettier (`format:check` in CI)                   |
+| `npm run verify`      | Everything CI runs, in one command                |
 
 Two more, both needing a build first and a Chromium
 (`npx playwright install chromium`):
 
-| Script                | What it does                                           |
-| --------------------- | ------------------------------------------------------ |
-| `npm run test:visual` | Pixel-diffs the app against the baseline — see below   |
-| `npm run icons`       | Regenerates the PNG app icons from the mark's geometry |
+| Script                     | What it does                                           |
+| -------------------------- | ------------------------------------------------------ |
+| `npm run test:visual`      | Pixel-diffs the app against the baseline — see below   |
+| `npm run test:visual:auth` | Same, for the account screens (builds with config)     |
+| `npm run icons`            | Regenerates the PNG app icons from the mark's geometry |
+
+`npm run build` **refuses to run without Supabase credentials.** A bundle with
+none looks like a working product and quietly saves nothing, which is a failure
+nobody notices until an athlete loses a week of answers — so the build stops
+instead. `build:local` is the deliberate opt-out, and it is what `verify`, CI and
+the visual harness use.
 
 ## What is in the app
-
-A complete, self-contained walkthrough of the product, with no backend:
 
 - **Onboarding** — thirteen questions covering goal, body, training week, food
   likes and dislikes, allergies, kitchen, budget and time. The answers are used:
   see [Allergies are a hard filter](#allergies-are-a-hard-filter).
+- **Accounts** — Google, Apple and email/password, with verification, password
+  reset, sign out and deletion. Only when a backend is configured; see
+  [Accounts and data](#accounts-and-data).
 - **Targets** — calories and macros derived from those answers, with the
   arithmetic shown: resting burn, training on top, the goal adjustment.
 - **Home** — the next meal, what's left of the day's calories and protein, and
@@ -51,6 +65,96 @@ A complete, self-contained walkthrough of the product, with no backend:
 - **Calendar, Log, Recipes, Grocery, Progress, Profile** — the rest of the tabs.
 - **Meal and swap sheets** — why a meal was chosen, its recipe, and three
   alternatives with the same numbers.
+
+Everything after Targets still runs on prototype data: the day's totals are
+hardcoded, the meal plan is the same slots every day, and macros are authored
+estimates rather than computed. Real nutrition data is the next phase.
+
+## Accounts and data
+
+Supabase — Postgres, Auth, Row Level Security, Edge Functions. Configuration
+decides whether any of it is used: with none, the app is exactly what it was
+before there was a backend.
+
+```bash
+cp .env.example .env    # then fill in the two values
+```
+
+| Variable                 | Where to find it            | Secret? |
+| ------------------------ | --------------------------- | ------- |
+| `VITE_SUPABASE_URL`      | Supabase → Settings → API   | No      |
+| `VITE_SUPABASE_ANON_KEY` | Supabase → Settings → API   | No      |
+| `VITE_ENABLE_APPLE`      | `true` once Apple is set up | No      |
+
+The `anon` key is public by design — it is compiled into the bundle and anyone
+can read it out. **The access boundary is Row Level Security, not key secrecy.**
+Every table requires `auth.uid() = user_id` on select, insert, update and delete,
+so the database refuses to return another athlete's rows rather than trusting the
+client not to ask. `supabase/tests/rls.test.ts` proves it against a real
+Postgres: an anonymous client and a wrong-user client are both denied on every
+table, and a table added later without policies fails the suite by construction.
+
+The `service_role` key bypasses all of that. It never appears in `.env`, in the
+bundle, or in this repository — Supabase injects it into Edge Functions, which is
+the only place it is needed.
+
+### Setting up the database
+
+```bash
+supabase start                       # local Postgres + auth, applies migrations
+npm run test:rls                     # with the keys `supabase start` prints
+supabase db push                     # apply to the hosted project
+supabase functions deploy delete-account
+```
+
+### Where accounts fit in the flow
+
+Onboarding first, account at the save point: thirteen questions → targets →
+account → app. Asking someone to sign up before they have seen anything is the
+cheapest way to lose them, and the questions are this app's best argument for
+itself. Answers are parked in `localStorage` across the redirect — OAuth and
+email links both tear the page down — then written to the database and cleared.
+
+Signing in on another device pulls the answers back down.
+
+### Google
+
+In Google Cloud Console: an OAuth consent screen with scopes `email`, `profile`,
+`openid` (none sensitive, so no verification review), published to **In
+production** — Testing caps you at 100 users and expires refresh tokens after
+seven days. Then a **Web application** OAuth client with:
+
+- Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
+- JavaScript origins: `http://localhost:5173` and your production URL
+
+Paste the Client ID and Secret into Supabase → Authentication → Providers →
+Google. Neither belongs in this repository.
+
+### Apple — built, switched off
+
+`VITE_ENABLE_APPLE=false` until there is an Apple Developer membership. The
+button, the callback and the account plumbing are all in place, so turning it on
+is configuration rather than code. Apple requires this option on iOS once Google
+sign-in exists (App Store Guideline 4.8), so it has to be on before submission.
+
+When you enrol you will need a Team ID, an App ID with the Sign in with Apple
+capability, a Services ID, and a `.p8` signing key. Two things bite later:
+**Apple caps the derived client secret at six months**, so sign-in breaks
+silently unless someone rotates it; and **Apple sends the user's name exactly
+once**, on first authorization, so it must be captured then or it is gone.
+
+### Email
+
+Supabase's built-in mailer is rate-limited to a handful of messages an hour and
+is not for production. Verification and reset work for testing; a real sender
+(Resend, Postmark) is a dashboard change plus SPF/DKIM records, no code.
+
+### Account deletion
+
+`supabase/functions/delete-account` — verifies the caller's JWT, resolves the
+user ID **from the token and never from the request body**, writes an audit row,
+then deletes the user. `on delete cascade` takes everything else. Reachable from
+Profile in three taps, which is Apple's limit.
 
 ## Allergies are a hard filter
 
@@ -124,12 +228,22 @@ every iPhone since the notch.
 ```
 src/
 ├── main.tsx                     entry point
-├── App.tsx                      root; sets the design's layout variants
+├── App.tsx                      root; layout variants + the session
+├── auth/
+│   ├── useSession.ts            the current session, from onAuthStateChange
+│   └── authActions.ts           sign up, sign in, reset, sign out, delete
 ├── components/
 │   ├── ErrorBoundary.tsx        keeps a render failure off the whole page
 │   └── ios/IOSFrame.tsx         the iOS 26 device shell the screens sit in
+├── data/
+│   ├── profileRepo.ts           AppState ↔ database rows, both directions
+│   └── pendingOnboarding.ts     answers parked across the sign-in redirect
 ├── hooks/
 │   └── useIsCompact.ts          phone viewport, or desktop
+├── lib/
+│   ├── env.ts                   configuration; nothing secret
+│   ├── supabase.ts              the client, or null when unconfigured
+│   └── database.types.ts        the schema, as TypeScript sees it
 ├── prototype/
 │   ├── AthlyApp.tsx             all state; derives the view model
 │   ├── viewModel.ts             ViewModel type, inferred from AthlyApp
@@ -140,9 +254,14 @@ src/
 │   ├── types.ts                 state shapes
 │   ├── styles.ts                CSS-string → React style
 │   ├── PrototypeShell.tsx       page chrome + device frame
-│   ├── screens/                 one file per screen
+│   ├── screens/                 one file per screen (auth/ for the account ones)
 │   └── overlays/                meal sheet, swap sheet, generating, toast
 └── styles/global.css            page ground, keyframes, hover rules
+
+supabase/
+├── migrations/0001_init.sql     schema, RLS policies, triggers
+├── functions/delete-account/    service-role deletion, JWT-verified
+└── tests/rls.test.ts            the access-control suite
 ```
 
 The shape is deliberately simple and comes straight from the design:
@@ -167,9 +286,15 @@ style attributes by hand would not have been.
 
 `data.ts` is static sample content — the meal library, the onboarding script.
 `renderVals()` is the seam: swap the derivations that read `this.state` for ones
-that read server data and the screens do not change. `nutrition.ts` is already
-pure and independently testable, and is the piece most likely to be shared with
-a backend.
+that read server data and the screens do not change. The account screens were
+built through that seam and added no new visual vocabulary — every style string
+under `screens/auth/` is copied from `OnboardingIntro` or `OnboardingQuestion`,
+and the Account rows in Profile reuse the existing data-driven row component.
+
+`nutrition.ts` is pure, dependency-free and takes a narrow `TargetInputs` rather
+than the whole state, so the same file computes targets in the browser and in an
+Edge Function — a target recomputed server-side must never disagree with the one
+the athlete was shown.
 
 ## Fidelity
 
@@ -199,6 +324,11 @@ It passes after the compact and safe-area work too, and for a similar reason:
 every inset is `calc(Npx + env(…, 0px))`, which is the design's own value
 wherever there is no inset.
 
+It passes after accounts arrived because the harness builds the app without a
+backend, which is the app those twenty screens are of. The account screens have
+their own five-screen baseline, captured from a second build with credentials
+that point nowhere — `npm run test:visual:auth`.
+
 ### What changed underneath
 
 The prototype ran on the design tool's runtime: it fetched React and Babel from
@@ -213,7 +343,7 @@ survives here.
 | `style="…"` parsed by the tool's runtime        | same strings, parsed by `S()` and memoised        |
 | `style-hover="…"` → classes injected at runtime | static CSS classes in `global.css`                |
 | One 2,000-line HTML file                        | typed modules, one file per screen                |
-| No types, no tests, no build                    | strict TypeScript, 77 tests, ESLint, Prettier, CI |
+| No types, no tests, no build                    | strict TypeScript, 99 tests, ESLint, Prettier, CI |
 
 Hover rules carry `!important` because the elements they apply to have inline
 styles — that is how the design tool did it too, and dropping it would silently
@@ -241,13 +371,19 @@ comparison over rather than a free swap.
 ## Deployment
 
 The build is a static bundle in `dist/` — any static host will serve it (Vercel,
-Netlify, Cloudflare Pages, S3 + CloudFront, nginx). There is no server, no API
-and no runtime configuration. CI builds every push and uploads `dist/` as an
-artifact.
+Netlify, Cloudflare Pages, S3 + CloudFront, nginx). CI builds every push and
+uploads `dist/` as an artifact.
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the host's environment
+settings before the first deploy. Without them the build fails rather than
+shipping an app that saves nothing. Add the deployed origin to Supabase →
+Authentication → URL Configuration, or its sign-in redirects will be rejected —
+including each preview URL you want sign-in to work on.
 
 `vercel.json` carries the build config and four security headers. It has no SPA
 rewrite: with a single route, a catch-all rewrite would turn genuine 404s into
-200s. That lands with routing.
+200s. That lands with routing. When a Content-Security-Policy is added, its
+`connect-src` needs the Supabase project origin.
 
 Source maps are off. `'hidden'` still writes the `.map` into `dist/`, where a
 public host serves it at a guessable path — obscurity, not privacy. It goes back

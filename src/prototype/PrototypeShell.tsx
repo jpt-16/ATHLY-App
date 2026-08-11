@@ -9,6 +9,7 @@
 import type { ViewModel } from './viewModel';
 import { S } from './styles';
 import { AppShell } from './screens/AppShell';
+import { Auth } from './screens/auth/Auth';
 import { GeneratingOverlay } from './overlays/GeneratingOverlay';
 import { MealSheet } from './overlays/MealSheet';
 import { Onboarding } from './screens/Onboarding';
@@ -26,6 +27,7 @@ function Screens({ v }: { v: ViewModel }) {
       )}
     >
       {v.isOnboarding ? <Onboarding v={v} /> : null}
+      {v.isAuth ? <Auth v={v} /> : null}
       {v.isApp ? <AppShell v={v} /> : null}
       {v.showMeal ? <MealSheet v={v} /> : null}
       {v.showSwap ? <SwapSheet v={v} /> : null}

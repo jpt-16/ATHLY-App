@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023"],
+    // DOM alongside ES2023: the Supabase client's types reach for `fetch`,
+    // `Headers` and friends, which live in the DOM lib even when the code runs
+    // under Node.
+    "lib": ["ES2023", "DOM"],
     "module": "ESNext",
     "moduleResolution": "bundler",
 
@@ -17,5 +20,5 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "types": ["node"]
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "vitest.rls.config.ts", "supabase/tests/**/*.ts"]
 }

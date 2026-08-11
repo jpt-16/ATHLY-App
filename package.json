@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --build --force && vite build",
+    "build:local": "tsc --build --force && node tools/build-local.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --build --force",
     "lint": "eslint .",
@@ -18,12 +19,16 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:rls": "vitest run --config vitest.rls.config.ts",
     "test:visual": "node tools/visual/run.mjs",
     "test:visual:update": "node tools/visual/run.mjs --update",
+    "test:visual:auth": "node tools/visual/run-auth.mjs",
+    "test:visual:auth:update": "node tools/visual/run-auth.mjs --update",
     "icons": "node tools/icons/generate.mjs",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build:local"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

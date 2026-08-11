@@ -1,4 +1,4 @@
-import type { AppState, DayMode, Targets } from './types';
+import type { DayMode, TargetInputs, Targets } from './types';
 
 /**
  * Derive an athlete's daily targets from their onboarding answers.
@@ -16,7 +16,7 @@ import type { AppState, DayMode, Targets } from './types';
  * General nutrition guidance, not medical advice — the same caveat the
  * targets screen puts in front of the athlete.
  */
-export function computeTargets(s: AppState): Targets {
+export function computeTargets(s: TargetInputs): Targets {
   const a = s.a;
   const kg = s.lb * 0.4536;
   const cm = (s.ft * 12 + s.inch) * 2.54;

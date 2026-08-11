@@ -113,6 +113,60 @@ export function ProfileScreen({ v }: { v: ViewModel }) {
           >
             Restart the prototype
           </button>
+          {v.showDeleteAccount ? (
+            <>
+              {v.deleteConfirming ? (
+                <div
+                  style={S(
+                    'margin-top:10px;padding:16px 18px;border:2px solid rgba(160,40,25,.28);border-radius:14px;background:rgba(160,40,25,.045)',
+                  )}
+                >
+                  <div style={S('font-size:15px;font-weight:900;font-stretch:113%;letter-spacing:-.01em')}>
+                    {v.deleteTitle}
+                  </div>
+                  <div style={S('margin-top:6px;font-size:12.5px;line-height:1.55;color:#6E6A60')}>
+                    {v.deleteSub}
+                  </div>
+                  <div style={S('display:flex;gap:8px;margin-top:14px')}>
+                    <button
+                      className={'dc-ho3'}
+                      onClick={v.deleteCancel}
+                      style={S(
+                        'flex:1;padding:13px 16px;border:2px solid rgba(17,24,21,.14);border-radius:12px;font-weight:800;font-size:13.5px',
+                      )}
+                    >
+                      Keep it
+                    </button>
+                    <button
+                      className={'dc-ho3'}
+                      onClick={v.deleteConfirm}
+                      disabled={v.authBusy}
+                      style={S(
+                        'flex:1;padding:13px 16px;border-radius:12px;background:#A0281A;color:#fff;font-weight:800;font-size:13.5px',
+                      )}
+                    >
+                      {v.deleteCta}
+                    </button>
+                  </div>
+                  {v.authError ? (
+                    <div style={S('margin-top:10px;font-size:12.5px;line-height:1.5;color:#8C2F20')}>
+                      {v.authError}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <button
+                  className={'dc-ho3'}
+                  onClick={v.deleteStart}
+                  style={S(
+                    'width:100%;margin-top:10px;padding:15px 18px;border:2px solid rgba(160,40,25,.24);border-radius:14px;font-weight:800;font-size:14px;text-align:left;color:#A0281A',
+                  )}
+                >
+                  Delete account
+                </button>
+              )}
+            </>
+          ) : null}
         </div>
       </div>
     </>

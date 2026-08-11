@@ -5,7 +5,18 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules', 'design'] },
+  {
+    ignores: [
+      'dist',
+      'coverage',
+      'node_modules',
+      'design',
+      // Deno, not Node: `Deno.serve`, `jsr:` specifiers and remote imports are
+      // all valid there and all errors here. Linting it with this config would
+      // report nothing but false positives. `deno lint` is the tool for it.
+      'supabase/functions',
+    ],
+  },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],

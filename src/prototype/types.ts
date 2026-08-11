@@ -9,7 +9,18 @@
 export type Goal = 'gain' | 'perform' | 'lose' | 'habits';
 export type Sex = 'male' | 'female' | 'na';
 export type ProteinMode = 'rec' | 'gpp' | 'custom';
-export type Stage = 'onboarding' | 'building' | 'targets' | 'app';
+export type Stage = 'onboarding' | 'building' | 'targets' | 'auth' | 'app';
+
+/**
+ * Which account screen the `'auth'` stage is showing.
+ *
+ * `'gate'` is the provider chooser, `'signUp'` / `'signIn'` / `'forgot'` are the
+ * email form wearing three different hats, `'setPassword'` is where a reset link
+ * lands, and the two notices are the screens that say "now go and read your
+ * email".
+ */
+export type AuthView =
+  'gate' | 'signUp' | 'signIn' | 'forgot' | 'setPassword' | 'checkEmail' | 'resetSent' | 'confirmDelete';
 export type Tab = 'home' | 'plan' | 'log' | 'recipes' | 'profile' | 'grocery' | 'progress' | 'calendar';
 export type DayMode = 'rest' | 'practice' | 'game';
 export type PlanScope = 'meal' | 'day' | 'week';
@@ -92,10 +103,48 @@ export interface AppState {
   cat: number;
   /** Transient note shown when a pick moved an item between lists. */
   note?: string | null;
+
+  // --- account ------------------------------------------------------------
+  authView: AuthView;
+  authEmail: string;
+  authPassword: string;
+  /** Message from the last failed attempt, shown on the account screens. */
+  authError: string | null;
+  /** True while a request is in flight, so the CTA cannot be double-fired. */
+  authBusy: boolean;
+  /** True while onboarding answers are being read back for a returning athlete. */
+  hydrating: boolean;
 }
 
+/** What the app needs to know about who is signed in. */
+export interface SessionProps {
+  /** The signed-in user's ID, or `null`. Absent entirely with no backend. */
+  userId?: string | null;
+  /** The signed-in user's email, for the Profile screen. */
+  userEmail?: string | null;
+  /** True until the session is known; the app holds its first paint. */
+  sessionLoading?: boolean;
+  /** True when the athlete arrived by following a password-reset link. */
+  recovering?: boolean;
+  /** Releases the recovery hold once a new password is saved. */
+  onRecoveryHandled?: () => void;
+}
+
+/**
+ * The part of the state the targets are actually derived from.
+ *
+ * `computeTargets` used to take the whole `AppState`, which meant anything
+ * holding these ten fields — a row loaded back from the database, say — had to
+ * be cast into a shape carrying thirty more it does not have. Naming the real
+ * input is both honest and less code. `AppState` still satisfies it.
+ */
+export type TargetInputs = Pick<
+  AppState,
+  'a' | 'age' | 'ft' | 'inch' | 'lb' | 'goalLb' | 'rate' | 'pMode' | 'pCustom' | 'week'
+>;
+
 /** Layout variants the prototype exposes; these were the design's A/B knobs. */
-export interface AthlyProps {
+export interface AthlyProps extends SessionProps {
   homeLayout?: 'Focus' | 'Dashboard';
   swapMode?: 'Compare three' | 'Card deck';
   plannerInput?: 'Ask in words' | 'Dial it in';
