@@ -33,7 +33,8 @@ npm run dev        # http://localhost:5173
 A complete, self-contained walkthrough of the product, with no backend:
 
 - **Onboarding** — thirteen questions covering goal, body, training week, food
-  likes and dislikes, allergies, kitchen, budget and time.
+  likes and dislikes, allergies, kitchen, budget and time. The answers are used:
+  see [Allergies are a hard filter](#allergies-are-a-hard-filter).
 - **Targets** — calories and macros derived from those answers, with the
   arithmetic shown: resting burn, training on top, the goal adjustment.
 - **Home** — the next meal, what's left of the day's calories and protein, and
@@ -42,6 +43,44 @@ A complete, self-contained walkthrough of the product, with no backend:
 - **Calendar, Log, Recipes, Grocery, Progress, Profile** — the rest of the tabs.
 - **Meal and swap sheets** — why a meal was chosen, its recipe, and three
   alternatives with the same numbers.
+
+## Allergies are a hard filter
+
+The design collected allergies and never used them — the build screen animated
+"Blocking your allergies" while blocking nothing. It blocks now, and the rules
+are deliberately asymmetric:
+
+- **Allergens are hard.** A meal containing a declared allergen is never shown,
+  never offered as a swap, never generated into a plan, and never listed under
+  Recipes. There is no override and no warning-banner fallback. If that empties
+  a slot, the slot says so and names the allergen.
+- **Dislikes and time are soft.** When they cannot both be met they are dropped
+  in a fixed order — time first, then dislikes. An allergen is never a rung on
+  that ladder. (Budget belongs on it and is absent: meals carry no cost yet, so
+  a budget rung would be a step that never changes the outcome.)
+
+Two design decisions hold this together:
+
+**Allergens are derived, never authored.** No meal carries a hand-written
+allergen list, because one drifts from its ingredients the first time a recipe
+is edited. `foodFacts.ts` maps each ingredient to what it contains, and a meal's
+allergens are computed from its ingredient list.
+
+**Unknown ingredients fail closed.** An ingredient with no entry in the facts
+table is treated as carrying _every_ allergen, so a missing entry hides the meal
+rather than silently marking it safe. A test asserts every ingredient in every
+recipe has an entry, so that path should never fire — it exists so the failure
+mode is refusal rather than exposure.
+
+The library grew from 14 meals to 44 for this. Fourteen could not absorb a real
+filter: dairy or gluten alone emptied most slots. Every slot now has at least
+two options free of _all nine_ allergens, which a test enforces.
+
+Where the facts table is deliberately over-cautious — uncertified oats and
+granola marked gluten, granola marked tree nuts, soy sauce marked gluten, Caesar
+dressing marked fish and egg and dairy — the reasoning is written down beside
+each entry. A tag that is too broad costs someone a meal; one that is too narrow
+costs them a reaction.
 
 ## Architecture
 
@@ -56,6 +95,8 @@ src/
 │   ├── AthlyApp.tsx             all state; derives the view model
 │   ├── viewModel.ts             ViewModel type, inferred from AthlyApp
 │   ├── nutrition.ts             targets + day-shape maths (pure, tested)
+│   ├── foodFacts.ts             what each ingredient contains (allergens, tags)
+│   ├── filtering.ts             the hard allergen gate + soft preference ladder
 │   ├── data.ts                  meals, onboarding script, tokens
 │   ├── types.ts                 state shapes
 │   ├── styles.ts                CSS-string → React style
@@ -105,6 +146,12 @@ along (`kicker: "Step 8 · Nope"`), so the step now carries `tag: 'Nope'` and
 reads `STEP 9 · NOPE`, numbered like every other step. That is the only
 deliberate visual change in the port.
 
+That comparison still passes after allergy filtering was added, and it is meant
+to: an athlete who declares nothing sees exactly the meals the design shipped,
+because each slot's candidate list is ordered with the original first. The
+screens change only once an allergy is declared — which is the point. Re-run the
+comparison after any change that touches rendering.
+
 ### What changed underneath
 
 The prototype ran on the design tool's runtime: it fetched React and Babel from
@@ -119,7 +166,7 @@ survives here.
 | `style="…"` parsed by the tool's runtime        | same strings, parsed by `S()` and memoised        |
 | `style-hover="…"` → classes injected at runtime | static CSS classes in `global.css`                |
 | One 2,000-line HTML file                        | typed modules, one file per screen                |
-| No types, no tests, no build                    | strict TypeScript, 27 tests, ESLint, Prettier, CI |
+| No types, no tests, no build                    | strict TypeScript, 69 tests, ESLint, Prettier, CI |
 
 Hover rules carry `!important` because the elements they apply to have inline
 styles — that is how the design tool did it too, and dropping it would silently

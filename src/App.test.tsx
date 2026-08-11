@@ -14,8 +14,11 @@ import { App } from './App';
 
 const next = (user: UserEvent) => user.click(screen.getByRole('button', { name: /^next$/i }));
 
-/** Answer the whole onboarding script as "Sam", stopping on the targets screen. */
-async function runOnboarding(user: UserEvent) {
+/**
+ * Answer the whole onboarding script as "Sam", stopping on the targets screen.
+ * `allergy` is an allergy chip label to tick on step 10, or none.
+ */
+async function runOnboarding(user: UserEvent, allergy?: string) {
   await user.click(screen.getByRole('button', { name: /let's set you up/i }));
 
   // 1 — name
@@ -44,7 +47,12 @@ async function runOnboarding(user: UserEvent) {
   // 9 — won't eat, 10 — allergies (both skippable)
   expect(screen.getByRole('heading', { name: /what won't you eat/i })).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: /nothing to avoid/i }));
-  await user.click(screen.getByRole('button', { name: /nothing to avoid/i }));
+  if (allergy) {
+    await user.click(screen.getByRole('button', { name: new RegExp(`^${allergy}$`, 'i') }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+  } else {
+    await user.click(screen.getByRole('button', { name: /nothing to avoid/i }));
+  }
 
   // 11 — kitchen, 12 — money, 13 — time
   await user.click(screen.getByRole('button', { name: /i can follow a recipe/i }));
@@ -106,6 +114,49 @@ describe('ATHLY', () => {
 
     await user.click(screen.getByRole('button', { name: /^profile$/i }));
     expect(screen.getByRole('heading', { name: /^sam$/i })).toBeInTheDocument();
+  }, 30000);
+});
+
+describe('a declared allergy', () => {
+  // The prototype collected allergies and did nothing with them. These drive the
+  // real app, so a regression here is visible to the person it would hurt.
+
+  it('keeps dairy off the plan and out of the recipe list', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await runOnboarding(user, 'Dairy');
+    await buildWeek(user);
+
+    // The shipped post-practice meal is chocolate milk and granola.
+    expect(screen.queryByText(/chocolate milk/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/recovery shake/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^recipes$/i }));
+    expect(screen.queryByText(/steak & roast potatoes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/chicken burrito bowl/i)).not.toBeInTheDocument();
+  }, 30000);
+
+  it('leaves the plan alone when the allergen is not in it', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await runOnboarding(user, 'Shellfish');
+    await buildWeek(user);
+
+    // Nothing in the library contains shellfish, so today should be untouched.
+    expect(screen.getByText(/chocolate milk/i)).toBeInTheDocument();
+  }, 30000);
+
+  it('still fills every slot for the harshest single allergy', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Gluten wipes out the shipped meal in five of the ten slots.
+    await runOnboarding(user, 'Gluten');
+    await buildWeek(user);
+
+    expect(screen.queryByText(/no safe option yet/i)).not.toBeInTheDocument();
   }, 30000);
 });
 

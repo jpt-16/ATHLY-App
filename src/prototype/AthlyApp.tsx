@@ -12,6 +12,7 @@ import {
   MEALS,
   OB,
   RECIPE_SETS,
+  SLOT_CANDIDATES,
   RESULTS,
   SWAPS,
   TILES,
@@ -20,8 +21,21 @@ import {
   shapes,
 } from './data';
 import { computeTargets, dayMeals } from './nutrition';
+import { minutesAvailable, safeMealIds, selectForSlot } from './filtering';
+import type { SlotConstraints } from './filtering';
+import { ALLERGEN_LABEL } from './foodFacts';
+import type { Allergen } from './foodFacts';
 import { PrototypeShell } from './PrototypeShell';
 import type { AppState, AthlyProps, DayMode, DaySpec, PlanScope, ProteinMode, Tab, Targets } from './types';
+
+/** One slot of a day after the allergy filter has had its say. */
+interface ResolvedSlot {
+  slot: string;
+  /** `null` when nothing in the library is safe for this athlete. */
+  mealId: string | null;
+  /** Allergens responsible, when `mealId` is null. */
+  blockedBy: string[];
+}
 
 /**
  * The ATHLY prototype, as one stateful component.
@@ -232,6 +246,73 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       overrides: Object.assign({}, st.overrides, { [dateNum]: [cur[0], cur[1], lift, cur[3] || ''] }),
     }));
   }
+  /** The athlete's declared constraints, in the shape the filter expects. */
+  private constraints(): SlotConstraints {
+    const a = this.state.a;
+    return {
+      allergens: a.allergies || [],
+      dislikes: a.dislikes || [],
+      maxMinutes: minutesAvailable(a.time),
+    };
+  }
+
+  /**
+   * Turn the slots a day calls for into the meals this athlete may actually be
+   * shown. A slot with no safe meal comes back with `mealId: null` rather than
+   * silently falling back to something they cannot eat.
+   */
+  private resolveSlots(slotIds: string[]): ResolvedSlot[] {
+    const c = this.constraints();
+    return slotIds.map((slot) => {
+      const result = selectForSlot(SLOT_CANDIDATES[slot] ?? [slot], c);
+      return result.meal
+        ? { slot, mealId: result.meal.id, blockedBy: [] }
+        : { slot, mealId: null, blockedBy: result.blockedBy };
+    });
+  }
+
+  /** How the app explains an empty slot, in the athlete's own terms. */
+  private blockedReason(blockedBy: string[]): string {
+    const names = blockedBy.map((b) => ALLERGEN_LABEL[b as Allergen] ?? b);
+    if (!names.length) return 'Nothing here fits yet';
+    if (names.length === 1) return `Nothing here is ${names[0]}-free yet`;
+    return 'Nothing here clears your allergies yet';
+  }
+
+  /**
+   * A row for a slot the filter emptied.
+   *
+   * Deliberately the same shape as `row()` so the screens render it without
+   * knowing the difference — an absence in the design's own vocabulary rather
+   * than a new component. Tapping it explains itself.
+   */
+  blockedRow(slot: string, blockedBy: string[], size?: number) {
+    const px = size || 62;
+    const sh = shapes(TILES.blocked, px);
+    const label = MEALS[SLOT_CANDIDATES[slot]?.[0]]?.slot ?? '';
+    const reason = this.blockedReason(blockedBy);
+    return {
+      slot: label,
+      name: 'No safe option yet',
+      macroText: reason,
+      open: () => this.toast(`${reason}. Add more favourites, or check your allergies in Profile.`),
+      rowStyle:
+        'display:flex;align-items:center;gap:14px;padding:14px 4px;width:100%;border-bottom:1px solid rgba(17,24,21,.1);transition:background .15s;opacity:.72',
+      tileStyle: sh.tileStyle,
+      s1: sh.s1,
+      s2: sh.s2,
+      s3: sh.s3,
+      word: '—',
+      fieldStyle: `position:absolute;inset:0;background:${TILES.blocked.bg};display:flex;align-items:flex-end;padding:8px;box-sizing:border-box`,
+      wordStyle: `font-size:${px < 55 ? 11 : 12}px;font-weight:900;font-stretch:118%;letter-spacing:-.035em;line-height:.88;color:${TILES.blocked.ink};text-transform:uppercase`,
+    };
+  }
+
+  /** Render a resolved slot, whichever way it resolved. */
+  slotRow(r: ResolvedSlot, size?: number) {
+    return r.mealId ? this.row(r.mealId, size) : this.blockedRow(r.slot, r.blockedBy, size);
+  }
+
   row(id: string, size?: number) {
     const m = MEALS[id];
     const sh = shapes(m.tile, size || 62);
@@ -286,6 +367,9 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       swapMode = p.swapMode ?? 'Compare three';
     const plannerInput = p.plannerInput ?? 'Ask in words',
       navPrimary = p.navPrimary ?? 'Center action';
+    // The hard filter, applied to every list of meals this method builds. A meal
+    // blocked on one screen must be blocked on all of them.
+    const allergyLabels = a.allergies || [];
     const STEPS = this.stepsList();
     const step = STEPS[s.ob - 1];
     const goalLb = s.goalLb == null ? s.lb + (a.goal === 'lose' ? -15 : 15) : s.goalLb;
@@ -458,7 +542,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     });
     const [selMode, selTime, selLift, selDur] = this.dayType(s.selDay);
     const selDate = new Date(2026, 7, s.selDay);
-    const selMeals = dayMeals(selMode, selLift);
+    const selMeals = this.resolveSlots(dayMeals(selMode, selLift));
     const sel = {
       dateLabel:
         ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][selDate.getDay()] +
@@ -513,7 +597,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         style: this.small(selTime === t) + ';white-space:nowrap;flex:none',
       })),
       mealsCount: selMeals.length + ' meals',
-      meals: selMeals.map((id) => this.row(id, 54)),
+      meals: selMeals.map((r) => this.slotRow(r, 54)),
       durNote: selDur
         ? (selMode === 'game' ? 'Game' : 'Practice') +
           ' runs about ' +
@@ -534,25 +618,48 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
 
     const todayMode = this.dayType(12)[0],
       todayTime = this.dayType(12)[1];
-    const todayIds = dayMeals(todayMode, this.dayType(12)[2]);
+    const todaySlots = this.resolveSlots(dayMeals(todayMode, this.dayType(12)[2]));
     const eatenIdx = s.nextEaten ? 1 : 0;
-    const upcoming = todayIds.slice(2 + eatenIdx);
-    const nm = MEALS[todayIds[2 + eatenIdx - 1] && s.nextEaten ? todayIds[3] : todayIds[2]] || MEALS.snack;
-    const nfA = field(nm.id, 18, 12),
-      nfB = field(nm.id, 13, 9);
-    const nextMeal = {
-      name: nm.name,
-      kcal: nm.kcal,
-      protein: nm.p + 'g protein',
-      time: nm.prep,
-      word: nfA.word,
-      fieldA: nfA.fieldStyle,
-      wordA: nfA.wordStyle,
-      fieldB: nfB.fieldStyle,
-      wordB: nfB.wordStyle,
-      when: `${nm.slot} · ${nm.timeText}`,
-      why: CHIPS[nm.id] || ['Matched to your macros', 'Fits your time', 'Allergy-safe'],
-    };
+    const upcoming = todaySlots.slice(2 + eatenIdx);
+    // The hero shows the next meal the athlete can actually eat. If the slot the
+    // day called for was emptied by an allergy, skip past it rather than lead
+    // with a hole; only an entirely blocked day falls through to `null`.
+    const heroIdx = 2 + eatenIdx;
+    const heroSlot =
+      todaySlots.slice(heroIdx).find((r) => r.mealId) ?? todaySlots.find((r) => r.mealId) ?? null;
+    const nm = heroSlot?.mealId ? MEALS[heroSlot.mealId] : null;
+    const blockedHero = todaySlots[heroIdx] ?? todaySlots[todaySlots.length - 1];
+    const nfA = nm ? field(nm.id, 18, 12) : null;
+    const nfB = nm ? field(nm.id, 13, 9) : null;
+    const heroField = (fs: number, pad: number) =>
+      `position:absolute;inset:0;background:${TILES.blocked.bg};display:flex;align-items:flex-end;padding:${pad}px;box-sizing:border-box;font-size:${fs}px`;
+    const nextMeal = nm
+      ? {
+          name: nm.name,
+          kcal: nm.kcal,
+          protein: nm.p + 'g protein',
+          time: nm.prep,
+          word: nfA!.word,
+          fieldA: nfA!.fieldStyle,
+          wordA: nfA!.wordStyle,
+          fieldB: nfB!.fieldStyle,
+          wordB: nfB!.wordStyle,
+          when: `${nm.slot} · ${nm.timeText}`,
+          why: CHIPS[nm.id] || ['Matched to your macros', 'Fits your time', 'Allergy-safe'],
+        }
+      : {
+          name: 'No safe option yet',
+          kcal: 0,
+          protein: '—',
+          time: '—',
+          word: '—',
+          fieldA: heroField(18, 12),
+          wordA: `font-size:18px;font-weight:900;font-stretch:118%;letter-spacing:-.035em;line-height:.88;color:${TILES.blocked.ink};text-transform:uppercase`,
+          fieldB: heroField(13, 9),
+          wordB: `font-size:13px;font-weight:900;font-stretch:118%;letter-spacing:-.035em;line-height:.88;color:${TILES.blocked.ink};text-transform:uppercase`,
+          when: this.blockedReason(blockedHero?.blockedBy ?? []),
+          why: ['Check your allergies in Profile', 'Add more favourites'],
+        };
 
     const remainCal = Math.max(0, tg.cal - 1840),
       remainPro = Math.max(0, tg.protein - 98);
@@ -573,7 +680,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       };
     });
 
-    const activeSwaps = s.swapSet === 0 ? SWAPS.slice(0, 3) : [SWAPS[3], SWAPS[0], SWAPS[2]];
+    // A swap is a meal like any other: never offer one the athlete cannot eat.
+    const safeSwaps = SWAPS.filter((o) => safeMealIds([o.id], allergyLabels).length > 0);
+    const swapDeck = safeSwaps.length ? safeSwaps : [];
+    const activeSwaps =
+      s.swapSet === 0
+        ? swapDeck.slice(0, 3)
+        : [swapDeck[3], swapDeck[0], swapDeck[2]].filter((x): x is (typeof SWAPS)[number] => !!x);
     const mk = (o: (typeof SWAPS)[number], pre: string) =>
       Object.assign(
         { name: MEALS[o.id].name, why: o.why, match: o.match, stats: this.stats(o.id, pre === 'fq-swap-') },
@@ -974,12 +1087,24 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         fill: `width:${Math.min(100, (had / goal2) * 100)}%;height:100%;background:${col};border-radius:99px`,
       })),
       eatNext: () => {
+        if (!nm) return;
         this.update({ nextEaten: true });
         this.toast(`${nm.name} logged — ${remainPro}g protein to go`);
       },
-      openNext: () => this.update({ overlay: 'meal', mealId: nm.id }),
+      openNext: () => {
+        if (!nm) {
+          this.toast(this.blockedReason(blockedHero?.blockedBy ?? []));
+          return;
+        }
+        this.update({ overlay: 'meal', mealId: nm.id });
+      },
       openSwap: () => this.update({ overlay: 'swap', deckIdx: 0, swapPick: null }),
-      todayMeals: upcoming.map((id) => this.row(s.swapCommitted && id === 'dinner' ? s.swapCommitted : id)),
+      todayMeals: upcoming.map((r) =>
+        // A committed swap replaces dinner, but only if it is safe to eat.
+        s.swapCommitted && r.slot === 'dinner' && safeMealIds([s.swapCommitted], allergyLabels).length
+          ? this.row(s.swapCommitted)
+          : this.slotRow(r),
+      ),
       dayShape: todayMode === 'game' ? 'Game day' : todayMode === 'practice' ? 'Hard day' : 'Rest day',
       showInsight: s.insight && s.tab === 'home',
       insightText: (a.dislikes || []).length
@@ -1112,7 +1237,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       generateLabel:
         s.scope === 'week' ? 'Generate my week' : s.scope === 'day' ? 'Generate my day' : 'Generate a meal',
       hasResults: !!s.genDone,
-      results: RESULTS.map((r) =>
+      results: RESULTS.filter((r) => safeMealIds([r.id], allergyLabels).length > 0).map((r) =>
         Object.assign(field(r.id, 13, 9), {
           name: MEALS[r.id].name,
           macroText: `${MEALS[r.id].kcal} cal · ${MEALS[r.id].p}g protein · ${MEALS[r.id].c}g carbs`,
@@ -1175,7 +1300,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         pick: () => this.update({ cat: i }),
         style: `padding:9px 15px;border-radius:99px;white-space:nowrap;font-size:12.5px;font-weight:800;flex:none;border:2px solid ${s.cat === i ? INK : 'rgba(17,24,21,.13)'};background:${s.cat === i ? INK : 'transparent'};color:${s.cat === i ? '#F4F2ED' : INK}`,
       })),
-      recipes: (RECIPE_SETS[s.cat] || RECIPE_SETS[0]).map((id) =>
+      recipes: safeMealIds(RECIPE_SETS[s.cat] || RECIPE_SETS[0], allergyLabels).map((id) =>
         Object.assign(field(id, 21, 12), {
           name: MEALS[id].name,
           macroText: `${MEALS[id].kcal} cal · ${MEALS[id].p}g protein`,
