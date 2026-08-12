@@ -69,10 +69,42 @@ await page.waitForTimeout(1500);
 const frame = page.locator('[data-om-starter="ios-frame"]');
 await frame.waitFor({ timeout: 15000 });
 
+await assertFontLoaded(page);
+
 async function shot(name) {
   await page.waitForTimeout(450);
   await frame.screenshot({ path: path.join(OUT, `${name}.png`) });
   console.log('  shot', name);
+}
+
+/**
+ * Refuse to photograph the app in the wrong typeface.
+ *
+ * Every screen here is mostly text, so a stubbed font that quietly failed to
+ * apply would fall back to whatever the system has and change every screen at
+ * once — which looks exactly like a design regression and is not one. The
+ * harness had no way to tell the two apart, so it is worth one assertion.
+ *
+ * `document.fonts.check` answers for the family, and the browser version goes
+ * in the log beside it: a pixel comparison is only meaningful between two
+ * renderings by the same renderer, and this is the line that says which.
+ */
+async function assertFontLoaded(p) {
+  const state = await p.evaluate(async () => {
+    await document.fonts.ready;
+    return {
+      ok: document.fonts.check('900 27px Archivo'),
+      families: [...new Set([...document.fonts].map((f) => f.family))],
+    };
+  });
+  console.log(`  chromium ${browser.version()} · fonts: ${state.families.join(', ') || '(none)'}`);
+  if (!state.ok) {
+    throw new Error(
+      'Archivo did not load, so every screen would be captured in a fallback face.\n' +
+        `Faces the page knows about: ${state.families.join(', ') || '(none)'}\n` +
+        'The stub answers https://fonts.googleapis.com/** — check that route still matches what index.html asks for.',
+    );
+  }
 }
 
 const click = async (text, nth = 0) => {

@@ -66,6 +66,24 @@ const frame = page.locator('[data-om-starter="ios-frame"]');
 await frame.waitFor({ timeout: 15000 });
 await page.waitForTimeout(1200);
 
+// Same assertion as `capture.mjs`, for the same reason: a font that silently
+// failed to apply would change every screen at once and look like a redesign.
+const fontState = await page.evaluate(async () => {
+  await document.fonts.ready;
+  return {
+    ok: document.fonts.check('900 27px Archivo'),
+    families: [...new Set([...document.fonts].map((f) => f.family))],
+  };
+});
+console.log(`  chromium ${browser.version()} · fonts: ${fontState.families.join(', ') || '(none)'}`);
+if (!fontState.ok) {
+  throw new Error(
+    `Archivo did not load; every screen would be captured in a fallback face. Faces seen: ${
+      fontState.families.join(', ') || '(none)'
+    }`,
+  );
+}
+
 async function shot(name) {
   await page.waitForTimeout(450);
   await frame.screenshot({ path: path.join(OUT, `${name}.png`) });
