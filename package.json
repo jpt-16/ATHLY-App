@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rls": "vitest run --config vitest.rls.config.ts",
+    "test:roundtrip": "vitest run --config vitest.roundtrip.config.ts",
     "test:visual": "node tools/visual/run.mjs",
     "test:visual:update": "node tools/visual/run.mjs --update",
     "test:visual:auth": "node tools/visual/run-auth.mjs",

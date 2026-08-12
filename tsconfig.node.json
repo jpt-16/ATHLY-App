@@ -20,5 +20,15 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vitest.rls.config.ts", "supabase/tests/**/*.ts"]
+  "include": [
+    "vite.config.ts",
+    "vitest.rls.config.ts",
+    "vitest.roundtrip.config.ts",
+    "supabase/tests/**/*.ts"
+  ],
+  // `roundTrip.test.ts` imports the app's own repositories, so it belongs to the
+  // app project — that is where `src` lives and where `vite/client` supplies the
+  // `import.meta.env` types `env.ts` reads. `rls.test.ts` stays here because it
+  // talks to Postgres directly and imports nothing from `src`.
+  "exclude": ["supabase/tests/roundTrip.test.ts"]
 }

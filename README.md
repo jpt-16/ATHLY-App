@@ -22,17 +22,18 @@ No configuration needed. With no Supabase project set up the app runs
 local-only: every screen works, nothing is saved, and no account is asked for.
 See [Accounts and data](#accounts-and-data) to connect a backend.
 
-| Script                | What it does                                      |
-| --------------------- | ------------------------------------------------- |
-| `npm run dev`         | Vite dev server with fast refresh                 |
-| `npm run build`       | Typecheck, then build to `dist/` — needs config   |
-| `npm run build:local` | Same, but builds the local-only app deliberately  |
-| `npm run preview`     | Serve the production build locally                |
-| `npm test`            | Vitest suite (`npm run test:watch` to iterate)    |
-| `npm run test:rls`    | Row Level Security suite — needs a local Supabase |
-| `npm run lint`        | ESLint (`lint:fix` to autofix)                    |
-| `npm run format`      | Prettier (`format:check` in CI)                   |
-| `npm run verify`      | Everything CI runs, in one command                |
+| Script                   | What it does                                      |
+| ------------------------ | ------------------------------------------------- |
+| `npm run dev`            | Vite dev server with fast refresh                 |
+| `npm run build`          | Typecheck, then build to `dist/` — needs config   |
+| `npm run build:local`    | Same, but builds the local-only app deliberately  |
+| `npm run preview`        | Serve the production build locally                |
+| `npm test`               | Vitest suite (`npm run test:watch` to iterate)    |
+| `npm run test:rls`       | Row Level Security suite — needs a local Supabase |
+| `npm run test:roundtrip` | End-to-end against a real project — needs `.env`  |
+| `npm run lint`           | ESLint (`lint:fix` to autofix)                    |
+| `npm run format`         | Prettier (`format:check` in CI)                   |
+| `npm run verify`         | Everything CI runs, in one command                |
 
 Two more, both needing a build first and a Chromium
 (`npx playwright install chromium`):
@@ -143,7 +144,23 @@ supabase start                       # local Postgres + auth, applies migrations
 npm run test:rls                     # with the keys `supabase start` prints
 supabase db push                     # apply to the hosted project
 supabase functions deploy delete-account
+npm run test:roundtrip               # against the project in .env
 ```
+
+Two suites, two different claims, and it is worth keeping them apart.
+`test:rls` needs the `service_role` key and proves **the database refuses the
+wrong request** — an anonymous client and a wrong-user client denied on every
+table, and any view that ships without `security_invoker` failing from the
+catalog. `test:roundtrip` needs only the two public values from `.env` and proves
+**the app makes the right request**: it signs up a throwaway account, saves the
+thirteen answers, reads them back field by field, logs a meal, totals it, checks
+a second athlete sees none of it, and then deletes both accounts through the same
+Edge Function the Profile screen calls. A repository writing a column the
+migration does not have fails there rather than in front of an athlete.
+
+It creates and deletes real accounts, so point it at an empty project or a
+branch. If sign-up returns no session it will say so: the project has email
+confirmation on, and the suite cannot proceed past it.
 
 ### Where accounts fit in the flow
 

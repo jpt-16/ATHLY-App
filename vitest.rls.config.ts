@@ -14,7 +14,10 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['supabase/tests/**/*.test.ts'],
+    // Named rather than globbed: `roundTrip.test.ts` lives in the same folder
+    // and needs a different set of credentials, so a glob would drag it in and
+    // fail for anyone who has only the local stack running.
+    include: ['supabase/tests/rls.test.ts'],
     // A real database, real auth round trips and user creation — the default
     // 5s is not enough for the setup step.
     testTimeout: 30_000,
