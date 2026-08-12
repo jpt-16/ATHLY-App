@@ -58,6 +58,16 @@ export default defineConfig(({ mode }) => ({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // The suite is of the local-only app: no account gate, no network, first
+    // paint is the final one. Vite loads `.env` for tests as readily as for a
+    // build, so a developer following the README's `cp .env.example .env` would
+    // flip `isBackendConfigured` to true and fail every test in the file that
+    // renders the app — for a reason with nothing to do with their change. CI
+    // has no `.env`, so CI would stay green and only the human would be stuck.
+    //
+    // Cleared here rather than in a setup file: `src/lib/env.ts` reads these at
+    // module scope, which runs before any setup hook could get to them.
+    env: { VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '', VITE_ENABLE_APPLE: '' },
     // `tools/` is in here because the USDA ingest parses this repo's own recipe
     // data, and the assertion that it reads all 44 meals rather than six is only
     // useful if it runs with everything else.
