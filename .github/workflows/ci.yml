@@ -117,4 +117,9 @@ jobs:
             tools/visual/diffs-auth
             tools/visual/.capture
             tools/visual/.capture-auth
+          # `.capture` is a dot-directory, so the default excluded the very
+          # thing worth having: the screens as this pinned image draws them.
+          # Only the diff images were being uploaded, which show where two
+          # renderings disagree but cannot be used to fix the disagreement.
+          include-hidden-files: true
           retention-days: 7
