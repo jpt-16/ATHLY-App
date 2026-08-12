@@ -8,9 +8,33 @@ compared with `baseline/` pixel by pixel. Any difference fails, and a diff image
 is written so the change can be looked at rather than guessed at.
 
 ```bash
-npm run build:local    # the harness serves dist/, not the dev server
-npm run test:visual
+npm run build:local          # the harness serves dist/, not the dev server
+npm run test:visual:docker   # in the same image CI uses
 ```
+
+## The renderer is part of the input
+
+A pixel comparison compares two renderings, so the thing doing the rendering has
+to be pinned or the comparison is noise. Chromium's build, freetype's version
+and the system fonts all change how a glyph lands on a pixel grid, and none of
+them is held still by `npx playwright install`.
+
+This was not a theoretical problem. The gate ran unpinned on CI for five commits
+and failed every one of them: all twenty screens differed, between 0.25% and 6%
+of their pixels, including screens nobody had edited. Two machines drawing the
+same words slightly differently, reported as a design regression.
+
+So both CI and the `:docker` scripts run
+`mcr.microsoft.com/playwright:v1.62.1-noble` — the tag matches the `playwright`
+version in `package.json`, and the two must be bumped together.
+
+**Regenerate baselines in that image, never on the host.** A baseline captured
+anywhere else disagrees with CI on every screen, and the failure looks exactly
+like a real regression, which is the worst kind of false alarm: the one that
+teaches people to run `--update` without looking.
+
+Running without Docker still works and is useful while iterating — you are
+comparing your machine against itself — but the result is not what CI will say.
 
 `build:local`, not `build`: a production build refuses to run without Supabase
 credentials, and the local-only app — no account gate, no network — is the one
@@ -38,7 +62,7 @@ If the change is wrong, fix it. If it is intended — a deliberate design change
 review each diff, then:
 
 ```bash
-npm run test:visual:update
+npm run test:visual:update:docker
 ```
 
 That replaces the baseline with the current rendering. Commit the changed PNGs

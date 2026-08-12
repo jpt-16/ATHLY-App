@@ -35,14 +35,16 @@ See [Accounts and data](#accounts-and-data) to connect a backend.
 | `npm run format`         | Prettier (`format:check` in CI)                   |
 | `npm run verify`         | Everything CI runs, in one command                |
 
-Two more, both needing a build first and a Chromium
-(`npx playwright install chromium`):
+Three more, all needing `npm run build:local` first. The `:docker` one needs
+Docker and is the only one whose answer matches CI — see
+[Fidelity](#fidelity) for why the renderer has to be pinned:
 
-| Script                     | What it does                                           |
-| -------------------------- | ------------------------------------------------------ |
-| `npm run test:visual`      | Pixel-diffs the app against the baseline — see below   |
-| `npm run test:visual:auth` | Same, for the account screens (builds with config)     |
-| `npm run icons`            | Regenerates the PNG app icons from the mark's geometry |
+| Script                       | What it does                                           |
+| ---------------------------- | ------------------------------------------------------ |
+| `npm run test:visual`        | Pixel-diffs the app against the baseline — see below   |
+| `npm run test:visual:docker` | The same, in the pinned image CI uses                  |
+| `npm run test:visual:auth`   | Same, for the account screens (builds with config)     |
+| `npm run icons`              | Regenerates the PNG app icons from the mark's geometry |
 
 `npm run build` **refuses to run without Supabase credentials.** A bundle with
 none looks like a working product and quietly saves nothing, which is a failure
@@ -439,6 +441,17 @@ to the pixel.
 The harness freezes the browser clock (`tools/visual/clock.mjs`) before the app
 loads. The calendar and the week strip are drawn from the real date now, so
 without the pin every baseline would expire at midnight and again every month.
+
+**And it pins the renderer**, which is the part that took five red builds to
+learn. A pixel comparison compares two renderings, so Chromium's build, the
+freetype version and the system fonts are all inputs to it — and `npx playwright
+install` on a CI runner holds none of them still. The gate failed every commit
+from the one that introduced it, on all twenty screens, including screens nobody
+had edited, by up to 6% of their pixels. Nothing was wrong with the app; two
+machines were drawing the same text differently and the harness had no way to
+say so. CI and `npm run test:visual:docker` now both run
+`mcr.microsoft.com/playwright:v1.62.1-noble`, and baselines are regenerated in
+that image or not at all. See [`tools/visual/`](./tools/visual/README.md).
 
 ### What changed underneath
 

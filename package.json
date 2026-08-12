@@ -25,6 +25,9 @@
     "test:visual:update": "node tools/visual/run.mjs --update",
     "test:visual:auth": "node tools/visual/run-auth.mjs",
     "test:visual:auth:update": "node tools/visual/run-auth.mjs --update",
+    "visual:docker": "docker run --rm -t -v \"$PWD\":/work -w /work -e HOME=/tmp -u \"$(id -u):$(id -g)\" mcr.microsoft.com/playwright:v1.62.1-noble",
+    "test:visual:docker": "npm run visual:docker -- npm run test:visual",
+    "test:visual:update:docker": "npm run visual:docker -- npm run test:visual:update",
     "icons": "node tools/icons/generate.mjs",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build:local"
   },
