@@ -5,6 +5,17 @@ on:
     branches: ['**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      update_baselines:
+        # Baselines have to be produced by the pinned image, because that is the
+        # only renderer whose output the gate compares against. Anyone with
+        # Docker can do it locally with `npm run test:visual:update:docker`;
+        # this is the same thing for anyone who cannot, and it is deliberately
+        # manual — nothing on a normal push can rewrite what the gate measures
+        # against, or the gate would agree with itself forever.
+        description: 'Regenerate the visual baselines in the pinned image and commit them'
+        type: boolean
+        default: false
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -64,6 +75,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Write access is needed only by the manual `update_baselines` path, which
+    # is the one step in this repository that commits from CI.
+    permissions:
+      contents: write
+
     # Pinned, because a pixel comparison is a comparison of two renderings and
     # the renderer is part of the input.
     #
@@ -99,13 +115,36 @@ jobs:
         run: npm run build:local
 
       - name: Compare against baseline
+        if: ${{ !inputs.update_baselines }}
         run: npm run test:visual
 
       # The account screens exist only with a backend configured, so this builds
       # a second time against a host that does not resolve. Every screen it
       # photographs renders before any request is made.
       - name: Compare account screens against baseline
+        if: ${{ !inputs.update_baselines }}
         run: npm run test:visual:auth
+
+      - name: Regenerate baselines
+        if: ${{ inputs.update_baselines }}
+        run: |
+          npm run test:visual:update
+          npm run test:visual:auth:update
+
+      - name: Commit baselines
+        if: ${{ inputs.update_baselines }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/visual/baseline tools/visual/baseline-auth
+          if git diff --cached --quiet; then
+            echo 'Baselines already match this image; nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'Regenerate visual baselines in the pinned image' \
+                     -m 'Captured by the CI container so the gate and the baselines agree on a renderer. Content unchanged; this is a re-rasterisation.'
+          git push origin HEAD:'${{ github.ref_name }}'
 
       - name: Upload diffs
         if: failure()
