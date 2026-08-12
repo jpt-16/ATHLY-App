@@ -50,31 +50,43 @@ const run = (cmd, args, opts = {}) =>
 console.log('Building with a backend configured…');
 await run('npx', ['vite', 'build'], { env: BUILD_ENV });
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
+// `127.0.0.1` on both ends, and the server's output kept — see `run.mjs` for
+// why both matter. `localhost` resolving to `::1` while Vite listens on IPv4 is
+// invisible until it is not.
+const HOST = '127.0.0.1';
+const ORIGIN = `http://${HOST}:${PORT}/`;
+
+const server = spawn('npx', ['vite', 'preview', '--host', HOST, '--port', String(PORT), '--strictPort'], {
   cwd: ROOT,
-  stdio: 'ignore',
+  stdio: ['ignore', 'pipe', 'pipe'],
   shell: process.platform === 'win32',
 });
+
+let serverLog = '';
+server.stdout.on('data', (d) => (serverLog += d));
+server.stderr.on('data', (d) => (serverLog += d));
 
 async function waitForServer(timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`http://localhost:${PORT}/`);
+      const res = await fetch(ORIGIN);
       if (res.ok) return;
     } catch {
       /* not up yet */
     }
     await new Promise((r) => setTimeout(r, 250));
   }
-  throw new Error(`preview server did not start on port ${PORT}`);
+  throw new Error(
+    `preview server did not start on ${ORIGIN}\n\nvite preview said:\n${serverLog.trim() || '(nothing)'}`,
+  );
 }
 
 let exitCode = 0;
 try {
   await waitForServer();
   fs.rmSync(CAPTURE, { recursive: true, force: true });
-  await run('node', [path.join(HERE, 'capture-auth.mjs'), CAPTURE, `http://localhost:${PORT}/`]);
+  await run('node', [path.join(HERE, 'capture-auth.mjs'), CAPTURE, ORIGIN]);
 
   if (update) {
     fs.rmSync(BASELINE, { recursive: true, force: true });

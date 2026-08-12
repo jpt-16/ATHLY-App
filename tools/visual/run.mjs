@@ -32,9 +32,28 @@ const run = (cmd, args, opts = {}) =>
     child.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} exited ${code}`))));
   });
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
+// `127.0.0.1`, never `localhost`, on both ends.
+//
+// Vite binds the preview server to IPv4 loopback; Node's `fetch` resolves
+// `localhost` and, on a machine that answers for `::1` first, tries IPv6 and is
+// refused. The server is up, the poll never sees it, and the harness reports
+// "did not start" — which is what happened the moment CI moved into a container.
+const HOST = '127.0.0.1';
+const ORIGIN = `http://${HOST}:${PORT}/`;
+
+const server = spawn('npx', ['vite', 'preview', '--host', HOST, '--port', String(PORT), '--strictPort'], {
   cwd: ROOT,
-  stdio: 'ignore',
+  stdio: ['ignore', 'pipe', 'pipe'],
+});
+
+// Kept, not discarded. This used to be `stdio: 'ignore'`, so when the server
+// failed to start the only thing anyone got was the timeout message — the
+// reason went to /dev/null.
+let serverLog = '';
+server.stdout.on('data', (d) => (serverLog += d));
+server.stderr.on('data', (d) => (serverLog += d));
+server.on('exit', (code) => {
+  if (code !== 0 && code !== null) serverLog += `\nvite preview exited ${code}`;
 });
 
 // Poll rather than parse the server's banner: the banner format is Vite's to
@@ -43,21 +62,23 @@ async function waitForServer(timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`http://localhost:${PORT}/`);
+      const res = await fetch(ORIGIN);
       if (res.ok) return;
     } catch {
       /* not up yet */
     }
     await new Promise((r) => setTimeout(r, 250));
   }
-  throw new Error(`preview server did not start on port ${PORT}`);
+  throw new Error(
+    `preview server did not start on ${ORIGIN}\n\nvite preview said:\n${serverLog.trim() || '(nothing)'}`,
+  );
 }
 
 let exitCode = 0;
 try {
   await waitForServer();
   fs.rmSync(CAPTURE, { recursive: true, force: true });
-  await run('node', [path.join(HERE, 'capture.mjs'), CAPTURE, `http://localhost:${PORT}/`]);
+  await run('node', [path.join(HERE, 'capture.mjs'), CAPTURE, ORIGIN]);
 
   if (update) {
     fs.rmSync(BASELINE, { recursive: true, force: true });
