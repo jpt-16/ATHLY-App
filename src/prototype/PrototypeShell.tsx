@@ -18,6 +18,39 @@ import { Toast } from './overlays/Toast';
 import { IOSDevice } from '../components/ios/IOSFrame';
 import { useIsCompact } from '../hooks/useIsCompact';
 
+/**
+ * The beat before the app knows who is signed in.
+ *
+ * `isOnboarding`, `isAuth` and `isApp` are all gated on `!hydrating`, and until
+ * this existed nothing was gated *on* it — so with a backend configured the app
+ * rendered an empty div until Supabase answered. A flash at best; a permanently
+ * blank page if the answer never came, with nothing on screen to say why.
+ *
+ * Locally and in CI there is no backend, so `hydrating` is false from the first
+ * render and none of that ever happened. It only appeared once the app was
+ * deployed with credentials, which is the worst place to find out.
+ *
+ * Deliberately just the mark on the app's own ground: an athlete opening a
+ * saved plan should see the app arrive, not a spinner announcing a wait.
+ */
+function Hydrating() {
+  return (
+    <div
+      style={S(
+        'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#F4F2ED',
+      )}
+    >
+      <div
+        style={S(
+          'width:34px;height:34px;border-radius:11px;background:#111815;display:flex;align-items:center;justify-content:center;opacity:.9',
+        )}
+      >
+        <span style={S('font-size:14px;font-weight:900;color:#F4F2ED;letter-spacing:-.04em')}>A</span>
+      </div>
+    </div>
+  );
+}
+
 /** The app itself — identical in both presentations. */
 function Screens({ v }: { v: ViewModel }) {
   return (
@@ -26,6 +59,7 @@ function Screens({ v }: { v: ViewModel }) {
         'position:relative;height:100%;min-height:100%;width:100%;overflow:hidden;background:#F4F2ED;color:#111815;font-family:Archivo,system-ui,sans-serif',
       )}
     >
+      {v.isHydrating ? <Hydrating /> : null}
       {v.isOnboarding ? <Onboarding v={v} /> : null}
       {v.isAuth ? <Auth v={v} /> : null}
       {v.isApp ? <AppShell v={v} /> : null}

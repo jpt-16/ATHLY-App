@@ -34,10 +34,41 @@ const rawUrl = import.meta.env.VITE_SUPABASE_URL?.trim() ?? '';
 const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? '';
 
 /**
+ * A URL that `createClient` will accept.
+ *
+ * Worth checking here rather than finding out later, because `createClient`
+ * runs at module scope in `supabase.ts` and throws on a malformed URL — before
+ * React has mounted, so before any error boundary exists to catch it. The whole
+ * bundle dies and the athlete gets a white page with the reason visible only in
+ * a console they will never open. A pasted value missing its scheme, or with a
+ * stray character from a dashboard field, is enough to do it.
+ */
+function usableUrl(raw: string): boolean {
+  if (raw === '') return false;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+if (rawUrl !== '' && !usableUrl(rawUrl)) {
+  // Loud, and still standing. Falling back to local-only is not silent success
+  // — the app says "no account needed" on every screen — but it beats a page
+  // that renders nothing and explains nothing.
+  console.error(
+    `ATHLY: VITE_SUPABASE_URL is not a usable URL (${JSON.stringify(rawUrl)}).\n` +
+      'Expected something like https://<project-ref>.supabase.co — check for a missing\n' +
+      'scheme or a stray character. Running local-only until it is fixed: nothing will save.',
+  );
+}
+
+/**
  * Whether a Supabase project is configured. When false, every backend-touching
  * path in the app is skipped rather than failing — see the module comment.
  */
-export const isBackendConfigured: boolean = rawUrl !== '' && rawKey !== '';
+export const isBackendConfigured: boolean = usableUrl(rawUrl) && rawKey !== '';
 
 /**
  * Configuration, or `null` when there is no backend.
