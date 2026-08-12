@@ -113,15 +113,26 @@ export function PrototypeShell({ v }: { v: ViewModel }) {
             'font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#A5A093;margin-left:auto',
           )}
         >
-          Interactive prototype
+          Early access
         </div>
       </div>
       <IOSDevice>
         <Screens v={v} />
       </IOSDevice>
-      <div style={S('width:402px;max-width:100%;font-size:12px;line-height:1.6;color:#6E6A60')}>
-        Tweaks switch the home layout, swap interaction, planner input and bottom nav.
-      </div>
+      {/*
+        A line reading "Tweaks switch the home layout, swap interaction, planner
+        input and bottom nav" used to sit here. It described the design tool's
+        A/B controls, which do not exist in a built bundle — so on the deployed
+        site it explained a set of knobs nobody could see or use. "Interactive
+        prototype" went at the same time: accurate in the design tool, and on a
+        public URL it reads as "this is a mockup" about an app that saves your
+        account and logs your food.
+
+        What is genuinely unfinished — the fixed meal plan, macros that are
+        authored estimates — is not something a label in the page chrome can
+        carry honestly. That belongs in the app, next to the numbers it applies
+        to, and it is not built yet.
+      */}
     </div>
   );
 }

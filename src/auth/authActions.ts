@@ -46,6 +46,13 @@ function readable(message: string): string {
   if (m.includes('failed to fetch') || m.includes('network')) {
     return "Couldn't reach the server. Check your connection and try again.";
   }
+  if (m.includes('provider is not enabled') || m.includes('unsupported provider')) {
+    // The catch-all used to answer this one, and it said "try again in a
+    // moment" — advice for a transient fault, offered for a permanent one. The
+    // provider is switched off in the project's settings and no amount of
+    // waiting will turn it on, so say what will actually work instead.
+    return 'That sign-in option is not set up yet. Use your email and a password for now.';
+  }
   return 'Something went wrong. Try again in a moment.';
 }
 

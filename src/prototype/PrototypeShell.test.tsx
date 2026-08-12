@@ -30,7 +30,10 @@ describe('PrototypeShell', () => {
     render(<App />);
 
     expect(frame()).toBeInTheDocument();
-    expect(screen.getByText(/interactive prototype/i)).toBeInTheDocument();
+    expect(screen.getByText(/early access/i)).toBeInTheDocument();
+    // The design tool's A/B knobs do not exist in a built bundle, so the line
+    // that described them has no business on the deployed page.
+    expect(screen.queryByText(/tweaks switch/i)).not.toBeInTheDocument();
     // The frame's own status bar clock — present only when we draw the hardware.
     expect(screen.getByText('9:41')).toBeInTheDocument();
   });
@@ -41,7 +44,7 @@ describe('PrototypeShell', () => {
 
     // The marker stays put in both modes — the visual harness keys off it.
     expect(frame()).toBeInTheDocument();
-    expect(screen.queryByText(/interactive prototype/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/early access/i)).not.toBeInTheDocument();
     expect(screen.queryByText('9:41')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /let's set you up/i })).toBeInTheDocument();
   });
