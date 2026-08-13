@@ -78,6 +78,7 @@ import {
   updatePassword,
 } from '../auth/authActions';
 import { loadAccount, saveAccount } from '../data/profileRepo';
+import { loadPlan, savePlanReplans, savePlanSwap } from '../data/planRepo';
 import type { PersistedState } from '../data/profileRepo';
 import { clearOnboarding, readOnboarding, stashOnboarding } from '../data/pendingOnboarding';
 
@@ -381,10 +382,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     }
     if (!this._alive) return;
 
-    // The food log is loaded either way and never blocks the app: an athlete
-    // whose history fails to arrive should still see today's plan, with an empty
-    // ring, rather than a spinner.
+    // The food log and the plan edits are loaded either way and never block the
+    // app: an athlete whose history fails to arrive should still see today's
+    // plan, with an empty ring, rather than a spinner.
     void this.loadLogs();
+    void this.loadPlanEdits();
 
     if (saved) {
       clearOnboarding();
@@ -442,6 +444,28 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
   // -------------------------------------------------------------------------
   // The food log
   // -------------------------------------------------------------------------
+
+  /**
+   * Read back the swaps and re-rolls the athlete made.
+   *
+   * Merged over whatever is already in state rather than replacing it, so a
+   * swap made while this request was in flight is not undone by its answer.
+   * Failure is silent and leaves the generated plan showing, which is a valid
+   * plan — the athlete's edits reappear on the next successful load.
+   */
+  private async loadPlanEdits() {
+    if (!isBackendConfigured) return;
+    try {
+      const stored = await loadPlan();
+      if (!this._alive) return;
+      this.update((st) => ({
+        swaps: Object.assign({}, stored.swaps, st.swaps),
+        replans: Object.assign({}, stored.replans, st.replans),
+      }));
+    } catch {
+      // See above.
+    }
+  }
 
   /** Read back the window the Home ring and the Progress tab are drawn from. */
   private async loadLogs() {
@@ -806,14 +830,30 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       this.update({ overlay: null, swapPick: null });
       return;
     }
-    const key = `${this.planDate()}|${slot}`;
+    const date = this.planDate();
     this.update((st) => ({
       overlay: null,
       swapPick: null,
       swapFor: null,
-      swaps: Object.assign({}, st.swaps, { [key]: mealId }),
+      swaps: Object.assign({}, st.swaps, { [`${date}|${slot}`]: mealId }),
     }));
     this.toast(`Swapped in ${MEALS[mealId].name}`);
+    this.persistSwap(date, slot, mealId);
+  }
+
+  /**
+   * Send a plan edit to the database, without making the athlete wait for it.
+   *
+   * The state is already updated when this runs, so the screen has moved. A
+   * failure is said out loud rather than swallowed: an athlete who swapped
+   * Thursday's dinner and comes back to find the old one needs to know it did
+   * not take, and the swap is cheap to redo.
+   */
+  private persistSwap(date: IsoDate, slot: string, mealId: string) {
+    if (!isBackendConfigured || !this.props.userId) return;
+    void savePlanSwap(this.props.userId, date, slot, mealId).catch(() => {
+      if (this._alive) this.toast("That swap didn't save — try it again.");
+    });
   }
 
   /**
@@ -830,9 +870,16 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
    */
   private replanDay(date: IsoDate) {
     const kept = Object.keys(this.state.swaps).filter((k) => k.startsWith(`${date}|`)).length;
+    const next = (this.state.replans[date] ?? 0) + 1;
     this.update((st) => ({
-      replans: Object.assign({}, st.replans, { [date]: (st.replans[date] ?? 0) + 1 }),
+      replans: Object.assign({}, st.replans, { [date]: next }),
     }));
+    if (isBackendConfigured && this.props.userId) {
+      // Quietly: a lost re-roll costs the athlete one tap, and the day they get
+      // back is still a valid plan. A lost *swap* is a decision, which is why
+      // that one speaks up.
+      void savePlanReplans(this.props.userId, date, next).catch(() => {});
+    }
     this.toast(
       kept
         ? `${shortDateLabel(date)} replanned — your ${kept === 1 ? 'swap' : 'swaps'} kept`
@@ -874,11 +921,12 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       return;
     }
 
-    const key = `${this.planDate()}|${slot}`;
+    const date = this.planDate();
     this.update((st) => ({
       overlay: null,
-      swaps: Object.assign({}, st.swaps, { [key]: better.meal.id }),
+      swaps: Object.assign({}, st.swaps, { [`${date}|${slot}`]: better.meal.id }),
     }));
+    this.persistSwap(date, slot, better.meal.id);
     this.toast(
       goal === 'faster'
         ? `${better.meal.name} — ${better.meal.prep}, ${-better.dMinutes} min quicker`

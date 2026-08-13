@@ -54,6 +54,8 @@ const OWNED_TABLES = [
   'training_week',
   'training_overrides',
   'meal_logs',
+  'plan_swaps',
+  'plan_days',
 ] as const;
 
 type Owned = (typeof OWNED_TABLES)[number];
@@ -102,6 +104,10 @@ function sampleRow(table: Owned, userId: string): Record<string, unknown> {
         carbs_g: 82,
         fat_g: 21,
       };
+    case 'plan_swaps':
+      return { user_id: userId, plan_date: '2026-08-12', slot: 'dinner', meal_id: 'steakpot' };
+    case 'plan_days':
+      return { user_id: userId, plan_date: '2026-08-12', replans: 2 };
   }
 }
 
@@ -564,6 +570,67 @@ describe('column bounds', () => {
       .update({ session_time: 'x'.repeat(21) })
       .eq('user_id', alice.id)
       .eq('weekday', 1);
+    expect(error).not.toBeNull();
+  });
+});
+
+describe('the plan an athlete edited', () => {
+  // Swapping Thursday's dinner is a decision, and it used to live in React
+  // state alone — gone the moment the tab closed. Now that it is a row, it is a
+  // row somebody else must not be able to read or rewrite.
+  it('is invisible to another athlete', async () => {
+    for (const table of ['plan_swaps', 'plan_days'] as const) {
+      const { data, error } = await bob.client.from(table).select('*');
+      expect(error).toBeNull();
+      expect(data ?? []).toEqual([]);
+    }
+  });
+
+  it('cannot be written on someone else’s behalf', async () => {
+    // The `with check` half of the policy. Without it an athlete could file a
+    // swap against another account's Thursday.
+    const { error } = await bob.client
+      .from('plan_swaps')
+      .insert({ user_id: alice.id, plan_date: '2026-08-13', slot: 'lunch', meal_id: 'wrap' });
+    expect(error).not.toBeNull();
+  });
+
+  it('is readable and writable by its owner', async () => {
+    const { data, error } = await alice.client.from('plan_swaps').select('*');
+    expect(error).toBeNull();
+    expect((data ?? []).length).toBe(1);
+
+    const { error: writeError } = await alice.client
+      .from('plan_swaps')
+      .upsert(
+        { user_id: alice.id, plan_date: '2026-08-14', slot: 'dinner', meal_id: 'salmon' },
+        { onConflict: 'user_id,plan_date,slot' },
+      );
+    expect(writeError).toBeNull();
+  });
+
+  it('is refused to anyone not signed in', async () => {
+    for (const table of ['plan_swaps', 'plan_days'] as const) {
+      const { data } = await anon.from(table).select('*');
+      expect(data ?? []).toEqual([]);
+    }
+  });
+
+  it('bounds the replan counter', async () => {
+    // It is an input to a hash, not a quantity anyone reads. A client in a loop
+    // should not be able to write an unbounded integer.
+    const { error } = await admin
+      .from('plan_days')
+      .upsert({ user_id: alice.id, plan_date: '2026-08-20', replans: 100000 });
+    expect(error).not.toBeNull();
+  });
+
+  it('keeps one swap per slot per day', async () => {
+    // The primary key is the reason a second swap replaces the first rather
+    // than stacking two meals into one dinner.
+    const { error } = await admin
+      .from('plan_swaps')
+      .insert({ user_id: alice.id, plan_date: '2026-08-12', slot: 'dinner', meal_id: 'salmon' });
     expect(error).not.toBeNull();
   });
 });

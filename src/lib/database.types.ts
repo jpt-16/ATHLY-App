@@ -118,6 +118,28 @@ export type MealLogRow = {
 };
 
 /**
+ * A meal the athlete put into a slot themselves.
+ *
+ * Keyed by the position in the day rather than by the meal it displaced: a
+ * replan may pick something different for that slot, and the choice was about
+ * what goes at dinner, not about the pasta it replaced.
+ */
+export type PlanSwapRow = {
+  user_id: string;
+  /** `YYYY-MM-DD`, in the athlete's own timezone. */
+  plan_date: string;
+  slot: string;
+  meal_id: string;
+};
+
+/** How many times a day has been re-rolled. An input to the planner's seed. */
+export type PlanDayRow = {
+  user_id: string;
+  plan_date: string;
+  replans: number;
+};
+
+/**
  * The `daily_totals` view. Read-only from here — `Insert` and `Update` exist
  * only because the client's table type demands them, and Postgres will refuse
  * either way.
@@ -153,6 +175,8 @@ export interface Database {
       training_overrides: Table<TrainingOverrideRow>;
       entitlements: Table<EntitlementRow>;
       meal_logs: Table<MealLogRow>;
+      plan_swaps: Table<PlanSwapRow>;
+      plan_days: Table<PlanDayRow>;
     };
     Views: {
       daily_totals: Table<DailyTotalsRow>;
@@ -185,6 +209,8 @@ export const USER_TABLES = [
   'training_week',
   'training_overrides',
   'meal_logs',
+  'plan_swaps',
+  'plan_days',
 ] as const;
 
 export type UserTable = (typeof USER_TABLES)[number];
