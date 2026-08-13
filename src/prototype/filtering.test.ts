@@ -151,3 +151,76 @@ describe('the default athlete', () => {
     }
   });
 });
+
+describe('a week is seven different days', () => {
+  // Without a date this function is a pure function of the athlete's
+  // constraints, so every day of the week resolved to the identical meal: the
+  // same breakfast on Monday, on Tuesday, and on every Tuesday after. The
+  // calendar was rendering seven copies of one day and calling it a plan.
+  const WEEK = [
+    '2026-08-10',
+    '2026-08-11',
+    '2026-08-12',
+    '2026-08-13',
+    '2026-08-14',
+    '2026-08-15',
+    '2026-08-16',
+  ];
+
+  it('varies the meal across the week for every slot', () => {
+    for (const [slot, candidates] of Object.entries(SLOT_CANDIDATES)) {
+      const picked = new Set(
+        WEEK.map((d) => selectForSlot(candidates, { allergens: [], dislikes: [] }, d).meal?.id),
+      );
+      expect(picked.size, `slot "${slot}" served one meal all week`).toBeGreaterThan(1);
+    }
+  });
+
+  it('gives the same day the same meal every time it is asked', () => {
+    // The property that makes it a plan rather than a shuffle. Screens re-render
+    // constantly; a plan that changed under the athlete's thumb would be worse
+    // than a repetitive one.
+    for (const [, candidates] of Object.entries(SLOT_CANDIDATES)) {
+      for (const d of WEEK) {
+        const a = selectForSlot(candidates, { allergens: [], dislikes: [] }, d).meal?.id;
+        const b = selectForSlot(candidates, { allergens: [], dislikes: [] }, d).meal?.id;
+        expect(b).toBe(a);
+      }
+    }
+  });
+
+  it('does not rotate every slot in lockstep', () => {
+    // Seeded on the slot as well as the day, or a day comes out "all first
+    // choices" and the next "all second choices" — variety between days but a
+    // strangely uniform day.
+    const offsets = WEEK.map((d) =>
+      Object.entries(SLOT_CANDIDATES)
+        .map(([, c]) => c.indexOf(selectForSlot(c, { allergens: [], dislikes: [] }, d).meal?.id ?? ''))
+        .join(','),
+    );
+    // At least one day must mix two different candidate positions.
+    const mixed = offsets.some((row) => new Set(row.split(',')).size > 1);
+    expect(mixed).toBe(true);
+  });
+
+  it('still never serves an allergen, whatever the date', () => {
+    // The hard rule outranks variety. Rotation picks among the safe meals; it
+    // must never reach past that filter.
+    for (const allergen of ALLERGENS) {
+      for (const d of WEEK) {
+        for (const candidates of Object.values(SLOT_CANDIDATES)) {
+          const result = selectForSlot(candidates, { allergens: [CHIP[allergen]], dislikes: [] }, d);
+          if (result.meal) expect(isSafe(result.meal, [CHIP[allergen]])).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('leaves the undated call exactly as it was', () => {
+    // The visual baselines and the "default athlete" test above both depend on
+    // the no-date path still returning the shipped first choice.
+    for (const [, candidates] of Object.entries(SLOT_CANDIDATES)) {
+      expect(selectForSlot(candidates, { allergens: [], dislikes: [] }).meal?.id).toBe(candidates[0]);
+    }
+  });
+});

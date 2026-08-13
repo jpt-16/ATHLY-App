@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { UserEvent } from '@testing-library/user-event';
 
 import { AthlyApp } from './AthlyApp';
+import { MEALS_BY_NAME, SLOW, leadMeal, planArea, reachHome } from './walkthrough';
 
 /**
  * The Home ring, end to end, with no backend.
@@ -20,19 +21,11 @@ import { AthlyApp } from './AthlyApp';
 
 const user = () => userEvent.setup();
 
-/**
- * Thirteen questions and a four-second build animation stand between the intro
- * screen and the ring, and every test here has to walk through them. That is
- * longer than the default five seconds, and worth it: entering the app the way
- * an athlete does is the only way to catch a number that is right in the view
- * model and wrong on the screen.
- */
-const SLOW = 30_000;
-
 beforeEach(() => {
-  // The app renders a real calendar now. Pinning the clock keeps "today" — and
-  // so the training day, the meals it calls for, and the week strip — the same
-  // on every run and in every timezone.
+  // The app renders a real calendar, and the planner varies the day's meals by
+  // date. Pinning the clock keeps "today" — and so the training day, the meals
+  // it calls for, and the week strip — the same on every run and in every
+  // timezone.
   //
   // `Date` only: the build animation and every `await` in here run on real
   // timers, and faking those would deadlock against `userEvent`.
@@ -44,43 +37,6 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** The thirteen answers, ending on the targets screen. */
-async function runOnboarding(u: UserEvent) {
-  await u.click(screen.getByRole('button', { name: /let's set you up/i }));
-  await u.type(screen.getByPlaceholderText(/jordan/i), 'Sam');
-  const next = () => u.click(screen.getByRole('button', { name: /^next$/i }));
-  await next();
-  await u.click(screen.getByRole('button', { name: /gain lean weight/i }));
-  await u.click(await screen.findByRole('button', { name: /^male/i }));
-  await screen.findByRole('heading', { name: /a few numbers/i });
-  await next();
-  await next();
-  await u.click(screen.getByRole('button', { name: /^soccer$/i }));
-  await next();
-  await next();
-  await u.click(screen.getByRole('button', { name: /^chicken$/i }));
-  await next();
-  await u.click(screen.getByRole('button', { name: /nothing to avoid/i }));
-  await u.click(screen.getByRole('button', { name: /nothing to avoid/i }));
-  await u.click(screen.getByRole('button', { name: /i can follow a recipe/i }));
-  await u.click(await screen.findByRole('button', { name: /middle of the road/i }));
-  await u.click(await screen.findByRole('button', { name: /about 20 minutes/i }));
-}
-
-/**
- * Onboard, then sit through the build animation and land on Home.
- *
- * `navPrimary="Even tabs"` throughout: the default nav puts the Log tab behind
- * an unlabelled `+` button (`AppShell.tsx`), which a test cannot address and a
- * screen reader cannot announce either. The even-tab layout is an existing
- * design variant, not a change to anything under test here.
- */
-async function reachHome(u: UserEvent) {
-  await runOnboarding(u);
-  await u.click(await screen.findByRole('button', { name: /build my week/i }));
-  await screen.findByText(/still to eat today/i, undefined, { timeout: 8000 });
-}
-
 /** The two numbers on the ring: calories left, protein left. */
 function stillToEat() {
   const heading = screen.getByText(/still to eat today/i);
@@ -89,17 +45,6 @@ function stillToEat() {
     .getAllByText(/^[\d,]+$/)
     .map((el) => Number(el.textContent?.replace(/,/g, '')));
   return { cal, pro };
-}
-
-/**
- * The plan list on Home, without the toast.
- *
- * Logging a meal names it in a toast — "Peanut butter banana oats logged — 142g
- * protein to go" — so a document-wide query still finds the meal after it has
- * left the plan. Everything here asks the hero card and the list below it.
- */
-function planArea(): HTMLElement {
-  return screen.getByText(/eat this next/i).closest('div')!.parentElement as HTMLElement;
 }
 
 /** Open the Progress screen from the card on Home. */
@@ -153,10 +98,12 @@ describe('the home ring', () => {
       // Breakfast leads the day before anything is logged — the prototype used to
       // skip the first two slots on the assumption they were already eaten, which
       // was true at the hour the screenshot was taken and at no other.
-      expect(within(planArea()).getByText(/peanut butter banana oats/i)).toBeInTheDocument();
+      const lead = leadMeal();
+      expect(MEALS_BY_NAME[lead].slot).toBe('Breakfast');
+      expect(within(planArea()).getAllByText(lead).length).toBeGreaterThan(0);
 
       await u.click(screen.getByRole('button', { name: /ate it/i }));
-      expect(within(planArea()).queryByText(/peanut butter banana oats/i)).not.toBeInTheDocument();
+      expect(within(planArea()).queryByText(lead)).not.toBeInTheDocument();
     },
     SLOW,
   );
@@ -185,12 +132,13 @@ describe('the log tab', () => {
       const u = user();
       render(<AthlyApp navPrimary="Even tabs" />);
       await reachHome(u);
+      const lead = leadMeal();
       await u.click(screen.getByRole('button', { name: /ate it/i }));
       await u.click(screen.getByRole('button', { name: /^log$/i }));
 
       // Exact text, not a pattern: the toast that confirms the log also names the
       // meal, and only the list row is the meal's own name and nothing else.
-      expect(await screen.findByText('Peanut butter banana oats')).toBeInTheDocument();
+      expect(await screen.findByText(lead)).toBeInTheDocument();
       expect(screen.getByText(/this morning/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^logged$/i })).toBeInTheDocument();
     },

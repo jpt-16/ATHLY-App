@@ -170,6 +170,23 @@ export type SlotResult =
   | { meal: null; blockedBy: string[] };
 
 /**
+ * A number from a string, the same one every time.
+ *
+ * FNV-1a. Nothing cryptographic is wanted here — the requirement is only that
+ * the same day always produces the same plan and that two adjacent days produce
+ * unrelated ones, so an athlete sees a different breakfast on Tuesday without
+ * the app reshuffling itself under them on a re-render.
+ */
+function hash(seed: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+/**
  * Pick a meal for one slot.
  *
  * `candidates` is in preference order — the caller decides what "best" means,
@@ -180,15 +197,36 @@ export type SlotResult =
  *
  * Note what the loop does *not* do: allergens are filtered once, up front, and
  * the ladder only ever loosens the soft rules underneath that filter.
+ *
+ * ## `date`, and why a plan needs one
+ *
+ * Without it this is a pure function of the athlete's constraints, which means
+ * every day resolves to the identical meal: the same breakfast on Monday, on
+ * Tuesday, and on every Tuesday after that. A seven-day plan of one repeated day
+ * is not a plan, and the calendar was rendering exactly that.
+ *
+ * Passing the date rotates the starting point through the safe candidates, so
+ * days differ from one another while any single day stays put — an athlete can
+ * open Thursday twice and see the same dinner, which is the property that makes
+ * it a plan rather than a shuffle. Omitting it keeps the old behaviour for
+ * callers that want the one best answer rather than a varied week.
  */
-export function selectForSlot(candidateIds: string[], c: SlotConstraints): SlotResult {
+export function selectForSlot(candidateIds: string[], c: SlotConstraints, date?: string): SlotResult {
   const candidates = candidateIds.map((id) => MEALS[id]).filter(Boolean);
-  const safe = candidates.filter((meal) => isSafe(meal, c.allergens));
+  let safe = candidates.filter((meal) => isSafe(meal, c.allergens));
 
   if (!safe.length) {
     const blocked = new Set<string>();
     for (const meal of candidates) for (const a of blockingAllergens(meal, c.allergens)) blocked.add(a);
     return { meal: null, blockedBy: [...blocked] };
+  }
+
+  if (date) {
+    // Seeded with the slot as well as the day, or every slot would rotate in
+    // lockstep and a day would come out "all first choices" or "all second
+    // choices" rather than a mix.
+    const by = hash(`${date}|${candidateIds[0] ?? ''}`) % safe.length;
+    safe = safe.slice(by).concat(safe.slice(0, by));
   }
 
   for (const relaxed of LADDER) {

@@ -129,7 +129,21 @@ export interface AppState {
   logTab: string;
   search: string;
   checked: Record<string, boolean>;
-  swapCommitted: string | null;
+  /**
+   * The meal the open swap sheet is replacing. Everything the sheet shows —
+   * which alternatives, how far off each one is, the sentence under each card —
+   * is derived from this, so opening the sheet without setting it is a bug
+   * rather than a default.
+   */
+  swapFor: string | null;
+  /**
+   * Committed swaps, keyed `${isoDate}|${slot}`.
+   *
+   * Was a single `swapCommitted: string | null` that only ever replaced dinner,
+   * on every day at once: swapping Tuesday's dinner changed Saturday's too, and
+   * breakfast could not be swapped at all.
+   */
+  swaps: Record<string, string>;
   cat: number;
   /** Transient note shown when a pick moved an item between lists. */
   note?: string | null;

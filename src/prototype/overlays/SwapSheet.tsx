@@ -69,11 +69,10 @@ export function SwapSheet({ v }: { v: ViewModel }) {
                   'margin:14px 0 6px;font-size:25px;font-weight:900;font-stretch:113%;letter-spacing:-.013em;line-height:1.1',
                 )}
               >
-                Three ways to hit the same numbers
+                {v.swapTitle}
               </h2>
               <p style={S('margin:0 0 16px;font-size:13.5px;line-height:1.45;color:rgba(244,242,237,.6)')}>
-                Each one lands within 60 calories and 3g of protein of your dinner, and clears your allergies,
-                dislikes and weeknight time.
+                {v.swapSub}
               </p>
               <div
                 style={S(
@@ -89,10 +88,10 @@ export function SwapSheet({ v }: { v: ViewModel }) {
                 </div>
                 <div style={S('flex:1;min-width:0')}>
                   <div style={S('font-size:14.5px;font-weight:800;letter-spacing:-.015em')}>
-                    Chicken pasta
+                    {v.swapOutName}
                   </div>
                   <div style={S('font-size:12px;color:rgba(244,242,237,.55);font-weight:700;margin-top:2px')}>
-                    750 cal · 45g protein · 62g carbs
+                    {v.swapOutMacros}
                   </div>
                 </div>
               </div>
@@ -235,10 +234,10 @@ export function SwapSheet({ v }: { v: ViewModel }) {
                     'margin:0;font-size:23px;font-weight:900;font-stretch:113%;letter-spacing:-.013em',
                   )}
                 >
-                  Instead of chicken pasta
+                  {v.swapOutHeading}
                 </h2>
                 <div style={S('font-size:12.5px;color:#6E6A60;font-weight:700;margin-top:5px')}>
-                  750 cal · 45g protein — everything here lands within 5%
+                  {v.swapDeckSub}
                 </div>
               </div>
               <button

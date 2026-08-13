@@ -14,7 +14,6 @@ import {
   RECIPE_SETS,
   SLOT_CANDIDATES,
   RESULTS,
-  SWAPS,
   TILES,
   TIMES,
   field,
@@ -23,6 +22,8 @@ import {
 import { computeTargets, dayMeals } from './nutrition';
 import { minutesAvailable, safeMealIds, selectForSlot } from './filtering';
 import type { SlotConstraints } from './filtering';
+import { CAL_TOLERANCE, PROTEIN_TOLERANCE, rankSwaps, slotFamilyOf } from './swaps';
+import type { SwapOption } from './swaps';
 import { ALLERGEN_LABEL } from './foodFacts';
 import type { Allergen } from './foodFacts';
 import { PrototypeShell } from './PrototypeShell';
@@ -299,7 +300,8 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     logTab: 'recent',
     search: '',
     checked: {},
-    swapCommitted: null,
+    swapFor: null,
+    swaps: {},
     cat: 0,
     authView: 'gate',
     authEmail: '',
@@ -812,6 +814,42 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       overrides: Object.assign({}, st.overrides, { [date]: [cur[0], cur[1], lift, cur[3] || ''] }),
     }));
   }
+  /**
+   * The day a plan edit applies to.
+   *
+   * The calendar edits the day it is showing; everywhere else edits today. This
+   * is the difference between "swap Thursday's dinner" and "swap dinner", and
+   * the old code could only express the second — and then applied it to all
+   * seven days at once.
+   */
+  private planDate(): IsoDate {
+    return this.state.tab === 'calendar' ? this.state.selDate : todayIso();
+  }
+
+  /**
+   * Record a swap against the day and slot it belongs to.
+   *
+   * Filed by slot rather than by the meal it replaced, so that re-planning the
+   * day still honours the choice: the athlete picked what goes in the dinner
+   * position, not what goes next to one particular pasta.
+   */
+  private commitSwap(mealId: string) {
+    const from = this.state.swapFor;
+    const slot = from ? slotFamilyOf(from) : null;
+    if (!slot || !MEALS[mealId]) {
+      this.update({ overlay: null, swapPick: null });
+      return;
+    }
+    const key = `${this.planDate()}|${slot}`;
+    this.update((st) => ({
+      overlay: null,
+      swapPick: null,
+      swapFor: null,
+      swaps: Object.assign({}, st.swaps, { [key]: mealId }),
+    }));
+    this.toast(`Swapped in ${MEALS[mealId].name}`);
+  }
+
   /** The athlete's declared constraints, in the shape the filter expects. */
   private constraints(): SlotConstraints {
     const a = this.state.a;
@@ -827,10 +865,19 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
    * shown. A slot with no safe meal comes back with `mealId: null` rather than
    * silently falling back to something they cannot eat.
    */
-  private resolveSlots(slotIds: string[]): ResolvedSlot[] {
+  private resolveSlots(slotIds: string[], date: IsoDate): ResolvedSlot[] {
     const c = this.constraints();
+    const allergens = c.allergens;
     return slotIds.map((slot) => {
-      const result = selectForSlot(SLOT_CANDIDATES[slot] ?? [slot], c);
+      // A swap the athlete committed for this day and slot wins over whatever
+      // the planner would have picked — but it is re-checked against the hard
+      // filter every time it is read. Allergies can change after a swap was
+      // made, and a stored meal id must not outlive its safety.
+      const picked = this.state.swaps[`${date}|${slot}`];
+      if (picked && safeMealIds([picked], allergens).length) {
+        return { slot, mealId: picked, blockedBy: [] };
+      }
+      const result = selectForSlot(SLOT_CANDIDATES[slot] ?? [slot], c, date);
       return result.meal
         ? { slot, mealId: result.meal.id, blockedBy: [] }
         : { slot, mealId: null, blockedBy: result.blockedBy };
@@ -899,29 +946,50 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       wordStyle: fd.wordStyle,
     };
   }
-  stats(id: string, full: boolean) {
-    const m = MEALS[id];
-    const o: Partial<(typeof SWAPS)[number]> = SWAPS.find((x) => x.id === id) || {};
-    const dc = m.kcal - 750,
-      dp = m.p - 45;
+  /**
+   * The numbers under a swap card, measured against the meal it would replace.
+   *
+   * The deltas used to be `m.kcal - 750` and `m.p - 45` — the outgoing dinner
+   * hardcoded, so an athlete swapping a 310-calorie snack was shown how far it
+   * sat from a meal that was not on their plan. They now come from `SwapOption`,
+   * which computed them against the actual meal.
+   *
+   * The fourth stat used to be cost, read from an authored `'$6.40'` on the swap
+   * list. Recipes carry no cost, so that number could only ever be decoration;
+   * it is carbohydrate now, which the meal actually has.
+   */
+  swapStats(o: SwapOption, full: boolean) {
+    const sign = (n: number, unit = '') => (n >= 0 ? '+' : '') + n + unit;
     const tone = (ok: boolean) => `font-size:11px;font-weight:800;color:${ok ? '#0E7B47' : '#B0553C'}`;
     const base = [
       {
         label: 'calories',
-        value: m.kcal,
-        delta: (dc >= 0 ? '+' : '') + dc,
-        deltaStyle: tone(Math.abs(dc) <= 60),
+        value: o.meal.kcal,
+        delta: sign(o.dCal),
+        deltaStyle: tone(Math.abs(o.dCal) <= CAL_TOLERANCE),
       },
       {
         label: 'protein',
-        value: m.p + 'g',
-        delta: (dp >= 0 ? '+' : '') + dp + 'g',
-        deltaStyle: tone(Math.abs(dp) <= 3),
+        value: o.meal.p + 'g',
+        delta: sign(o.dProtein, 'g'),
+        deltaStyle: tone(Math.abs(o.dProtein) <= PROTEIN_TOLERANCE),
       },
-      { label: 'time', value: o.time || m.prep, delta: '', deltaStyle: 'display:none' },
+      {
+        label: 'time',
+        value: o.meal.prep,
+        delta: o.dMinutes === 0 ? '' : sign(o.dMinutes, 'm'),
+        deltaStyle: o.dMinutes === 0 ? 'display:none' : tone(o.dMinutes <= 0),
+      },
     ];
     return full
-      ? base.concat([{ label: 'cost', value: o.cost || '', delta: '', deltaStyle: 'display:none' }])
+      ? base.concat([
+          {
+            label: 'carbs',
+            value: o.meal.c + 'g',
+            delta: sign(o.dCarbs, 'g'),
+            deltaStyle: tone(Math.abs(o.dCarbs) <= 15),
+          },
+        ])
       : base;
   }
 
@@ -1125,7 +1193,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       };
     });
     const [selMode, selTime, selLift, selDur] = this.dayType(s.selDate);
-    const selMeals = this.resolveSlots(dayMeals(selMode, selLift));
+    const selMeals = this.resolveSlots(dayMeals(selMode, selLift), s.selDate);
     const sel = {
       dateLabel: longDateLabel(s.selDate),
       modes: (
@@ -1198,7 +1266,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
 
     const todayMode = this.dayType(iso)[0],
       todayTime = this.dayType(iso)[1];
-    const todaySlots = this.resolveSlots(dayMeals(todayMode, this.dayType(iso)[2]));
+    const todaySlots = this.resolveSlots(dayMeals(todayMode, this.dayType(iso)[2]), iso);
 
     // What is left of today, decided by what has actually been logged.
     //
@@ -1266,31 +1334,45 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       };
     });
 
-    // A swap is a meal like any other: never offer one the athlete cannot eat.
-    const safeSwaps = SWAPS.filter((o) => safeMealIds([o.id], allergyLabels).length > 0);
-    const swapDeck = safeSwaps.length ? safeSwaps : [];
-    const activeSwaps =
-      s.swapSet === 0
-        ? swapDeck.slice(0, 3)
-        : [swapDeck[3], swapDeck[0], swapDeck[2]].filter((x): x is (typeof SWAPS)[number] => !!x);
-    const mk = (o: (typeof SWAPS)[number], pre: string) =>
+    // ── swaps ────────────────────────────────────────────────────────────
+    //
+    // Everything here used to come from `SWAPS`: four hand-written dinners with
+    // authored "98% match" strings, ranked against a meal the code assumed was
+    // 750 calories and 45g of protein whatever the athlete had actually tapped.
+    // It is now computed from the meal being replaced — see `swaps.ts`.
+    const swapFor = s.swapFor ?? heroSlot?.mealId ?? null;
+    const outgoing = swapFor ? MEALS[swapFor] : null;
+    // Ranked once, then split into pages of three so "Show me three more" walks
+    // further down the same honest ranking instead of re-showing two of the
+    // three it just offered.
+    const ranked = outgoing ? rankSwaps(outgoing.id, this.constraints(), 9) : [];
+    const pages = Math.max(1, Math.ceil(ranked.length / 3));
+    const activeSwaps = ranked.slice((s.swapSet % pages) * 3, (s.swapSet % pages) * 3 + 3);
+
+    const mk = (o: SwapOption, pre: string) =>
       Object.assign(
-        { name: MEALS[o.id].name, why: o.why, match: o.match, stats: this.stats(o.id, pre === 'fq-swap-') },
-        field(o.id, pre === 'fq-swap-' ? 30 : 36, pre === 'fq-swap-' ? 16 : 18),
+        {
+          name: o.meal.name,
+          why: o.why,
+          match: `${o.match}% match`,
+          stats: this.swapStats(o, pre === 'fq-swap-'),
+        },
+        field(o.meal.id, pre === 'fq-swap-' ? 30 : 36, pre === 'fq-swap-' ? 16 : 18),
       );
     const swapOptions = activeSwaps.map((o) =>
       Object.assign(mk(o, 'fq-swap-'), {
-        pick: () => this.update({ swapPick: o.id }),
-        cardStyle: `display:block;width:100%;background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;overflow:hidden;border:2px solid ${s.swapPick === o.id ? GREEN : 'transparent'};box-shadow:${s.swapPick === o.id ? '0 8px 22px rgba(23,160,94,.18)' : '0 1px 3px rgba(17,24,21,.07)'};transition:all .18s`,
+        pick: () => this.update({ swapPick: o.meal.id }),
+        cardStyle: `display:block;width:100%;background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;overflow:hidden;border:2px solid ${s.swapPick === o.meal.id ? GREEN : 'transparent'};box-shadow:${s.swapPick === o.meal.id ? '0 8px 22px rgba(23,160,94,.18)' : '0 1px 3px rgba(17,24,21,.07)'};transition:all .18s`,
         matchStyle:
           'position:absolute;left:12px;top:12px;z-index:2;padding:5px 11px;border-radius:99px;background:rgba(17,24,21,.82);color:#5BE3A0;font-size:10.5px;font-weight:800;pointer-events:none',
         checkStyle:
-          s.swapPick === o.id
+          s.swapPick === o.meal.id
             ? `width:24px;height:24px;border-radius:50%;background:${GREEN};flex:none;box-shadow:inset 0 0 0 3px #fff, inset 0 0 0 4.5px ${GREEN}`
             : 'width:24px;height:24px;border-radius:50%;border:2px solid rgba(17,24,21,.16);flex:none',
       }),
     );
-    const deckOrder = activeSwaps.slice(s.deckIdx % 3).concat(activeSwaps.slice(0, s.deckIdx % 3));
+    const turn = activeSwaps.length ? s.deckIdx % activeSwaps.length : 0;
+    const deckOrder = activeSwaps.slice(turn).concat(activeSwaps.slice(0, turn));
     const swapDeckCards = deckOrder
       .slice(0, 3)
       .map((o, n) =>
@@ -1753,7 +1835,8 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           tab: 'home',
           overlay: null,
           genDone: false,
-          swapCommitted: null,
+          swapFor: null,
+          swaps: {},
           overrides: {},
           selDate: iso,
           // Local-only restart. With an account the rows stay in the database —
@@ -1800,13 +1883,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         }
         this.update({ overlay: 'meal', mealId: nm.id });
       },
-      openSwap: () => this.update({ overlay: 'swap', deckIdx: 0, swapPick: null }),
-      todayMeals: upcoming.map((r) =>
-        // A committed swap replaces dinner, but only if it is safe to eat.
-        s.swapCommitted && r.slot === 'dinner' && safeMealIds([s.swapCommitted], allergyLabels).length
-          ? this.row(s.swapCommitted)
-          : this.slotRow(r),
-      ),
+      // The hero's own meal is what the sheet will offer alternatives to. It
+      // used to open on whatever `SWAPS` listed, which meant tapping "swap" on
+      // breakfast offered three dinners.
+      openSwap: () => this.update({ overlay: 'swap', deckIdx: 0, swapPick: null, swapFor: nm?.id ?? null }),
+      // Committed swaps are applied in `resolveSlots` now, for every slot and
+      // every day, so this is just the resolved plan.
+      todayMeals: upcoming.map((r) => this.slotRow(r)),
       dayShape: todayMode === 'game' ? 'Game day' : todayMode === 'practice' ? 'Hard day' : 'Rest day',
       trainingBadge: todayMode === 'game' ? 'Game day' : todayMode === 'practice' ? 'Hard day' : 'Rest day',
       trainingBadgeStyle: `padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;${todayMode === 'game' ? 'background:rgba(212,87,58,.14);color:#A03A22' : todayMode === 'practice' ? 'background:rgba(23,160,94,.12);color:#0E7B47' : 'background:rgba(17,24,21,.07);color:#6E6A60'}`,
@@ -2221,7 +2304,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       closeOverlay: () => this.update({ overlay: null }),
       meal,
       mealActions: [
-        ['Swap meal', () => this.update({ overlay: 'swap', deckIdx: 0, swapPick: null }), 1],
+        [
+          'Swap meal',
+          // Swap *this* meal — the one the overlay is showing — rather than
+          // whatever the authored list happened to be about.
+          () => this.update({ overlay: 'swap', deckIdx: 0, swapPick: null, swapFor: s.mealId }),
+          1,
+        ],
         ['Make it faster', () => this.toast('Rebuilt at 12 minutes')],
         ['Make it cheaper', () => this.toast('Swapped to thighs — now $4.20')],
         ['Use what I have', () => this.toast('Rebuilt around chicken, rice, cheese')],
@@ -2239,27 +2328,41 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       swapDeck: swapMode === 'Card deck',
       swapOptions,
       swapDeckCards,
+      // The sheet's header, which was three lines of copy about a chicken pasta
+      // nobody was necessarily eating.
+      swapOutName: outgoing?.name ?? '',
+      swapOutMacros: outgoing ? `${outgoing.kcal} cal · ${outgoing.p}g protein · ${outgoing.c}g carbs` : '',
+      swapOutHeading: outgoing ? `Instead of ${outgoing.name.toLowerCase()}` : 'Instead of this meal',
+      swapTitle: `${activeSwaps.length === 1 ? 'One way' : activeSwaps.length === 2 ? 'Two ways' : 'Three ways'} to hit the same numbers`,
+      swapSub: outgoing
+        ? `Each one is ranked by how close it lands to your ${outgoing.slot.toLowerCase()}, and clears your allergies, dislikes and weeknight time.`
+        : '',
+      swapDeckSub: outgoing
+        ? `${outgoing.kcal} cal · ${outgoing.p}g protein — ranked by how close each one lands`
+        : '',
       moreSwaps: () => {
-        this.update((st) => ({ swapSet: (st.swapSet + 1) % 2, swapPick: null }));
-        this.toast('Three more, same numbers');
+        if (pages < 2) {
+          this.toast('That is every safe option in this slot');
+          return;
+        }
+        this.update((st) => ({ swapSet: (st.swapSet + 1) % pages, swapPick: null }));
       },
       deckSkip: () => this.update((st) => ({ deckIdx: st.deckIdx + 1 })),
       deckKeep: () => {
         const pick = deckOrder[0];
-        this.update({ overlay: null, swapCommitted: pick.id });
-        this.toast(`Swapped in ${MEALS[pick.id].name}`);
+        if (pick) this.commitSwap(pick.meal.id);
       },
       swapBlocked: !s.swapPick,
-      swapCtaLabel: s.swapPick ? 'Swap it into tonight' : 'Pick a replacement',
+      swapCtaLabel: s.swapPick
+        ? `Swap it into ${outgoing ? outgoing.slot.toLowerCase() : 'the plan'}`
+        : 'Pick a replacement',
       swapCtaStyle:
         ctaBase +
         (s.swapPick
           ? `;background:${GREEN};color:#fff;box-shadow:0 8px 20px rgba(23,160,94,.28)`
           : ';background:rgba(17,24,21,.09);color:#A9A498;cursor:not-allowed'),
       confirmSwap: () => {
-        if (!s.swapPick) return;
-        this.update({ overlay: null, swapCommitted: s.swapPick });
-        this.toast(`Swapped in ${MEALS[s.swapPick].name}`);
+        if (s.swapPick) this.commitSwap(s.swapPick);
       },
 
       showGen: s.genOn,
