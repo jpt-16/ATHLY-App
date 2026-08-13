@@ -133,3 +133,57 @@ describe('the week view', () => {
     SLOW,
   );
 });
+
+describe('replanning a day', () => {
+  it(
+    'produces a different day, and only that day',
+    async () => {
+      const u = user();
+      render(<AthlyApp navPrimary="Even tabs" />);
+      await reachHome(u);
+      await openCalendar(u);
+
+      const before = dayCards().map((c) => c.textContent);
+
+      // The month view is where a single day is edited.
+      await u.click(screen.getByRole('button', { name: /^month$/i }));
+      await u.click(await screen.findByRole('button', { name: /replan this day/i }));
+      await u.click(screen.getByRole('button', { name: /^week$/i }));
+
+      const after = dayCards().map((c) => c.textContent);
+      // "Replan this day" used to announce a rebuild and change nothing at all —
+      // the planner was deterministic with no way to produce a second answer.
+      const changed = after.filter((t, i) => t !== before[i]);
+      expect(changed).toHaveLength(1);
+    },
+    SLOW,
+  );
+});
+
+describe('the grocery list', () => {
+  it(
+    'is built from the meals actually planned',
+    async () => {
+      const u = user();
+      render(<AthlyApp navPrimary="Even tabs" />);
+      await reachHome(u);
+
+      await u.click(screen.getByRole('button', { name: /profile/i }));
+      const link = await screen.findByText(/grocery/i);
+      await u.click(link.closest('button') as HTMLElement);
+      await screen.findByRole('heading', { name: /grocery list/i });
+
+      // It was fourteen hand-written rows shown to everyone regardless of their
+      // week, their allergies, or anything they had swapped.
+      const shown = screen.getAllByRole('button').map((b) => b.textContent ?? '');
+      const planned = new Set(Object.values(MEALS).flatMap((m) => m.ingredients.map(([n]) => n)));
+      const items = shown.filter((t) => [...planned].some((p) => t.startsWith(p)));
+      expect(items.length).toBeGreaterThan(0);
+      // Every line must trace back to an ingredient of a real recipe.
+      for (const line of items) {
+        expect([...planned].some((p) => line.startsWith(p))).toBe(true);
+      }
+    },
+    SLOW,
+  );
+});

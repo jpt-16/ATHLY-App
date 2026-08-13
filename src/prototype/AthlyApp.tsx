@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ChangeEvent, KeyboardEvent } from 'react';
 
-import type { Tile } from './data';
+import type { Meal, Tile } from './data';
 import {
   CHIPS,
   DAYS,
@@ -23,6 +23,7 @@ import { computeTargets, dayMeals } from './nutrition';
 import { minutesAvailable, safeMealIds, selectForSlot } from './filtering';
 import type { SlotConstraints } from './filtering';
 import { CAL_TOLERANCE, PROTEIN_TOLERANCE, rankSwaps, slotFamilyOf } from './swaps';
+import { groceryCount, groceryFor } from './grocery';
 import type { SwapOption } from './swaps';
 import { ALLERGEN_LABEL } from './foodFacts';
 import type { Allergen } from './foodFacts';
@@ -97,54 +98,6 @@ const FOOD_TILES: Tile[] = [
   TILES.taco,
   TILES.wrap,
 ];
-
-/**
- * The grocery list.
- *
- * Still a fixed list rather than one derived from the week's meals — building it
- * from the plan is Phase 4 work, and it is a missing feature rather than a false
- * claim. Named here so the count on the Profile screen can be taken from it: that
- * card read `18` beside a list of fourteen items, which is the kind of number
- * nobody can check and everybody believes.
- */
-const GROCERY_LIST: [string, [string, string][]][] = [
-  [
-    'Produce',
-    [
-      ['Bananas', '6'],
-      ['Baby potatoes', '2 lb'],
-      ['Spinach', '1 bag'],
-      ['Green beans', '1 lb'],
-    ],
-  ],
-  [
-    'Meat',
-    [
-      ['Chicken breast', '3 lb'],
-      ['Sirloin', '2 steaks'],
-      ['Ground beef', '1 lb'],
-    ],
-  ],
-  [
-    'Dairy',
-    [
-      ['Whole milk', '1 gal'],
-      ['Greek yogurt', '32 oz'],
-      ['Shredded cheese', '8 oz'],
-    ],
-  ],
-  [
-    'Grains & pantry',
-    [
-      ['Rolled oats', '1 canister'],
-      ['Jasmine rice', '2 lb'],
-      ['Penne', '1 box'],
-      ['Honey', '1 jar'],
-    ],
-  ],
-];
-
-const GROCERY_COUNT = GROCERY_LIST.reduce((n, [, items]) => n + items.length, 0);
 
 function tileForName(name: string): Tile {
   let h = 0;
@@ -304,6 +257,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     swapFor: null,
     swaps: {},
     calView: 'week',
+    replans: {},
     cat: 0,
     authView: 'gate',
     authEmail: '',
@@ -852,6 +806,76 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     this.toast(`Swapped in ${MEALS[mealId].name}`);
   }
 
+  /**
+   * Ask the planner for a different answer for one day.
+   *
+   * The planner is deterministic on purpose — the same day resolves the same way
+   * every render, or the plan would move under the athlete's thumb. That left
+   * "Replan this day" with nothing to do, so it announced a rebuild and changed
+   * nothing. The counter here joins the rotation seed, so each tap is a fresh
+   * deal for that day alone while every other day holds still.
+   *
+   * Swaps the athlete committed by hand survive it. They chose those; a replan
+   * is a request for a better suggestion, not for their choices to be discarded.
+   */
+  private replanDay(date: IsoDate) {
+    const kept = Object.keys(this.state.swaps).filter((k) => k.startsWith(`${date}|`)).length;
+    this.update((st) => ({
+      replans: Object.assign({}, st.replans, { [date]: (st.replans[date] ?? 0) + 1 }),
+    }));
+    this.toast(
+      kept
+        ? `${shortDateLabel(date)} replanned — your ${kept === 1 ? 'swap' : 'swaps'} kept`
+        : `${shortDateLabel(date)} replanned`,
+    );
+  }
+
+  /**
+   * "Make it faster" and "Use what I have", done rather than described.
+   *
+   * Both used to be a toast. This re-ranks the meal's own slot on the axis the
+   * athlete asked about — prep time, or how much of the recipe they already have
+   * — subject to the same macro tolerance the swap sheet holds everything else
+   * to, so a faster meal is still a meal that hits the day's numbers. If nothing
+   * clears that bar the app says so instead of claiming a rebuild.
+   */
+  private rebuild(goal: 'faster' | 'pantry') {
+    const from = this.state.mealId;
+    const current = from ? MEALS[from] : null;
+    const slot = from ? slotFamilyOf(from) : null;
+    if (!current || !slot) return;
+
+    const ranked = rankSwaps(current.id, this.constraints(), 12).filter((o) => o.withinTolerance);
+    const inKitchen = (m: Meal) => m.ingredients.filter(([, , have]) => have).length;
+
+    const better =
+      goal === 'faster'
+        ? ranked.filter((o) => o.dMinutes < 0).sort((a, b) => a.dMinutes - b.dMinutes)[0]
+        : ranked
+            .filter((o) => inKitchen(o.meal) > inKitchen(current))
+            .sort((a, b) => inKitchen(b.meal) - inKitchen(a.meal))[0];
+
+    if (!better) {
+      this.toast(
+        goal === 'faster'
+          ? `Nothing quicker hits the same numbers — ${current.prep} is the fastest that does`
+          : 'Nothing else uses more of what you already have',
+      );
+      return;
+    }
+
+    const key = `${this.planDate()}|${slot}`;
+    this.update((st) => ({
+      overlay: null,
+      swaps: Object.assign({}, st.swaps, { [key]: better.meal.id }),
+    }));
+    this.toast(
+      goal === 'faster'
+        ? `${better.meal.name} — ${better.meal.prep}, ${-better.dMinutes} min quicker`
+        : `${better.meal.name} — uses ${inKitchen(better.meal)} things you already have`,
+    );
+  }
+
   /** The athlete's declared constraints, in the shape the filter expects. */
   private constraints(): SlotConstraints {
     const a = this.state.a;
@@ -879,7 +903,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       if (picked && safeMealIds([picked], allergens).length) {
         return { slot, mealId: picked, blockedBy: [] };
       }
-      const result = selectForSlot(SLOT_CANDIDATES[slot] ?? [slot], c, date);
+      // "Replan this day" bumps a counter per date; folding it into the seed is
+      // what makes a second tap produce a second answer.
+      const nonce = this.state.replans[date];
+      const seed = nonce ? `${date}#${nonce}` : date;
+      const result = selectForSlot(SLOT_CANDIDATES[slot] ?? [slot], c, seed);
       return result.meal
         ? { slot, mealId: result.meal.id, blockedBy: [] }
         : { slot, mealId: null, blockedBy: result.blockedBy };
@@ -1207,12 +1235,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     // against the day's target.
     const weekDates = weekAround(s.selDate);
     const weekRangeLabel = `${shortDateLabel(weekDates[0])} — ${shortDateLabel(weekDates[6])}`;
+    /** Every meal the week actually calls for, which the shopping list is built from. */
+    const weekPlanned: Meal[] = [];
     const weekDays = weekDates.map((date) => {
       const [mode, time, lift] = this.dayType(date);
       const slots = this.resolveSlots(dayMeals(mode, lift), date);
-      const planned = slots
-        .map((r) => (r.mealId ? MEALS[r.mealId] : null))
-        .filter((m): m is (typeof MEALS)[string] => !!m);
+      const planned = slots.map((r) => (r.mealId ? MEALS[r.mealId] : null)).filter((m): m is Meal => !!m);
+      weekPlanned.push(...planned);
       const kcal = planned.reduce((n, m) => n + m.kcal, 0);
       const protein = planned.reduce((n, m) => n + m.p, 0);
       const isToday = date === iso;
@@ -1257,6 +1286,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         }),
       };
     });
+
+    // The shopping list is the week above, not a fixed fourteen rows: a swap the
+    // athlete made on Wednesday changes what they buy on Sunday.
+    const groceryAisles = groceryFor(weekPlanned);
 
     const [selMode, selTime, selLift, selDur] = this.dayType(s.selDate);
     const selMeals = this.resolveSlots(dayMeals(selMode, selLift), s.selDate);
@@ -1904,6 +1937,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           swapFor: null,
           swaps: {},
           calView: 'week',
+          replans: {},
           overrides: {},
           selDate: iso,
           // Local-only restart. With an account the rows stay in the database —
@@ -2018,10 +2052,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         dot: `width:${i === 2 ? 11 : 7}px;height:${i === 2 ? 5 : 7}px;border-radius:3px;background:${c}`,
       })),
       sel,
-      replanDay: () =>
-        this.toast(
-          `${shortDateLabel(s.selDate)} rebuilt — ${selMeals.length} meals around your ${selMode === 'rest' ? 'rest day' : selMode}`,
-        ),
+      // It said "rebuilt" and rebuilt nothing: the same meals were on screen
+      // before and after, because the planner had no way to produce a second
+      // answer. It re-rolls the day's picks now, and keeps whatever the athlete
+      // swapped in by hand — those were choices, not suggestions.
+      replanDay: () => this.replanDay(s.selDate),
 
       constraints,
       scopes: (
@@ -2104,9 +2139,15 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
 
       search: s.search,
       searchChange: (e: ChangeEvent<HTMLInputElement>) => this.update({ search: e.target.value }),
-      toastScan: () => this.toast('Point at a barcode — camera would open here'),
-      toastPhoto: () => this.toast('Snap the plate, we estimate the macros'),
-      toastCustom: () => this.toast('Custom food builder would open'),
+      // Three things the app does not do yet, saying so.
+      //
+      // "Snap the plate, we estimate the macros" was the worst of them: present
+      // tense, first person plural, describing a capability that does not exist
+      // — an athlete could reasonably read it as having worked. A stub should be
+      // legible as a stub.
+      toastScan: () => this.toast('Barcode scanning is not built yet'),
+      toastPhoto: () => this.toast('Photo logging is not built yet'),
+      toastCustom: () => this.toast('Saving your own foods is not built yet'),
       logTabs: (
         [
           ['recent', 'Recent'],
@@ -2127,7 +2168,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             logEmptyTitle: 'No custom foods yet',
             logEmptyBody: "Made something of your own? Save it once and it's a one-tap log forever.",
             logEmptyCta: 'Create a food',
-            logEmptyAction: () => this.toast('Custom food builder would open'),
+            logEmptyAction: () => this.toast('Saving your own foods is not built yet'),
           }
         : s.logTab === 'favorites'
           ? {
@@ -2316,14 +2357,14 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         })),
       })),
 
-      groceryGroups: GROCERY_LIST.map(([title, items]) => ({
+      groceryGroups: groceryAisles.map(({ title, items }) => ({
         title,
-        items: items.map(([nm3, qty]) => {
-          const key = title + nm3,
+        items: items.map((item) => {
+          const key = title + item.name,
             on = !!s.checked[key];
           return {
-            name: nm3,
-            qty,
+            name: item.name,
+            qty: item.qty,
             tap: () =>
               this.update((st) => ({ checked: Object.assign({}, st.checked, { [key]: !st.checked[key] }) })),
             rowStyle:
@@ -2344,7 +2385,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       // they were not. What survives is what the app can actually observe.
       // Profile's second stat card said `6/7 days on plan` to everyone, forever.
       daysLogged: `${adhere.daysLogged}/${adhere.window}`,
-      groceryCount: GROCERY_COUNT,
+      groceryCount: groceryCount(groceryAisles),
       progressHasData: weekBars.some((w) => w.hasData),
       weeks: weekBars.map((w, i) => ({
         label: w.label,
@@ -2392,9 +2433,18 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           () => this.update({ overlay: 'swap', deckIdx: 0, swapPick: null, swapFor: s.mealId }),
           1,
         ],
-        ['Make it faster', () => this.toast('Rebuilt at 12 minutes')],
-        ['Make it cheaper', () => this.toast('Swapped to thighs — now $4.20')],
-        ['Use what I have', () => this.toast('Rebuilt around chicken, rice, cheese')],
+        // Both of these answered with a sentence and changed nothing: "Rebuilt
+        // at 12 minutes" on a meal that stayed 28, "Rebuilt around chicken,
+        // rice, cheese" on a meal whose ingredients never moved. They run
+        // through the swap ranking now, so they either do the thing or say they
+        // could not.
+        ['Make it faster', () => this.rebuild('faster')],
+        ['Use what I have', () => this.rebuild('pantry')],
+        // "Make it cheaper" is gone rather than rewritten. Recipes carry no
+        // cost — the '$4.20' it quoted came from an authored string on the swap
+        // list — so there is nothing to rank a cheaper meal by. It comes back
+        // when meals carry a cost band, which is also when `filtering.ts` gets
+        // its 'budget' rung.
       ].map(([label, tap, primary]) => ({
         label,
         tap,
@@ -2402,7 +2452,9 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       })),
       addGrocery: () => {
         this.update({ overlay: null, tab: 'grocery' });
-        this.toast('4 items added to your grocery list');
+        // Counted, not asserted. This said "4 items" whatever the recipe was.
+        const n = mm ? mm.ingredients.length : 0;
+        this.toast(n ? `${n} ${n === 1 ? 'item' : 'items'} are on your list` : 'Your list is empty');
       },
 
       swapSheet: swapMode === 'Compare three',

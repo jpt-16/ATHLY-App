@@ -155,6 +155,14 @@ export interface AppState {
   swaps: Record<string, string>;
   /** Whether the calendar shows the week's meals or the month's training dots. */
   calView: CalView;
+  /**
+   * How many times each day has been replanned, keyed by ISO date.
+   *
+   * Folded into the planner's rotation seed, which is what lets "Replan this
+   * day" produce a genuinely different day while the planner stays
+   * deterministic everywhere else.
+   */
+  replans: Record<string, number>;
   cat: number;
   /** Transient note shown when a pick moved an item between lists. */
   note?: string | null;
