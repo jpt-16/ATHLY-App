@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { UserEvent } from '@testing-library/user-event';
 
 import { AthlyApp } from './AthlyApp';
-import { MEALS_BY_NAME, SLOW, leadMeal, planArea, reachHome } from './walkthrough';
+import { MEALS_BY_NAME, SLOW, leadMeal, logRow, planArea, reachHome } from './walkthrough';
 
 /**
  * The Home ring, end to end, with no backend.
@@ -196,6 +196,77 @@ describe('the progress tab', () => {
 
       expect(await screen.findByText('1/7')).toBeInTheDocument();
       expect(screen.getByText(/you logged food on 1 of the last 7 days/i)).toBeInTheDocument();
+    },
+    SLOW,
+  );
+});
+
+describe('searching for something never eaten', () => {
+  it(
+    'finds it in the recipe library',
+    async () => {
+      const u = user();
+      render(<AthlyApp navPrimary="Even tabs" />);
+      await reachHome(u);
+      await u.click(screen.getByRole('button', { name: /^log$/i }));
+
+      // The search box filtered the athlete's own history and nothing else, so
+      // on the first day it searched an empty list and always found nothing.
+      // Every food in the app was unreachable until the plan happened to offer
+      // it.
+      await u.type(screen.getByPlaceholderText(/search your foods/i), 'salmon');
+      expect(await screen.findByText(/salmon/i)).toBeInTheDocument();
+    },
+    SLOW,
+  );
+
+  it(
+    'logs it, and it moves the ring',
+    async () => {
+      const u = user();
+      render(<AthlyApp navPrimary="Even tabs" />);
+      await reachHome(u);
+      const before = stillToEat();
+
+      await u.click(screen.getByRole('button', { name: /^log$/i }));
+      await u.type(screen.getByPlaceholderText(/search your foods/i), 'salmon');
+      await screen.findByText(/salmon/i);
+      await u.click(within(logRow(/salmon/i)).getByRole('button', { name: /^log$/i }));
+
+      await u.click(screen.getByRole('button', { name: /^home$/i }));
+      expect(stillToEat().cal).toBeLessThan(before.cal);
+    },
+    SLOW,
+  );
+
+  it(
+    'never offers a meal the athlete is allergic to',
+    async () => {
+      // The hard rule does not care which screen it is on. A meal filtered out
+      // of the plan and handed back through search would be the same failure by
+      // a different door.
+      const u = user();
+      render(<AthlyApp navPrimary="Even tabs" />);
+      await reachHome(u, /^fish$/i);
+      await u.click(screen.getByRole('button', { name: /^log$/i }));
+
+      await u.type(screen.getByPlaceholderText(/search your foods/i), 'salmon');
+      expect(await screen.findByText(/nothing matched/i)).toBeInTheDocument();
+    },
+    SLOW,
+  );
+
+  it(
+    'says the search found nothing, rather than that nothing is logged',
+    async () => {
+      const u = user();
+      render(<AthlyApp navPrimary="Even tabs" />);
+      await reachHome(u);
+      await u.click(screen.getByRole('button', { name: /^log$/i }));
+
+      await u.type(screen.getByPlaceholderText(/search your foods/i), 'zzzz');
+      expect(await screen.findByText(/nothing matched/i)).toBeInTheDocument();
+      expect(screen.queryByText(/nothing logged yet/i)).not.toBeInTheDocument();
     },
     SLOW,
   );

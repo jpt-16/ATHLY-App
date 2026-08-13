@@ -18,8 +18,13 @@ import { MEALS } from './data';
 /** Longer than the default five seconds, because the walk really does take it. */
 export const SLOW = 30_000;
 
-/** The thirteen answers, ending on the targets screen. */
-export async function runOnboarding(u: UserEvent) {
+/**
+ * The thirteen answers, ending on the targets screen.
+ *
+ * `allergy` picks a chip on the allergies question instead of "nothing to
+ * avoid", for the tests that check the hard filter actually holds.
+ */
+export async function runOnboarding(u: UserEvent, allergy?: RegExp) {
   await u.click(screen.getByRole('button', { name: /let's set you up/i }));
   await u.type(screen.getByPlaceholderText(/jordan/i), 'Sam');
   const next = () => u.click(screen.getByRole('button', { name: /^next$/i }));
@@ -34,8 +39,14 @@ export async function runOnboarding(u: UserEvent) {
   await next();
   await u.click(screen.getByRole('button', { name: /^chicken$/i }));
   await next();
+  // Dislikes, then allergies — two questions wearing the same chip layout.
   await u.click(screen.getByRole('button', { name: /nothing to avoid/i }));
-  await u.click(screen.getByRole('button', { name: /nothing to avoid/i }));
+  if (allergy) {
+    await u.click(await screen.findByRole('button', { name: allergy }));
+    await next();
+  } else {
+    await u.click(screen.getByRole('button', { name: /nothing to avoid/i }));
+  }
   await u.click(screen.getByRole('button', { name: /i can follow a recipe/i }));
   await u.click(await screen.findByRole('button', { name: /middle of the road/i }));
   await u.click(await screen.findByRole('button', { name: /about 20 minutes/i }));
@@ -49,10 +60,26 @@ export async function runOnboarding(u: UserEvent) {
  * and a screen reader cannot announce either. The even-tab layout is an existing
  * design variant, not a change to anything under test.
  */
-export async function reachHome(u: UserEvent) {
-  await runOnboarding(u);
+export async function reachHome(u: UserEvent, allergy?: RegExp) {
+  await runOnboarding(u, allergy);
   await u.click(await screen.findByRole('button', { name: /build my week/i }));
   await screen.findByText(/still to eat today/i, undefined, { timeout: 8000 });
+}
+
+/**
+ * The Log tab row containing some text, found by walking up to its button.
+ *
+ * "Log" is the name of both the nav tab and every row's action, so a
+ * document-wide query for it is ambiguous. The first ancestor of a food's name
+ * that contains a Log/Logged button is that food's row.
+ */
+export function logRow(name: RegExp | string): HTMLElement {
+  let node: HTMLElement | null = screen.getByText(name);
+  while (node) {
+    if (within(node).queryByRole('button', { name: /^(log|logged)$/i })) return node;
+    node = node.parentElement;
+  }
+  throw new Error(`no log row for ${String(name)}`);
 }
 
 /**

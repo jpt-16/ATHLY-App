@@ -20,7 +20,7 @@ import {
   shapes,
 } from './data';
 import { computeTargets, dayMeals } from './nutrition';
-import { minutesAvailable, safeMealIds, selectForSlot } from './filtering';
+import { isSafe, minutesAvailable, safeMealIds, selectForSlot } from './filtering';
 import type { SlotConstraints } from './filtering';
 import { CAL_TOLERANCE, PROTEIN_TOLERANCE, rankSwaps, slotFamilyOf } from './swaps';
 import { groceryCount, groceryFor } from './grocery';
@@ -65,6 +65,7 @@ import {
   totalsFor,
   weeklyCalories,
 } from '../data/dailyTotals';
+import type { LoggedItem } from '../data/dailyTotals';
 import { deleteLog, loadWindow, localLog, logMeal } from '../data/logRepo';
 import type { NewLog } from '../data/logRepo';
 import {
@@ -98,6 +99,15 @@ const FOOD_TILES: Tile[] = [
   TILES.taco,
   TILES.wrap,
 ];
+
+/**
+ * A row in the Log tab.
+ *
+ * `LoggedItem` always has a last-logged entry, because it is rolled up from the
+ * log. A library search result has none — the athlete has never eaten it — and
+ * the row says its macros instead of a date.
+ */
+type LogRow = Omit<LoggedItem, 'lastLogged'> & { lastLogged: MealLog | null };
 
 function tileForName(name: string): Tile {
   let h = 0;
@@ -1523,7 +1533,8 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     // under a placeholder promising "Search 400,000 foods" — a database that does
     // not exist. It searches what the athlete has actually logged, and says so.
     const logSearch = s.search.trim().toLowerCase();
-    const logItems = (
+    // What the athlete has eaten before.
+    const history = (
       s.logTab === 'favorites'
         ? favoriteItems(s.logs, 40)
         : s.logTab === 'recent'
@@ -1532,6 +1543,41 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     )
       .filter((item) => !logSearch || item.name.toLowerCase().includes(logSearch))
       .slice(0, 8);
+
+    /**
+     * …and, when they are searching, anything in the library they could eat.
+     *
+     * The search box was dead on the first day and stayed dead for anything
+     * never logged: it filtered the athlete's own history and nothing else, so a
+     * new athlete typing "chicken" into "Search your foods" got an empty screen
+     * above an empty list. The only food loggable at all was whatever the plan
+     * had already offered.
+     *
+     * Allergen-filtered, like every other list of meals in the app — a search
+     * result is a suggestion, and the hard rule does not care which screen it is
+     * on.
+     */
+    const fromLibrary: LogRow[] =
+      logSearch && s.logTab !== 'custom'
+        ? Object.values(MEALS)
+            .filter((m) => m.name.toLowerCase().includes(logSearch))
+            .filter((m) => isSafe(m, allergyLabels))
+            .filter((m) => !history.some((h) => h.mealId === m.id))
+            .slice(0, Math.max(0, 8 - history.length))
+            .map((m) => ({
+              name: m.name,
+              mealId: m.id,
+              kcal: m.kcal,
+              protein: m.p,
+              carbs: m.c,
+              fat: m.f,
+              // Never eaten, so there is no last time. The row reads its macros
+              // instead of a date.
+              lastLogged: null,
+              count: 0,
+            }))
+        : [];
+    const logItems: LogRow[] = [...history, ...fromLibrary];
     const nowHour = rightNow().getHours();
 
     const tabsDef: [Tab, string][] = [
@@ -2170,21 +2216,31 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             logEmptyCta: 'Create a food',
             logEmptyAction: () => this.toast('Saving your own foods is not built yet'),
           }
-        : s.logTab === 'favorites'
+        : // A search that found nothing is not the same as a log with nothing in
+          // it, and telling an athlete "nothing logged yet" while they are
+          // looking at their own search term reads as a broken box.
+          logSearch
           ? {
-              logEmptyTitle: 'No favourites yet',
-              // Deliberately explains the rule rather than inventing entries:
-              // a favourite here means something logged more than once.
-              logEmptyBody: 'Log a meal more than once and it turns up here, ready to tap.',
+              logEmptyTitle: 'Nothing matched',
+              logEmptyBody: `No food here is called "${s.search.trim()}". Try a shorter word, or log it from your plan.`,
               logEmptyCta: '',
               logEmptyAction: () => {},
             }
-          : {
-              logEmptyTitle: 'Nothing logged yet',
-              logEmptyBody: 'Log what you eat and it lands here, along with your rings on Home.',
-              logEmptyCta: 'Back to today',
-              logEmptyAction: () => this.update({ tab: 'home' }),
-            }),
+          : s.logTab === 'favorites'
+            ? {
+                logEmptyTitle: 'No favourites yet',
+                // Deliberately explains the rule rather than inventing entries:
+                // a favourite here means something logged more than once.
+                logEmptyBody: 'Log a meal more than once and it turns up here, ready to tap.',
+                logEmptyCta: '',
+                logEmptyAction: () => {},
+              }
+            : {
+                logEmptyTitle: 'Nothing logged yet',
+                logEmptyBody: 'Log what you eat and it lands here, along with your rings on Home.',
+                logEmptyCta: 'Back to today',
+                logEmptyAction: () => this.update({ tab: 'home' }),
+              }),
       logItems: logItems.map((item) => {
         const sh = shapes(item.mealId ? MEALS[item.mealId].tile : tileForName(item.name), 46);
         const loggedToday = logsToday.filter((l) =>
@@ -2194,7 +2250,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         return {
           name: item.name,
           meta:
-            s.logTab === 'favorites'
+            s.logTab === 'favorites' || !item.lastLogged
               ? `${item.kcal} cal · ${item.protein}g protein`
               : `${item.kcal} cal · ${relativeDayLabel(item.lastLogged.date, iso, nowHour)}`,
           tileStyle: sh.tileStyle,
@@ -2213,7 +2269,12 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             void this.addLog(
               {
                 date: iso,
-                source: s.logTab === 'favorites' ? 'favorite' : 'recent',
+                // A library result is `'plan'`: the macros came from one of our
+                // recipes rather than from the athlete, which is the distinction
+                // `LogSource` exists to record. It is not `'recent'` — they have
+                // never eaten it — and not `'custom'`, which means they typed
+                // the numbers themselves.
+                source: !item.lastLogged ? 'plan' : s.logTab === 'favorites' ? 'favorite' : 'recent',
                 mealId: item.mealId,
                 name: item.name,
                 servings: 1,
