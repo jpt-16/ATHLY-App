@@ -148,8 +148,8 @@ describe('the swap sheet', () => {
       // dinner changed every day at once. It is filed against a date now: move
       // to another day and the swap does not follow.
       await u.click(screen.getByRole('button', { name: /calendar/i }));
-      const other = await screen.findByRole('button', { name: /^19$/ });
-      await u.click(other);
+      await u.click(await screen.findByRole('button', { name: /^month$/i }));
+      await u.click(await screen.findByRole('button', { name: /^19$/ }));
       const meals = screen.getByText(/meals that day/i).closest('div')!.parentElement as HTMLElement;
       expect(within(meals).queryByText(first.meal.name)).not.toBeInTheDocument();
     },

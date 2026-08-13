@@ -31,6 +31,7 @@ import type {
   AppState,
   AthlyProps,
   AuthView,
+  CalView,
   DayMode,
   DaySpec,
   LogSource,
@@ -302,6 +303,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     checked: {},
     swapFor: null,
     swaps: {},
+    calView: 'week',
     cat: 0,
     authView: 'gate',
     authEmail: '',
@@ -1192,6 +1194,70 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         dot: `width:${lift && mode === 'rest' ? 9 : 5}px;height:5px;border-radius:3px;background:${mode === 'game' ? '#D4573A' : mode === 'practice' ? (on ? '#5BE3A0' : GREEN) : lift ? (on ? 'rgba(244,242,237,.55)' : '#8C8779') : 'transparent'}`,
       };
     });
+    // ── the week view ────────────────────────────────────────────────────
+    //
+    // The calendar could only ever show one day at a time: a month of dots, and
+    // whichever day you tapped underneath it. An athlete planning Thursday's
+    // shopping around Wednesday's game had to tap through the week a day at a
+    // time and hold it in their head.
+    //
+    // Every day here is resolved through the same `resolveSlots` the rest of the
+    // app uses, so the week shows the plan rather than a summary of it — the
+    // training shape, the meals it calls for, and what those meals add up to
+    // against the day's target.
+    const weekDates = weekAround(s.selDate);
+    const weekRangeLabel = `${shortDateLabel(weekDates[0])} — ${shortDateLabel(weekDates[6])}`;
+    const weekDays = weekDates.map((date) => {
+      const [mode, time, lift] = this.dayType(date);
+      const slots = this.resolveSlots(dayMeals(mode, lift), date);
+      const planned = slots
+        .map((r) => (r.mealId ? MEALS[r.mealId] : null))
+        .filter((m): m is (typeof MEALS)[string] => !!m);
+      const kcal = planned.reduce((n, m) => n + m.kcal, 0);
+      const protein = planned.reduce((n, m) => n + m.p, 0);
+      const isToday = date === iso;
+      const label =
+        mode === 'game' ? 'Game day' : mode === 'practice' ? 'Practice' : lift ? 'Lift only' : 'Rest';
+      return {
+        key: date,
+        day: DAYS[weekdayOf(date)],
+        num: Number(date.slice(8, 10)),
+        isToday,
+        todayLabel: isToday ? 'Today' : '',
+        // Tapping a day opens it in the month view's day editor, which is where
+        // training is changed — the week view reports, it does not duplicate.
+        open: () => this.update({ calView: 'month', selDate: date }),
+        cardStyle: `width:100%;text-align:left;background:#fff;border-radius:18px;padding:14px 16px 12px;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border:2px solid ${isToday ? INK : 'transparent'}`,
+        dayStyle: `font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:${isToday ? INK : '#8C8779'}`,
+        badge: label,
+        badgeStyle: `padding:3px 9px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;${mode === 'game' ? 'background:rgba(212,87,58,.14);color:#A03A22' : mode === 'practice' ? 'background:rgba(23,160,94,.12);color:#0E7B47' : 'background:rgba(17,24,21,.07);color:#6E6A60'}`,
+        // The training line is the reason this view exists: the meals below it
+        // are the ones that shape calls for.
+        trainingLine:
+          mode === 'rest' && !lift
+            ? 'No training'
+            : [
+                mode === 'game' ? `Game ${time}` : mode === 'practice' ? `Practice ${time}` : '',
+                lift ? `lift ${lift}` : '',
+              ]
+                .filter(Boolean)
+                .join(' · '),
+        totals: `${kcal.toLocaleString()} cal · ${protein}g protein`,
+        // Against the target rather than in isolation, because "2,900 calories"
+        // means nothing without the number it is meant to hit.
+        totalsStyle: `font-size:11.5px;font-weight:700;color:${Math.abs(kcal - tg.cal) <= 150 ? '#0E7B47' : '#8C8779'}`,
+        meals: slots.map((r) => {
+          const m = r.mealId ? MEALS[r.mealId] : null;
+          return {
+            slot: m ? m.slot : this.blockedReason(r.blockedBy),
+            name: m ? m.name : 'No safe option yet',
+            macroText: m ? `${m.kcal} cal · ${m.p}g` : '',
+            style: `display:flex;align-items:baseline;gap:8px;padding:5px 0;${m ? '' : 'opacity:.6'}`,
+          };
+        }),
+      };
+    });
+
     const [selMode, selTime, selLift, selDur] = this.dayType(s.selDate);
     const selMeals = this.resolveSlots(dayMeals(selMode, selLift), s.selDate);
     const sel = {
@@ -1837,6 +1903,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           genDone: false,
           swapFor: null,
           swaps: {},
+          calView: 'week',
           overrides: {},
           selDate: iso,
           // Local-only restart. With an account the rows stay in the database —
@@ -1922,11 +1989,25 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             ? `Practice at ${todayTime}. Carbs are stacked before it and protein lands after.`
             : 'No training today, so carbs come down a little and protein holds.',
 
-      calMonth: monthLabel(s.selDate),
+      calMonth: s.calView === 'week' ? weekRangeLabel : monthLabel(s.selDate),
       calHeads: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => ({
         label: label + (i === 0 ? '' : ''),
       })),
       calCells,
+      calShowMonth: s.calView === 'month',
+      calShowWeek: s.calView === 'week',
+      calViews: (
+        [
+          ['week', 'Week'],
+          ['month', 'Month'],
+        ] as [CalView, string][]
+      ).map(([v, label]) => ({
+        label,
+        pick: () => this.update({ calView: v }),
+        style: `flex:1;padding:10px 0;font-size:12.5px;font-weight:800;${s.calView === v ? `background:${INK};color:#F4F2ED` : 'background:transparent;color:#8C8779'}`,
+      })),
+      weekDays,
+      weekShift: (n: number) => this.update({ selDate: addDays(s.selDate, n * 7) }),
       calLegend: [
         ['Practice', GREEN],
         ['Game', '#D4573A'],

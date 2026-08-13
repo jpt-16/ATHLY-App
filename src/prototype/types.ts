@@ -25,6 +25,15 @@ export type AuthView =
   'gate' | 'signUp' | 'signIn' | 'forgot' | 'setPassword' | 'checkEmail' | 'resetSent' | 'confirmDelete';
 export type Tab = 'home' | 'plan' | 'log' | 'recipes' | 'profile' | 'grocery' | 'progress' | 'calendar';
 export type DayMode = 'rest' | 'practice' | 'game';
+
+/**
+ * The two ways the calendar reads.
+ *
+ * `month` is the training grid the design shipped: dots for what is on, and one
+ * day's detail underneath. `week` shows seven days of meals at once, which is
+ * what an athlete shopping or prepping on a Sunday actually needs.
+ */
+export type CalView = 'week' | 'month';
 export type PlanScope = 'meal' | 'day' | 'week';
 
 /** `[mode, sessionTime, liftTime, durationMinutes]` — empty string means "unset". */
@@ -144,6 +153,8 @@ export interface AppState {
    * breakfast could not be swapped at all.
    */
   swaps: Record<string, string>;
+  /** Whether the calendar shows the week's meals or the month's training dots. */
+  calView: CalView;
   cat: number;
   /** Transient note shown when a pick moved an item between lists. */
   note?: string | null;
