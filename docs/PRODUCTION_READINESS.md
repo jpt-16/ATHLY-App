@@ -15,6 +15,9 @@ sections, in the order they matter:
 3. [Verified](#verified) — what the audit checked and found sound, so the next
    person does not re-derive it.
 
+For what would most improve the athlete's experience next — as opposed to what
+blocks a launch — see [`UX_AUDIT.md`](UX_AUDIT.md).
+
 A note on what this document is not. It is an engineering checklist. It is not a
 compliance assessment, it is not legal advice, and nothing in it should be read
 as a claim that ATHLY meets COPPA, GDPR-K, HIPAA or any other regime. See
@@ -140,6 +143,9 @@ limit yet; that is a fact about the current build, not an omission.
       `https://athly-app-five.vercel.app,http://localhost:5173`.
       **`delete-account` returns 500 without it**, by design: a CORS allow-list
       that falls back to permissive when unset is an allow-list nobody sets.
+      Still unset as of the last check, and the redeployed function is live, so
+      account deletion answers 500 until it is added. Nobody has an account yet,
+      so nothing is currently broken by it — but it blocks Blocking #4.
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected
 by the platform. The service-role key must appear nowhere else — not in `.env`,
@@ -154,10 +160,32 @@ not in the bundle, not in the repository.
 
 ### Migrations
 
-`0004_limits.sql` has not been applied. It adds the rate-limit table and the
-column bounds. Apply it before the Edge Function is redeployed, or every
-deletion returns 503 — the function fails closed when its limiter is missing,
-which is the correct direction and still an outage.
+- [x] `0004_limits.sql` — **applied**, and `delete-account` redeployed against
+      it (function version 4). The rate-limit table, the `consume_rate_limit`
+      function and the column bounds are all live and verified: RLS on with no
+      policies, `security definer` with `search_path = ''`, execute revoked from
+      `anon` and `authenticated`.
+- [ ] **`0005_plan.sql` has not been applied.** It adds `plan_swaps` and
+      `plan_days` — the meals an athlete swapped into their week, and how many
+      times they re-rolled a day. Until it is applied, every swap works for the
+      session and is lost on reload, and the write fails silently behind a
+      "That swap didn't save" toast. Nothing else breaks.
+
+### Supabase advisors
+
+Checked against the live project. Four findings, three of which are noise, and
+they are recorded here so nobody re-investigates them:
+
+- `deleted_accounts` and `rate_limits` have RLS enabled and no policies. That is
+  the deliberate deny-all posture — service-role only — not an oversight.
+- `rls_auto_enable()` is reported as a `SECURITY DEFINER` function callable by
+  `anon` and `authenticated`. It is Supabase's own platform function, owned by
+  `postgres` and wired to the `ensure_rls` event trigger. It returns
+  `event_trigger`, a type PostgREST cannot call and Postgres refuses outside a
+  DDL event, so neither warning is reachable. Its only effect is enabling RLS,
+  which is the safe direction anyway.
+- **Leaked-password protection is off.** This one is real, and it is the same
+  item listed under Providers above.
 
 ---
 
