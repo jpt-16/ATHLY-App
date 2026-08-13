@@ -1554,10 +1554,12 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         lbDiff === 0
           ? 'Same as where you are now — we\u2019ll hold you steady.'
           : `${lbDiff} lb to ${a.goal === 'lose' ? 'lose' : 'gain'} at ${tg.rate} lb a week is about ${Math.max(1, Math.round(lbDiff / tg.rate))} weeks. That works out to ${a.goal === 'lose' ? '-' : '+'}${Math.round((tg.rate * 3500) / 7 / 25) * 25} calories a day.${
+              // Only a deficit gets eased now, so this no longer has to ask
+              // which goal it is explaining. The line that used to sit here
+              // for gaining — "you picked 1.5, but you are 16" — went with the
+              // cap it was apologising for.
               tg.rate < s.rate
-                ? a.goal === 'lose'
-                  ? ` You picked ${s.rate}, but that\u2019s past the ceiling — about 1% of your bodyweight a week is as fast as you can go without losing muscle with it.${s.age < 18 ? ' Your age factors in too.' : ''}`
-                  : ` You picked ${s.rate}, but you\u2019re ${s.age} — steady beats fast while you\u2019re still growing.`
+                ? ` You picked ${s.rate}, but that\u2019s past the ceiling — about 1% of your bodyweight a week is as fast as you can go without losing muscle with it.${s.age < 18 ? ' Your age factors in too.' : ''}`
                 : a.goal === 'lose' && s.rate >= 1.5
                   ? ` That pace is within range for your size — protein stays high so what comes off is fat.`
                   : ''

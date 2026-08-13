@@ -8,8 +8,9 @@ import type { DayMode, TargetInputs, Targets } from './types';
  *
  *   1. Mifflin–St Jeor resting burn from age, height, weight and baseline.
  *   2. An activity multiplier that scales with training days in the week.
- *   3. A goal adjustment derived from the chosen pace, capped for safety
- *      (about 1% of bodyweight a week, lower again for athletes under 18).
+ *   3. A goal adjustment derived from the chosen pace. Losing is capped for
+ *      safety (about 1% of bodyweight a week, lower again under 18); gaining
+ *      is not — see the note on `loseCap` below.
  *   4. Protein set against *goal* weight, then fat at 27% of calories, with
  *      carbohydrate taking the remainder.
  *
@@ -29,9 +30,24 @@ export function computeTargets(s: TargetInputs): Targets {
   const young = s.age < 18;
 
   let rate = s.rate;
+
+  // Losing is capped. Gaining is not.
+  //
+  // A deficit that outruns what the body can give up takes muscle with the
+  // fat, and the ceiling for that is roughly 1% of bodyweight a week — set
+  // lower for an athlete still growing, who has less to spare.
+  //
+  // Gaining had a matching cap at 1 lb a week for anyone under 18, on the
+  // reasoning that a bigger surplus lands more of the gain as fat. It is gone
+  // by decision: this app's athletes are training hard enough to spend a
+  // surplus, and the cap's real effect was a picker offering five paces while
+  // silently delivering three identical ones — a worse failure than the one it
+  // was hedging against. Every offered pace now moves the target.
+  //
+  // Both of these are on the list for a Registered Dietitian to review before
+  // launch; neither is a clinical judgement.
   const loseCap = Math.max(0.5, Math.min(young ? 1.5 : 2.5, Math.round(s.lb * 0.01 * 4) / 4));
   if (goal === 'lose') rate = Math.min(rate, loseCap);
-  if (young && goal === 'gain') rate = Math.min(rate, 1);
 
   const perDay = Math.round((rate * 3500) / 7 / 25) * 25;
   const adj = goal === 'gain' ? perDay : goal === 'lose' ? -perDay : 0;

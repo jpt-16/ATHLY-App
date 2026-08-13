@@ -107,16 +107,39 @@ describe('computeTargets', () => {
     expect(t.rate).toBeLessThan(2.5);
   });
 
-  it('caps a minor gaining faster than a pound a week', () => {
-    const t = computeTargets(athlete({ age: 16, rate: 1.5 }));
-    expect(t.young).toBe(true);
-    expect(t.rate).toBe(1);
+  /**
+   * A pound of bodyweight is treated as 3500 calories, so a pound a week is
+   * 500 a day and every other pace is that scaled. Written out longhand rather
+   * than recomputed from the formula, because a test that repeats the
+   * implementation agrees with any bug the implementation has.
+   */
+  it.each([
+    [0.5, 250],
+    [0.75, 375],
+    [1, 500],
+    [1.25, 625],
+    [1.5, 750],
+  ])('puts %s lb a week at +%i calories a day', (rate, expected) => {
+    expect(computeTargets(athlete({ rate })).adj).toBe(expected);
   });
 
-  it('does not cap an adult gaining at the same pace', () => {
-    const t = computeTargets(athlete({ age: 25, rate: 1.5 }));
-    expect(t.young).toBe(false);
-    expect(t.rate).toBe(1.5);
+  it('does not cap a minor who is gaining', () => {
+    // This used to hold every under-18 athlete to 1 lb a week, which made the
+    // top three of the five offered paces produce an identical target.
+    const minor = computeTargets(athlete({ age: 16, rate: 1.5 }));
+    const adult = computeTargets(athlete({ age: 25, rate: 1.5 }));
+
+    expect(minor.young).toBe(true);
+    expect(minor.rate).toBe(1.5);
+    expect(minor.adj).toBe(adult.adj);
+  });
+
+  it('still caps a minor who is losing, and lower than an adult', () => {
+    // The deficit ceiling is the one that stayed: 1.5 lb under 18, 2.5 over,
+    // both further limited to about 1% of bodyweight.
+    const heavy = { lb: 300, a: { ...athlete().a, goal: 'lose' as const }, rate: 2.5 };
+    expect(computeTargets(athlete({ ...heavy, age: 16 })).rate).toBe(1.5);
+    expect(computeTargets(athlete({ ...heavy, age: 25 })).rate).toBe(2.5);
   });
 
   it('sets protein against goal weight, not current weight', () => {
