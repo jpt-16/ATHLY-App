@@ -504,10 +504,23 @@ shipping an app that saves nothing. Add the deployed origin to Supabase →
 Authentication → URL Configuration, or its sign-in redirects will be rejected —
 including each preview URL you want sign-in to work on.
 
-`vercel.json` carries the build config and four security headers. It has no SPA
-rewrite: with a single route, a catch-all rewrite would turn genuine 404s into
-200s. That lands with routing. When a Content-Security-Policy is added, its
-`connect-src` needs the Supabase project origin.
+`vercel.json` carries the build config and the transport headers — nosniff,
+referrer policy, `X-Frame-Options`, permissions policy, HSTS, COOP, and the one
+CSP directive a `<meta>` policy is required to ignore, `frame-ancestors`. It has
+no SPA rewrite: with a single route, a catch-all rewrite would turn genuine 404s
+into 200s. That lands with routing.
+
+The rest of the Content-Security-Policy is generated at build time and written
+into the page — see `tools/csp.mjs` and the `athly:csp` plugin. It has to be
+generated because `connect-src` names the configured Supabase project, and a
+wildcard there would permit exfiltration to any project anyone can create in a
+minute. `tools/csp.test.mjs` asserts the shape of it, because a policy with a
+typo in it fails open and renders a perfectly working page.
+
+The Edge Function needs one secret of its own:
+`supabase secrets set ALLOWED_ORIGINS=https://your-app.vercel.app,http://localhost:5173`.
+`delete-account` refuses to run without it rather than falling back to
+answering every origin.
 
 Source maps are off. `'hidden'` still writes the `.map` into `dist/`, where a
 public host serves it at a guessable path — obscurity, not privacy. It goes back
@@ -519,7 +532,9 @@ nothing.
 
 ## Before this is public
 
-Three things are outstanding, and none of them is a code change.
+The full list, including the dashboard settings this repository cannot check for
+you, is in [docs/PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md). The
+three that block everything else:
 
 **This is not medical or dietary advice, and the app does not say so anywhere
 yet.** It computes calorie and protein targets for 13–17-year-olds and now keeps

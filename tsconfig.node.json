@@ -8,6 +8,12 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
 
+    // `tools/csp.mjs` is plain JavaScript carrying its types in JSDoc, and
+    // `vite.config.ts` imports it. Reading them from the source beats a
+    // hand-written `.d.mts` that can drift away from the thing it describes.
+    "allowJs": true,
+    "checkJs": true,
+
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -22,6 +28,7 @@
   },
   "include": [
     "vite.config.ts",
+    "tools/csp.mjs",
     "vitest.rls.config.ts",
     "vitest.roundtrip.config.ts",
     "supabase/tests/**/*.ts"

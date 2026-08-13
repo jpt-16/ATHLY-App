@@ -3,6 +3,8 @@ import { loadEnv } from 'vite';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
+import { buildCsp } from './tools/csp.mjs';
+
 /**
  * Refuse to build a production bundle that has no backend to talk to.
  *
@@ -36,9 +38,40 @@ function requireBackendConfig(mode: string): Plugin {
   };
 }
 
+/**
+ * Write a Content-Security-Policy into the built page.
+ *
+ * Generated rather than written into `vercel.json` because one directive cannot
+ * be static: `connect-src` has to name the Supabase project this bundle talks
+ * to, and that origin is an environment variable. A hardcoded
+ * `https://*.supabase.co` would permit exfiltration to any Supabase project
+ * anyone can create in a minute, which is most of the value gone.
+ *
+ * The policy itself, and the reasoning behind each concession in it, is in
+ * `tools/csp.mjs` — separated so `tools/csp.test.mjs` can assert on it. A policy
+ * is one long line in which a wrong token silently stops protecting anything,
+ * without producing a broken page anyone would notice.
+ */
+function contentSecurityPolicy(mode: string): Plugin {
+  return {
+    name: 'athly:csp',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        const policy = buildCsp(loadEnv(mode, process.cwd(), '').VITE_SUPABASE_URL);
+        return html.replace(
+          '<head>',
+          `<head>\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`,
+        );
+      },
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), requireBackendConfig(mode)],
+  plugins: [react(), requireBackendConfig(mode), contentSecurityPolicy(mode)],
   server: {
     port: 5173,
     strictPort: false,

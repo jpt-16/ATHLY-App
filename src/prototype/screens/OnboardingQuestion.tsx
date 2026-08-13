@@ -6,6 +6,18 @@ import React from 'react';
 import type { ViewModel, VmRow } from '../viewModel';
 import { S } from '../styles';
 
+/**
+ * Ceilings on the two fields an athlete types freely into.
+ *
+ * Both mirror CHECK constraints added in `0004_limits.sql`, and neither is the
+ * enforcement — a `maxLength` attribute is a courtesy to someone using the app,
+ * not an obstacle to someone using the API. What it buys is that a name the
+ * column would reject cannot be typed in the first place, so the failure never
+ * arrives thirteen questions later as a save that did not work.
+ */
+const NAME_MAX = 60;
+const ENTRY_MAX = 40;
+
 export function OnboardingQuestion({ v }: { v: ViewModel }) {
   return (
     <>
@@ -31,6 +43,11 @@ export function OnboardingQuestion({ v }: { v: ViewModel }) {
               <input
                 value={v.nameDraft}
                 onChange={v.nameChange}
+                // Matches `profiles_name_length` in 0004. The database is where
+                // the bound holds — a client can be replaced — but a field that
+                // accepts more than the column will is a save that fails at the
+                // end of onboarding for a reason nobody can see.
+                maxLength={NAME_MAX}
                 placeholder="e.g. Jordan"
                 style={S(
                   'width:100%;padding:18px;font:inherit;font-size:24px;font-weight:800;letter-spacing:-.02em;background:#fff;border:2px solid rgba(17,24,21,.12);border-radius:14px;color:#111815;caret-color:#17A05E',
@@ -305,6 +322,7 @@ export function OnboardingQuestion({ v }: { v: ViewModel }) {
                 value={v.obDraft}
                 onChange={v.obDraftChange}
                 onKeyDown={v.obDraftKey}
+                maxLength={ENTRY_MAX}
                 placeholder={v.obDraftHint}
                 style={S(
                   'width:100%;padding:13px 14px;font:inherit;font-size:14px;background:#fff;border:2px solid rgba(17,24,21,.12);border-radius:12px;color:#111815;caret-color:#17A05E',

@@ -38,6 +38,8 @@ export function AuthEmail({ v }: { v: ViewModel }) {
               inputMode="email"
               autoCapitalize="none"
               spellCheck={false}
+              // The longest an email address is allowed to be, per RFC 5321.
+              maxLength={254}
               value={v.authEmail}
               onChange={v.authEmailChange}
               placeholder="you@example.com"

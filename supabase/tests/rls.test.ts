@@ -189,12 +189,14 @@ describe('coverage', () => {
     const { data } = await admin.rpc('rls_coverage');
     const objects = (data ?? []) as CoverageRow[];
 
-    // `deleted_accounts` is the deliberate exception: RLS on, no policies at
-    // all, which makes it unreachable to every client but the service role.
+    // Two deliberate exceptions: RLS on, no policies at all, which makes them
+    // unreachable to every client but the service role. `deleted_accounts` holds
+    // an audit trail nobody being audited should read; `rate_limits` holds how
+    // close each caller is to their ceiling, which is neither theirs to read nor
+    // — emphatically — theirs to write.
+    const denyAll = ['deleted_accounts', 'rate_limits'];
     const silent = objects
-      .filter(
-        (o) => o.kind === 'table' && o.object_name !== 'deleted_accounts' && Number(o.policy_count) === 0,
-      )
+      .filter((o) => o.kind === 'table' && !denyAll.includes(o.object_name) && Number(o.policy_count) === 0)
       .map((o) => o.object_name);
     expect(silent).toEqual([]);
   });
@@ -365,6 +367,203 @@ describe('deleted_accounts', () => {
     const { error } = await alice.client
       .from('deleted_accounts')
       .insert({ deleted_user_id: alice.id, requested_by: 'user' });
+    expect(error).not.toBeNull();
+  });
+});
+
+describe('rate_limits', () => {
+  it('is invisible and unwritable to every client', async () => {
+    // A client that could read this would learn how close it was to the
+    // ceiling; one that could write it would not have a ceiling. RLS is on with
+    // no policies at all, the same posture as `deleted_accounts`.
+    const { data: anonRows } = await anon.from('rate_limits').select('*');
+    expect(anonRows ?? []).toEqual([]);
+
+    const { data: userRows } = await alice.client.from('rate_limits').select('*');
+    expect(userRows ?? []).toEqual([]);
+
+    const { error } = await alice.client.from('rate_limits').insert({
+      bucket: 'delete-account',
+      subject: `user:${alice.id}`,
+      window_start: new Date().toISOString(),
+      count: 0,
+    });
+    expect(error).not.toBeNull();
+  });
+});
+
+describe('consume_rate_limit', () => {
+  const subject = () => `test:${crypto.randomUUID()}`;
+
+  it('allows up to the limit and refuses past it', async () => {
+    const who = subject();
+    const call = () =>
+      admin.rpc('consume_rate_limit', {
+        p_bucket: 'test',
+        p_subject: who,
+        p_limit: 3,
+        p_window: '1 hour',
+      });
+
+    expect((await call()).data).toBe(true);
+    expect((await call()).data).toBe(true);
+    expect((await call()).data).toBe(true);
+    // The fourth is the one that matters.
+    expect((await call()).data).toBe(false);
+    expect((await call()).data).toBe(false);
+  });
+
+  it('counts each subject separately', async () => {
+    // Otherwise one athlete deleting their account locks out everyone else.
+    const [a, b] = [subject(), subject()];
+    const call = (who: string) =>
+      admin.rpc('consume_rate_limit', { p_bucket: 'test', p_subject: who, p_limit: 1, p_window: '1 hour' });
+
+    expect((await call(a)).data).toBe(true);
+    expect((await call(b)).data).toBe(true);
+    expect((await call(a)).data).toBe(false);
+  });
+
+  it('counts each bucket separately', async () => {
+    const who = subject();
+    const call = (bucket: string) =>
+      admin.rpc('consume_rate_limit', { p_bucket: bucket, p_subject: who, p_limit: 1, p_window: '1 hour' });
+
+    expect((await call('one')).data).toBe(true);
+    expect((await call('two')).data).toBe(true);
+    expect((await call('one')).data).toBe(false);
+  });
+
+  it('counts concurrent calls rather than losing them', async () => {
+    // The property the whole thing rests on. Read-then-write would let ten
+    // simultaneous requests all see zero and all be allowed; the upsert takes a
+    // row lock, so they are counted one after another.
+    const who = subject();
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        admin.rpc('consume_rate_limit', {
+          p_bucket: 'test',
+          p_subject: who,
+          p_limit: 4,
+          p_window: '1 hour',
+        }),
+      ),
+    );
+    expect(results.filter((r) => r.data === true)).toHaveLength(4);
+  });
+
+  it('is not callable by anyone but the service role', async () => {
+    // `security definer` on a function that writes a table nobody has a policy
+    // on. Reachable from the REST API would mean any client could exhaust
+    // anyone's limit — or their own, silently.
+    const args = { p_bucket: 'test', p_subject: subject(), p_limit: 1, p_window: '1 hour' };
+
+    const { error: anonError } = await anon.rpc('consume_rate_limit', args);
+    expect(anonError).not.toBeNull();
+
+    const { error: userError } = await alice.client.rpc('consume_rate_limit', args);
+    expect(userError).not.toBeNull();
+  });
+
+  it('refuses a limit that is not a limit', async () => {
+    const { error } = await admin.rpc('consume_rate_limit', {
+      p_bucket: 'test',
+      p_subject: subject(),
+      p_limit: 0,
+      p_window: '1 hour',
+    });
+    expect(error).not.toBeNull();
+  });
+});
+
+/**
+ * `SPORTS` from `src/prototype/data.ts`, copied rather than imported.
+ *
+ * This file talks to Postgres and imports nothing from `src` — that separation
+ * is why it lives in the node project rather than the app one, and importing a
+ * constant is not worth undoing it. The copy can drift; the ceiling it is
+ * checked against has nineteen slots of headroom above it, which is the margin
+ * that makes drift survivable.
+ */
+const EVERY_SPORT = [
+  'Soccer',
+  'Football',
+  'Basketball',
+  'Baseball',
+  'Softball',
+  'Track',
+  'Cross country',
+  'Swimming',
+  'Wrestling',
+  'Volleyball',
+  'Tennis',
+  'Lacrosse',
+  'Hockey',
+  'Golf',
+  'Rowing',
+  'Cheer',
+  'Dance',
+  'Weightlifting',
+  'CrossFit',
+  'Just the gym',
+  'Nothing right now',
+];
+
+describe('column bounds', () => {
+  /**
+   * `meal_logs.name` was bounded when it was written; the columns in 0001 were
+   * not, and the difference was that one was written later. Row Level Security
+   * means an athlete can only do this to their own row — so this is not a leak,
+   * it is that "your name" had no ceiling and a client with a loop is not
+   * obliged to be the client we shipped.
+   */
+  it('refuses a name longer than a name', async () => {
+    const { error } = await alice.client
+      .from('profiles')
+      .update({ name: 'a'.repeat(61) })
+      .eq('user_id', alice.id);
+    expect(error).not.toBeNull();
+  });
+
+  it('accepts a name of a plausible length', async () => {
+    const { error } = await alice.client
+      .from('profiles')
+      .update({ name: 'Alexandra' })
+      .eq('user_id', alice.id);
+    expect(error).toBeNull();
+  });
+
+  it('refuses an unbounded list of sports', async () => {
+    const { error: tooMany } = await alice.client
+      .from('profiles')
+      .update({ sports: Array.from({ length: 41 }, (_, i) => `sport ${i}`) })
+      .eq('user_id', alice.id);
+    expect(tooMany).not.toBeNull();
+
+    const { error: tooLong } = await alice.client
+      .from('profiles')
+      .update({ sports: ['x'.repeat(1700)] })
+      .eq('user_id', alice.id);
+    expect(tooLong).not.toBeNull();
+  });
+
+  it('still accepts every chip the app can actually offer', async () => {
+    // The bounds exist to stop a megabyte, not an enthusiast. `SPORTS` in
+    // `data.ts` offers 21 options and nothing stops an athlete tapping all of
+    // them, so a ceiling below that would be a bug shipped as a safeguard.
+    const { error } = await alice.client
+      .from('profiles')
+      .update({ sports: EVERY_SPORT })
+      .eq('user_id', alice.id);
+    expect(error).toBeNull();
+  });
+
+  it('refuses a training time that is not a time', async () => {
+    const { error } = await alice.client
+      .from('training_week')
+      .update({ session_time: 'x'.repeat(21) })
+      .eq('user_id', alice.id)
+      .eq('weekday', 1);
     expect(error).not.toBeNull();
   });
 });

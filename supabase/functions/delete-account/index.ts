@@ -14,33 +14,80 @@
 //
 // Deploy:
 //   supabase functions deploy delete-account
+//   supabase secrets set ALLOWED_ORIGINS=https://athly-app-five.vercel.app,http://localhost:5173
 //
 // Apple requires account deletion to be available from inside the app for any
 // app that offers account creation, which is what this backs.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+/**
+ * How often one athlete may ask.
+ *
+ * Deleting an account is idempotent to the point of being meaningless twice —
+ * the second call has no user to find — so this is not protecting the outcome.
+ * It bounds the work: every call costs a service-role round trip and an audit
+ * insert, and an authenticated client in a loop should not be able to spend that
+ * without limit. Generous enough that a real athlete retrying a failure never
+ * meets it.
+ */
+const LIMIT = 5;
+const WINDOW = '1 hour';
 
-function json(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+/**
+ * Which origins may call this from a browser.
+ *
+ * Required, not optional. The function answered `Access-Control-Allow-Origin: *`
+ * until this audit — which is *not* the hole it looks like, because the only way
+ * to reach this endpoint is with a bearer token, and a cross-origin page cannot
+ * read one out of another origin's `localStorage`. CORS is not what protects
+ * this; the JWT check is.
+ *
+ * It is narrowed anyway, and it is required rather than defaulted, because a
+ * config that silently falls back to the permissive case is a config nobody
+ * sets. Missing it fails the same way a missing service-role key does: loudly,
+ * at the first request, before anything happens.
+ */
+function allowedOrigins(): string[] {
+  return (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+}
+
+function corsHeaders(origin: string | null, allowed: string[]): Record<string, string> {
+  const base: Record<string, string> = {
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    // The response differs by origin, so a cache keyed without it would serve
+    // one caller's allow header to another.
+    Vary: 'Origin',
+  };
+  // No echo for an origin we do not know. The browser refuses the response,
+  // which is the whole mechanism — there is nothing to add by lying.
+  if (origin && allowed.includes(origin)) base['Access-Control-Allow-Origin'] = origin;
+  return base;
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  const origin = req.headers.get('Origin');
 
   const url = Deno.env.get('SUPABASE_URL');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!url || !anonKey || !serviceKey) {
+  const allowed = allowedOrigins();
+
+  const cors = corsHeaders(origin, allowed);
+  const json = (body: unknown, status: number) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    });
+
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+  if (!url || !anonKey || !serviceKey || allowed.length === 0) {
     console.error('delete-account: function environment is incomplete');
     return json({ error: 'Server misconfigured' }, 500);
   }
@@ -63,6 +110,23 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  // Keyed on the verified user id, so the limit follows the account rather than
+  // an IP address that a phone changes by walking down the street. Counted after
+  // the JWT check, so an unauthenticated flood cannot fill the table.
+  const { data: allowedNow, error: limitError } = await admin.rpc('consume_rate_limit', {
+    p_bucket: 'delete-account',
+    p_subject: `user:${user.id}`,
+    p_limit: LIMIT,
+    p_window: WINDOW,
+  });
+  if (limitError) {
+    // Fail closed. A limiter that waves everything through when it breaks is
+    // not a limiter, and this endpoint is not one anybody needs urgently.
+    console.error('delete-account: rate limit check failed', limitError.message);
+    return json({ error: 'Could not delete the account' }, 503);
+  }
+  if (!allowedNow) return json({ error: 'Too many attempts. Try again later.' }, 429);
 
   // Audit first. If the delete succeeds and the audit write had been left until
   // afterwards, a failure between the two would erase the account with no record
