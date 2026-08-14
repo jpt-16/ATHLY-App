@@ -99,3 +99,38 @@ describe('frame-ancestors', () => {
     expect(keys).toContain('X-Frame-Options');
   });
 });
+
+describe('the visual harness renders under this policy', () => {
+  /**
+   * The capture harness photographs the built page, so the policy applies to it
+   * too — and that coupling is invisible from either file.
+   *
+   * It broke exactly once, silently: the harness stubbed Google Fonts with the
+   * woff2 inlined as a `data:` URI, which had been fine for as long as there was
+   * no policy. Adding `font-src 'self' https://fonts.gstatic.com` blocked it,
+   * every capture aborted on the font assertion, and the visual gate stayed red
+   * for two commits while looking like a pixel regression.
+   */
+  const captures = ['tools/visual/capture.mjs', 'tools/visual/capture-auth.mjs'];
+
+  it.each(captures)('%s serves its stub font from an origin font-src allows', (file) => {
+    const source = readFileSync(path.join(process.cwd(), file), 'utf8');
+    const url = source.match(/const FONT_URL = '([^']+)'/)?.[1];
+    expect(url, `${file} has no FONT_URL`).toBeTruthy();
+
+    const fontSrc = buildCsp(PROJECT)
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('font-src '));
+    expect(fontSrc).toBeTruthy();
+
+    expect(fontSrc).toContain(new URL(url).origin);
+  });
+
+  it.each(captures)('%s does not inline a font the policy would block', (file) => {
+    const source = readFileSync(path.join(process.cwd(), file), 'utf8');
+    // `data:` is allowed for images and deliberately not for fonts.
+    expect(buildCsp(PROJECT)).toContain("img-src 'self' data:");
+    expect(source).not.toMatch(/src:url\(data:font/);
+  });
+});

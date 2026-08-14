@@ -43,7 +43,9 @@ const fontFile = path.join(
   path.dirname(require.resolve('@fontsource-variable/archivo/package.json')),
   'files/archivo-latin-wdth-normal.woff2',
 );
-const fontB64 = fs.readFileSync(fontFile).toString('base64');
+const fontBytes = fs.readFileSync(fontFile);
+/** Any path under the origin the CSP's `font-src` names; the route matches all of them. */
+const FONT_URL = 'https://fonts.gstatic.com/s/archivo/athly-stub.woff2';
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 // Wide enough that the shell renders its desktop branch — the compact branch
@@ -56,11 +58,23 @@ const page = await browser.newPage({
 page.on('pageerror', (e) => console.log('  [pageerror]', e.message));
 await pinClock(page);
 
+// The stub answers in production's own shape: the stylesheet from
+// googleapis, the font file from gstatic. It used to inline the woff2 as a
+// `data:` URI, which was simpler and stopped working the day a
+// Content-Security-Policy arrived — `font-src 'self' https://fonts.gstatic.com`
+// does not cover `data:`, so the face was blocked, every screen would have been
+// photographed in a fallback typeface, and `assertFontLoaded` refused. Serving
+// it from the origin the policy actually names keeps the harness honest about
+// what the shipped page does.
 await page.route('https://fonts.googleapis.com/**', (route) =>
   route.fulfill({
     contentType: 'text/css',
-    body: `@font-face{font-family:'Archivo';font-style:normal;font-weight:100 900;font-stretch:62% 125%;font-display:block;src:url(data:font/woff2;base64,${fontB64}) format('woff2-variations');}`,
+    body: `@font-face{font-family:'Archivo';font-style:normal;font-weight:100 900;font-stretch:62% 125%;font-display:block;src:url(${FONT_URL}) format('woff2-variations');}`,
   }),
+);
+
+await page.route('https://fonts.gstatic.com/**', (route) =>
+  route.fulfill({ contentType: 'font/woff2', body: fontBytes }),
 );
 
 await page.goto(URL, { waitUntil: 'networkidle' });
