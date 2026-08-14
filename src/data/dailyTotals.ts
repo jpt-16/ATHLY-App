@@ -1,5 +1,7 @@
 import { addDays, startOfWeek, weekdayOf } from '../lib/clock';
 import type { IsoDate } from '../lib/clock';
+import { ZERO } from '../prototype/nutrients';
+import type { Nutrients } from '../prototype/nutrients';
 import type { MealLog, Week } from '../prototype/types';
 
 /**
@@ -15,25 +17,26 @@ import type { MealLog, Week } from '../prototype/types';
  * different, and the screens treat them differently.
  */
 
-export interface Totals {
-  kcal: number;
-  protein: number;
-  carbs: number;
-  fat: number;
+export interface Totals extends Nutrients {
   /** How many things were logged. Zero means the day is empty, not that it was a fast. */
   entries: number;
 }
 
-export const EMPTY_TOTALS: Totals = { kcal: 0, protein: 0, carbs: 0, fat: 0, entries: 0 };
+export const EMPTY_TOTALS: Totals = { ...ZERO, entries: 0 };
 
+const NUTRIENT_KEYS = Object.keys(ZERO) as (keyof Nutrients)[];
+
+/**
+ * Add one entry into a running total.
+ *
+ * Every nutrient, keyed off `ZERO`, so the eight micronutrients added in
+ * `0006_micronutrients.sql` cannot be silently left out of a sum by a function
+ * that lists its fields by hand.
+ */
 function add(into: Totals, log: MealLog): Totals {
-  return {
-    kcal: into.kcal + log.kcal,
-    protein: into.protein + log.protein,
-    carbs: into.carbs + log.carbs,
-    fat: into.fat + log.fat,
-    entries: into.entries + 1,
-  };
+  const out = { ...into, entries: into.entries + 1 };
+  for (const key of NUTRIENT_KEYS) out[key] = into[key] + log[key];
+  return out;
 }
 
 /** Everything logged on one date. */
@@ -162,13 +165,9 @@ export function adherence(
 // The Log tab
 // ---------------------------------------------------------------------------
 
-export interface LoggedItem {
+export interface LoggedItem extends Nutrients {
   name: string;
   mealId: string | null;
-  kcal: number;
-  protein: number;
-  carbs: number;
-  fat: number;
   /** Most recent time this was logged. */
   lastLogged: MealLog;
   count: number;
@@ -206,26 +205,18 @@ function rollUp(logs: MealLog[]): LoggedItem[] {
     const key = log.mealId ?? 'name:' + log.name.toLowerCase();
     const seen = by.get(key);
     if (!seen) {
-      by.set(key, {
-        name: log.name,
-        mealId: log.mealId,
-        kcal: log.kcal,
-        protein: log.protein,
-        carbs: log.carbs,
-        fat: log.fat,
-        lastLogged: log,
-        count: 1,
-      });
+      const fresh = { name: log.name, mealId: log.mealId, lastLogged: log, count: 1 } as LoggedItem;
+      for (const k of NUTRIENT_KEYS) fresh[k] = log[k];
+      by.set(key, fresh);
       continue;
     }
     seen.count += 1;
+    // The most recent entry's numbers win, so a food logged at a different
+    // portion shows what it was last actually eaten at.
     if (log.loggedAt > seen.lastLogged.loggedAt) {
       seen.lastLogged = log;
       seen.name = log.name;
-      seen.kcal = log.kcal;
-      seen.protein = log.protein;
-      seen.carbs = log.carbs;
-      seen.fat = log.fat;
+      for (const k of NUTRIENT_KEYS) seen[k] = log[k];
     }
   }
   return [...by.values()];

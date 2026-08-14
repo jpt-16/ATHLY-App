@@ -96,6 +96,43 @@ export function ProgressScreen({ v }: { v: ViewModel }) {
             </React.Fragment>
           ))}
         </div>
+        {v.microRows?.length ? (
+          <div style={S('padding:18px 22px 0')}>
+            <div
+              style={S(
+                'font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:9px',
+              )}
+            >
+              {v.microHeading}
+            </div>
+            <div
+              style={S(
+                'background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;overflow:hidden',
+              )}
+            >
+              {(v.microRows ?? []).map((m: VmRow, i: number) => (
+                <React.Fragment key={i}>
+                  <div style={S(m.rowStyle)}>
+                    <div style={S('flex:1;min-width:0')}>
+                      <div style={S('font-size:13.5px;font-weight:700')}>{m.label}</div>
+                      <div
+                        style={S('height:5px;border-radius:3px;background:rgba(17,24,21,.08);margin-top:7px')}
+                      >
+                        <div style={S(m.barStyle)} />
+                      </div>
+                    </div>
+                    <div style={S('text-align:right;flex:none;min-width:96px')}>
+                      <div style={S('font-size:13.5px;font-weight:800;letter-spacing:-.01em')}>{m.value}</div>
+                      <div style={S('font-size:11px;font-weight:600;color:#8C8779;margin-top:3px')}>
+                        {m.note}
+                      </div>
+                    </div>
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {/*
           A "What Athly learned" card used to sit here, listing three things the
           app had noticed about the athlete — which foods they swapped out, how

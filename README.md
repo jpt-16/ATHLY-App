@@ -535,7 +535,9 @@ nothing.
 The full list, including the dashboard settings this repository cannot check for
 you, is in [docs/PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md), and
 what would most improve the app for the athlete using it is in
-[docs/UX_AUDIT.md](./docs/UX_AUDIT.md). The three that block everything else:
+[docs/UX_AUDIT.md](./docs/UX_AUDIT.md). Every nutrition formula the app uses —
+and the six things a dietitian should question first — is in
+[docs/NUTRITION.md](./docs/NUTRITION.md). The three that block everything else:
 
 **This is not medical or dietary advice, and the app does not say so anywhere
 yet.** It computes calorie and protein targets for 13–17-year-olds and now keeps

@@ -532,17 +532,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const m = MEALS[mealId];
     // Scaled to what the plan actually asked for. Logging one serving of a meal
     // the plan portioned at 1½ would under-count by half a meal.
-    const v = nutritionOf(m, servings);
     return {
       date: todayIso(),
       source,
       mealId,
       name: m.name,
       servings,
-      kcal: v.kcal,
-      protein: v.protein,
-      carbs: v.carbs,
-      fat: v.fat,
+      ...nutritionOf(m, servings),
     };
   }
 
@@ -1641,7 +1637,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             .map((m) => ({
               name: m.name,
               mealId: m.id,
-              ...(({ kcal, protein, carbs, fat }) => ({ kcal, protein, carbs, fat }))(nutritionOf(m)),
+              ...nutritionOf(m),
               // Never eaten, so there is no last time. The row reads its macros
               // instead of a date.
               lastLogged: null,
@@ -2340,10 +2336,33 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
                 mealId: item.mealId,
                 name: item.name,
                 servings: 1,
-                kcal: item.kcal,
-                protein: item.protein,
-                carbs: item.carbs,
-                fat: item.fat,
+                ...(({
+                  kcal,
+                  protein,
+                  carbs,
+                  fat,
+                  fiber,
+                  sugar,
+                  sodium,
+                  potassium,
+                  calcium,
+                  iron,
+                  vitaminC,
+                  vitaminD,
+                }) => ({
+                  kcal,
+                  protein,
+                  carbs,
+                  fat,
+                  fiber,
+                  sugar,
+                  sodium,
+                  potassium,
+                  calcium,
+                  iron,
+                  vitaminC,
+                  vitaminD,
+                }))(item),
               },
               () => `${item.name} logged`,
             );
@@ -2507,6 +2526,35 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       daysLogged: `${adhere.daysLogged}/${adhere.window}`,
       groceryCount: groceryCount(groceryAisles),
       progressHasData: weekBars.some((w) => w.hasData),
+
+      // Today's micronutrients against today's reference intakes.
+      //
+      // Only shown once something has been logged: a row of eight zeros is not
+      // information, it is a reminder that the app knows nothing yet, and the
+      // empty state above already says that better.
+      microHeading: `Micronutrients · ${logsToday.length === 1 ? '1 meal' : `${logsToday.length} meals`} today`,
+      microRows: logsToday.length
+        ? MICRONUTRIENTS.map((key) => {
+            const had = eaten[key];
+            const target = tg.micros[key];
+            const pct = target > 0 ? Math.round((had / target) * 100) : 0;
+            const ceiling = CEILING_NUTRIENTS.includes(key);
+            // A ceiling nutrient is doing well when it is *low*, so the bar
+            // turns amber going over rather than green arriving.
+            const good = ceiling ? pct <= 100 : pct >= 80;
+            const unit = NUTRIENT_UNIT[key];
+            const show = (v: number) =>
+              key === 'iron' || key === 'vitaminD' ? Math.round(v * 10) / 10 : Math.round(v);
+            return {
+              key,
+              label: NUTRIENT_LABEL[key],
+              value: `${show(had)}${unit}`,
+              note: `${ceiling ? 'limit' : 'of'} ${show(target)}${unit}`,
+              rowStyle: `display:flex;align-items:center;gap:14px;padding:13px 16px;${MICRONUTRIENTS.indexOf(key) ? 'border-top:1px solid rgba(17,24,21,.08)' : ''}`,
+              barStyle: `width:${Math.min(100, pct)}%;height:5px;border-radius:3px;background:${good ? GREEN : '#D4573A'}`,
+            };
+          })
+        : [],
       weeks: weekBars.map((w, i) => ({
         label: w.label,
         // Uncapped percentages would run off the top of a 96px row, so the bar

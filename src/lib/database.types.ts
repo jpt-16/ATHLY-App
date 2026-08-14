@@ -37,8 +37,6 @@ export type ProfileRow = {
   goal: GoalKind | null;
   goal_weight_lb: number | null;
   rate_lb_per_week: number | null;
-  protein_mode: ProteinModeDb;
-  protein_custom_g: number | null;
   sports: string[];
   onboarding_complete: boolean;
   created_at: string;
@@ -115,6 +113,19 @@ export type MealLogRow = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  /**
+   * The eight micronutrients, nullable because rows written before
+   * `0006_micronutrients.sql` have none and inventing values for them would make
+   * a fabricated figure indistinguishable from a measured one.
+   */
+  fiber_g: number | null;
+  sugar_g: number | null;
+  sodium_mg: number | null;
+  potassium_mg: number | null;
+  calcium_mg: number | null;
+  iron_mg: number | null;
+  vitamin_c_mg: number | null;
+  vitamin_d_mcg: number | null;
 };
 
 /**
@@ -151,6 +162,14 @@ export type DailyTotalsRow = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  fiber_g: number;
+  sugar_g: number;
+  sodium_mg: number;
+  potassium_mg: number;
+  calcium_mg: number;
+  iron_mg: number;
+  vitamin_c_mg: number;
+  vitamin_d_mcg: number;
   entries: number;
 };
 

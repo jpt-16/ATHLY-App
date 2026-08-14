@@ -44,6 +44,15 @@ Two judgements in it are ours and should not be:
 A Registered Dietitian should review both before launch. Neither is a code
 change; both are marked in the source.
 
+**This grew in the nutrition pass.** Energy is now derived from the athlete's
+_goal_ weight rather than their current one, which is the largest single change
+to the arithmetic and the one with the most room to be wrong. A safety floor
+stops it stacking two deficits on a teenager, and that floor is itself a
+judgement. Micronutrient targets were added from the DRIs. Every formula, its
+source, and the six questions worth asking first are written out in
+[`NUTRITION.md`](NUTRITION.md) — that document is the agenda for the review, not
+a substitute for it.
+
 ### 2. No privacy review, and the app holds health data about minors
 
 Logged food intake tied to a named 13-year-old is health data about a child.
@@ -57,14 +66,22 @@ data sold or shared. What does not exist: a Privacy Policy, Terms of Service, an
 in-app disclosure that this is not medical advice, a retention policy, or any
 answer at all on parental consent.
 
-### 3. The macros are authored estimates
+### 3. The nutrition values are authored estimates
 
-The recipe macros in `src/prototype/data.ts` were written by hand. The USDA
-ingest (`tools/usda/`) is built and has never been run against the live API —
-this environment cannot reach `api.nal.usda.gov`. Until
-`FDC_API_KEY=… node tools/usda/ingest.mjs` runs and someone reads
-`tools/usda/report.mjs`'s diff, the app is stating estimates as fact to people
-making decisions from them.
+Recipes no longer carry hand-written macros — a meal's nutrition is summed from
+the per-100g ingredient table in `src/prototype/nutrients.ts`, which also carries
+the eight micronutrients. That is better provenance and not proof: the table is
+still authored rather than sourced.
+
+The USDA ingest (`tools/usda/`) now targets exactly this table, which is what it
+was always for, and has never been run against the live API — this environment
+cannot reach `api.nal.usda.gov`. Until `FDC_API_KEY=… node tools/usda/ingest.mjs`
+runs and someone reads `tools/usda/report.mjs`'s diff, the app is stating
+estimates as fact to people making decisions from them.
+
+Two things did improve. The old per-meal figures did not agree with themselves —
+only 17 of 44 stated a calorie count within 2% of their own macro breakdown — and
+an ingredient is checkable in a way a composed meal is not.
 
 ### 4. Nobody has ever created an account
 
@@ -182,6 +199,12 @@ not in the bundle, not in the repository.
       function and the column bounds are all live and verified: RLS on with no
       policies, `security definer` with `search_path = ''`, execute revoked from
       `anon` and `authenticated`.
+- [ ] **`0006_micronutrients.sql` has not been applied.** It adds the eight
+      micronutrient columns to `meal_logs`, rebuilds `daily_totals` to sum them
+      (restating `security_invoker = on`), and drops the `protein_mode` /
+      `protein_custom_g` columns the app no longer writes. Until it is applied,
+      logging fails against the live project: the client sends columns that do
+      not exist.
 - [x] `0005_plan.sql` — **applied**. `plan_swaps` and `plan_days` hold the meals
       an athlete swapped into their week and how many times they re-rolled a
       day. Verified against the catalog: RLS on, four policies each, and the

@@ -5,6 +5,7 @@ import { loadAccount, saveAccount } from '../../src/data/profileRepo';
 import type { PersistedState } from '../../src/data/profileRepo';
 import { deleteLog, loadWindow, logMeal } from '../../src/data/logRepo';
 import { supabase } from '../../src/lib/supabase';
+import { ZERO } from '../../src/prototype/nutrients';
 import { totalsFor } from '../../src/data/dailyTotals';
 
 /**
@@ -70,6 +71,7 @@ const sample: PersistedState = {
 
 const today = '2026-08-12';
 const meal = {
+  ...ZERO,
   date: today,
   source: 'plan' as const,
   mealId: 'breakfast',

@@ -7,7 +7,7 @@
  */
 
 import type { IsoDate } from '../lib/clock';
-import type { Micronutrient } from './nutrients';
+import type { Micronutrient, Nutrients } from './nutrients';
 
 export type Goal = 'gain' | 'perform' | 'lose' | 'habits';
 export type Sex = 'male' | 'female' | 'na';
@@ -56,7 +56,7 @@ export type LogSource = 'plan' | 'recent' | 'favorite' | 'custom' | 'swap';
  * of what happened; when a recipe is edited, or when the USDA pass revises its
  * numbers, last Tuesday must not quietly become a different Tuesday.
  */
-export interface MealLog {
+export interface MealLog extends Nutrients {
   id: string;
   date: IsoDate;
   /** Timestamp, for ordering within a day and for "this morning" style copy. */
@@ -65,11 +65,12 @@ export interface MealLog {
   /** The recipe it came from, when it came from one. */
   mealId: string | null;
   name: string;
+  /**
+   * How much of the recipe. The plan portions each day to the athlete's target,
+   * so this is rarely 1 — and the macros above are already scaled to it rather
+   * than needing to be multiplied by it.
+   */
   servings: number;
-  kcal: number;
-  protein: number;
-  carbs: number;
-  fat: number;
 }
 
 /**

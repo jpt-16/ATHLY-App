@@ -10,6 +10,7 @@ import {
   totalsFor,
   weeklyCalories,
 } from './dailyTotals';
+import { ZERO } from '../prototype/nutrients';
 import type { MealLog, Week } from '../prototype/types';
 
 /**
@@ -30,6 +31,9 @@ function log(date: string, macros: Partial<MealLog> = {}): MealLog {
     mealId: null,
     name: 'Something',
     servings: 1,
+    // Micronutrients default to zero so a test that only cares about calories
+    // does not have to name eight more fields.
+    ...ZERO,
     kcal: 500,
     protein: 30,
     carbs: 60,
@@ -61,7 +65,11 @@ describe('daily totals', () => {
       log('2026-08-12', { kcal: 780, protein: 52, carbs: 76, fat: 24 }),
       log('2026-08-11', { kcal: 900, protein: 60, carbs: 90, fat: 30 }),
     ];
+    // Exact rather than partial, and spread from `ZERO`, so the eight
+    // micronutrients are asserted to be summed too — at zero here, because these
+    // fixtures carry none, but present rather than quietly missing.
     expect(totalsFor(logs, '2026-08-12')).toEqual({
+      ...ZERO,
       kcal: 1400,
       protein: 80,
       carbs: 158,
@@ -195,5 +203,42 @@ describe('the log tab', () => {
   it('respects the limit', () => {
     const logs = Array.from({ length: 20 }, (_, i) => log('2026-08-12', { name: 'Food ' + i }));
     expect(recentItems(logs, 8)).toHaveLength(8);
+  });
+});
+
+describe('micronutrients are totalled like everything else', () => {
+  it('sums all eight across a day', () => {
+    // Added in `0006_micronutrients.sql`. The failure this guards against is a
+    // sum that lists its fields by hand and quietly forgets the new ones.
+    const logs = [
+      log('2026-08-12', { fiber: 8, sodium: 400, iron: 2.5, vitaminD: 1.2, calcium: 200 }),
+      log('2026-08-12', { fiber: 5, sodium: 650, iron: 1.5, vitaminD: 0.8, calcium: 310 }),
+    ];
+    const t = totalsFor(logs, '2026-08-12');
+    expect(t.fiber).toBe(13);
+    expect(t.sodium).toBe(1050);
+    expect(t.iron).toBeCloseTo(4, 5);
+    expect(t.vitaminD).toBeCloseTo(2, 5);
+    expect(t.calcium).toBe(510);
+  });
+
+  it('carries them onto a recent-foods row', () => {
+    const logs = [log('2026-08-12', { mealId: 'salmon', vitaminD: 21.8, potassium: 719 })];
+    const [item] = recentItems(logs, 5);
+    expect(item.vitaminD).toBeCloseTo(21.8, 5);
+    expect(item.potassium).toBe(719);
+  });
+
+  it('takes the most recent portion when a food is logged twice', () => {
+    // The same food at a different serving size is a different number, and the
+    // row should show what it was last actually eaten at.
+    const logs = [
+      log('2026-08-11', { mealId: 'dinner', kcal: 500, iron: 2 }),
+      log('2026-08-12', { mealId: 'dinner', kcal: 1000, iron: 4 }),
+    ];
+    const [item] = recentItems(logs, 5);
+    expect(item.kcal).toBe(1000);
+    expect(item.iron).toBeCloseTo(4, 5);
+    expect(item.count).toBe(2);
   });
 });

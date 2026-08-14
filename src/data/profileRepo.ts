@@ -5,7 +5,6 @@ import type {
   FoodPrefsRow,
   GoalKind,
   ProfileRow,
-  ProteinModeDb,
   SexBasis,
   TrainingOverrideRow,
   TrainingWeekRow,
@@ -98,11 +97,6 @@ export async function saveAccount(userId: string, s: PersistedState): Promise<vo
     goal: (a.goal ?? null) as GoalKind | null,
     goal_weight_lb: s.goalLb,
     rate_lb_per_week: s.rate,
-    // Protein is derived from the goal weight now; the columns stay in the
-    // schema until a migration drops them, written with the only value the app
-    // can still mean by them.
-    protein_mode: 'rec' as ProteinModeDb,
-    protein_custom_g: null,
     sports: a.sports ?? [],
     onboarding_complete: true,
   };

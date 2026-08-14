@@ -44,6 +44,17 @@ function fromRow(row: MealLogRow): MealLog {
     protein: Math.round(num(row.protein_g)),
     carbs: Math.round(num(row.carbs_g)),
     fat: Math.round(num(row.fat_g)),
+    // Nullable in the database — rows written before `0006_micronutrients.sql`
+    // have none. Zero here is the only honest reading of "we don't know" in
+    // something that will be summed.
+    fiber: Math.round(num(row.fiber_g)),
+    sugar: Math.round(num(row.sugar_g)),
+    sodium: Math.round(num(row.sodium_mg)),
+    potassium: Math.round(num(row.potassium_mg)),
+    calcium: Math.round(num(row.calcium_mg)),
+    iron: num(row.iron_mg),
+    vitaminC: Math.round(num(row.vitamin_c_mg)),
+    vitaminD: num(row.vitamin_d_mcg),
   };
 }
 
@@ -72,6 +83,16 @@ export async function logMeal(userId: string, log: NewLog): Promise<MealLog> {
       protein_g: Math.round(log.protein),
       carbs_g: Math.round(log.carbs),
       fat_g: Math.round(log.fat),
+      fiber_g: Math.round(log.fiber),
+      sugar_g: Math.round(log.sugar),
+      sodium_mg: Math.round(log.sodium),
+      potassium_mg: Math.round(log.potassium),
+      calcium_mg: Math.round(log.calcium),
+      // Two decimals: iron and vitamin D land in single digits, where rounding
+      // to whole numbers loses most of a meal's contribution.
+      iron_mg: Math.round(log.iron * 100) / 100,
+      vitamin_c_mg: Math.round(log.vitaminC),
+      vitamin_d_mcg: Math.round(log.vitaminD * 100) / 100,
     })
     .select()
     .single();
