@@ -19,7 +19,9 @@ import {
   field,
   shapes,
 } from './data';
-import { computeTargets, dayMeals } from './nutrition';
+import { CEILING_NUTRIENTS, computeTargets, dayMeals } from './nutrition';
+import { MICRONUTRIENTS, NUTRIENT_LABEL, NUTRIENT_UNIT } from './nutrients';
+import { baseNutrition, nutritionOf, portionDay, servingLabel } from './portions';
 import { isSafe, minutesAvailable, safeMealIds, selectForSlot } from './filtering';
 import type { SlotConstraints } from './filtering';
 import { CAL_TOLERANCE, PROTEIN_TOLERANCE, rankSwaps, slotFamilyOf } from './swaps';
@@ -38,7 +40,6 @@ import type {
   LogSource,
   MealLog,
   PlanScope,
-  ProteinMode,
   Tab,
   Targets,
 } from './types';
@@ -230,8 +231,6 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     lb: 165,
     goalLb: null,
     rate: 0.75,
-    pMode: 'rec',
-    pCustom: null,
     openDay: null,
     week: {
       0: ['rest', '', '', ''],
@@ -529,18 +528,21 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
   }
 
   /** One log entry from a recipe in the plan. */
-  private mealEntry(mealId: string, source: LogSource): NewLog {
+  private mealEntry(mealId: string, source: LogSource, servings = 1): NewLog {
     const m = MEALS[mealId];
+    // Scaled to what the plan actually asked for. Logging one serving of a meal
+    // the plan portioned at 1½ would under-count by half a meal.
+    const v = nutritionOf(m, servings);
     return {
       date: todayIso(),
       source,
       mealId,
       name: m.name,
-      servings: 1,
-      kcal: m.kcal,
-      protein: m.p,
-      carbs: m.c,
-      fat: m.f,
+      servings,
+      kcal: v.kcal,
+      protein: v.protein,
+      carbs: v.carbs,
+      fat: v.fat,
     };
   }
 
@@ -577,8 +579,6 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       lb: s.lb,
       goalLb: s.goalLb,
       rate: s.rate,
-      pMode: s.pMode,
-      pCustom: s.pCustom,
       week: s.week,
       overrides: s.overrides,
     };
@@ -1010,18 +1010,34 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
   }
 
   /** Render a resolved slot, whichever way it resolved. */
-  slotRow(r: ResolvedSlot, size?: number) {
-    return r.mealId ? this.row(r.mealId, size) : this.blockedRow(r.slot, r.blockedBy, size);
+  slotRow(r: ResolvedSlot, size?: number, servings = 1) {
+    return r.mealId ? this.row(r.mealId, size, servings) : this.blockedRow(r.slot, r.blockedBy, size);
   }
 
-  row(id: string, size?: number) {
+  /**
+   * Portion a day's resolved slots against the athlete's calorie target.
+   *
+   * The plan was a list of fixed recipes handed to everybody, so it matched the
+   * target only by accident. See `portions.ts`.
+   */
+  private portionedDay(slots: ResolvedSlot[], targetCal: number) {
+    const meals = slots.map((r) => (r.mealId ? MEALS[r.mealId] : null)).filter((m): m is Meal => !!m);
+    const day = portionDay(meals, targetCal);
+    const byId = new Map(day.meals.map((p) => [p.meal.id, p]));
+    return { day, servingsFor: (id: string | null) => (id ? (byId.get(id)?.servings ?? 1) : 1) };
+  }
+
+  row(id: string, size?: number, servings = 1) {
     const m = MEALS[id];
     const sh = shapes(m.tile, size || 62);
     const fd = field(id, (size || 62) < 55 ? 11 : 12, 8);
+    const v = nutritionOf(m, servings);
     return {
       slot: m.slot,
       name: m.name,
-      macroText: `${m.kcal} cal · ${m.p}g protein · ${m.prep}`,
+      // The serving count only appears when it is not one, so a plain day reads
+      // exactly as it always did.
+      macroText: `${v.kcal} cal · ${v.protein}g protein · ${m.prep}${servings === 1 ? '' : ` · ${servingLabel(servings)}×`}`,
       open: () => this.update({ overlay: 'meal', mealId: id }),
       rowStyle:
         'display:flex;align-items:center;gap:14px;padding:14px 4px;width:100%;border-bottom:1px solid rgba(17,24,21,.1);transition:background .15s',
@@ -1049,16 +1065,17 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
   swapStats(o: SwapOption, full: boolean) {
     const sign = (n: number, unit = '') => (n >= 0 ? '+' : '') + n + unit;
     const tone = (ok: boolean) => `font-size:11px;font-weight:800;color:${ok ? '#0E7B47' : '#B0553C'}`;
+    const v = baseNutrition(o.meal);
     const base = [
       {
         label: 'calories',
-        value: o.meal.kcal,
+        value: v.kcal,
         delta: sign(o.dCal),
         deltaStyle: tone(Math.abs(o.dCal) <= CAL_TOLERANCE),
       },
       {
         label: 'protein',
-        value: o.meal.p + 'g',
+        value: v.protein + 'g',
         delta: sign(o.dProtein, 'g'),
         deltaStyle: tone(Math.abs(o.dProtein) <= PROTEIN_TOLERANCE),
       },
@@ -1073,7 +1090,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       ? base.concat([
           {
             label: 'carbs',
-            value: o.meal.c + 'g',
+            value: v.carbs + 'g',
             delta: sign(o.dCarbs, 'g'),
             deltaStyle: tone(Math.abs(o.dCarbs) <= 15),
           },
@@ -1300,8 +1317,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       const slots = this.resolveSlots(dayMeals(mode, lift), date);
       const planned = slots.map((r) => (r.mealId ? MEALS[r.mealId] : null)).filter((m): m is Meal => !!m);
       weekPlanned.push(...planned);
-      const kcal = planned.reduce((n, m) => n + m.kcal, 0);
-      const protein = planned.reduce((n, m) => n + m.p, 0);
+      // Portioned against the same target Home uses, so the week's totals are
+      // the totals of the day the athlete would actually be served.
+      const { day: portioned, servingsFor } = this.portionedDay(slots, tg.cal);
+      const kcal = portioned.total.kcal;
+      const protein = portioned.total.protein;
       const isToday = date === iso;
       const label =
         mode === 'game' ? 'Game day' : mode === 'practice' ? 'Practice' : lift ? 'Lift only' : 'Rest';
@@ -1338,7 +1358,9 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           return {
             slot: m ? m.slot : this.blockedReason(r.blockedBy),
             name: m ? m.name : 'No safe option yet',
-            macroText: m ? `${m.kcal} cal · ${m.p}g` : '',
+            macroText: m
+              ? `${nutritionOf(m, servingsFor(m.id)).kcal} cal · ${nutritionOf(m, servingsFor(m.id)).protein}g`
+              : '',
             style: `display:flex;align-items:baseline;gap:8px;padding:5px 0;${m ? '' : 'opacity:.6'}`,
           };
         }),
@@ -1351,6 +1373,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
 
     const [selMode, selTime, selLift, selDur] = this.dayType(s.selDate);
     const selMeals = this.resolveSlots(dayMeals(selMode, selLift), s.selDate);
+    const { servingsFor: selServings } = this.portionedDay(selMeals, tg.cal);
     const sel = {
       dateLabel: longDateLabel(s.selDate),
       modes: (
@@ -1402,7 +1425,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         style: this.small(selTime === t) + ';white-space:nowrap;flex:none',
       })),
       mealsCount: selMeals.length + ' meals',
-      meals: selMeals.map((r) => this.slotRow(r, 54)),
+      meals: selMeals.map((r) => this.slotRow(r, 54, selServings(r.mealId))),
       durNote: selDur
         ? (selMode === 'game' ? 'Game' : 'Practice') +
           ' runs about ' +
@@ -1424,6 +1447,9 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const todayMode = this.dayType(iso)[0],
       todayTime = this.dayType(iso)[1];
     const todaySlots = this.resolveSlots(dayMeals(todayMode, this.dayType(iso)[2]), iso);
+    // Today's plan, portioned to today's target. Every macro Home shows — the
+    // hero, the list below it, what "Ate it" logs — comes through this.
+    const { servingsFor: todayServings } = this.portionedDay(todaySlots, tg.cal);
 
     // What is left of today, decided by what has actually been logged.
     //
@@ -1448,8 +1474,8 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const nextMeal = nm
       ? {
           name: nm.name,
-          kcal: nm.kcal,
-          protein: nm.p + 'g protein',
+          kcal: nutritionOf(nm, todayServings(nm.id)).kcal,
+          protein: nutritionOf(nm, todayServings(nm.id)).protein + 'g protein',
           time: nm.prep,
           word: nfA!.word,
           fieldA: nfA!.fieldStyle,
@@ -1615,10 +1641,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             .map((m) => ({
               name: m.name,
               mealId: m.id,
-              kcal: m.kcal,
-              protein: m.p,
-              carbs: m.c,
-              fat: m.f,
+              ...(({ kcal, protein, carbs, fat }) => ({ kcal, protein, carbs, fat }))(nutritionOf(m)),
               // Never eaten, so there is no last time. The row reads its macros
               // instead of a date.
               lastLogged: null,
@@ -1654,16 +1677,20 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     };
 
     const mm = MEALS[s.mealId] || MEALS.snack;
+    // At the portion today's plan asks for, so the recipe sheet and the plan row
+    // never disagree about the same meal.
+    const mmServings = todayServings(mm.id);
+    const mmV = nutritionOf(mm, mmServings);
     const meal = Object.assign(field(mm.id, 46, 22), {
       name: mm.name,
       slot: mm.slot,
       timeText: mm.timeText,
       reasons: mm.reasons,
       macros: [
-        ['calories', mm.kcal],
-        ['protein', mm.p + 'g'],
-        ['carbs', mm.c + 'g'],
-        ['fat', mm.f + 'g'],
+        ['calories', mmV.kcal],
+        ['protein', mmV.protein + 'g'],
+        ['carbs', mmV.carbs + 'g'],
+        ['fat', mmV.fat + 'g'],
       ].map(([label, value], i) => ({
         label,
         value,
@@ -1956,34 +1983,21 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           { label: 'carbs', value: tg.carbs + 'g' },
           { label: 'fat', value: tg.fat + 'g' },
         ],
-        proteinBasis:
-          tg.pMode === 'rec'
-            ? `${(tg.protein / tg.goalLb).toFixed(2)}g per pound of your ${tg.goalLb} lb goal weight. One pound a week sits at 1g per pound; ${tg.rate} lb a week ${tg.rate > 1 ? 'asks for more' : tg.rate < 1 ? 'needs less' : 'is the baseline'}. Lock it with one of the fixed options below if you'd rather pace didn't move it.`
-            : `Fixed at ${(tg.protein / tg.goalLb).toFixed(2)}g per pound of your ${tg.goalLb} lb goal weight. Changing your pace moves calories only — this number stays put.`,
-        pOpts: [
-          { v: 'rec' as ProteinMode, label: 'Recommended', sub: tg.recProtein + 'g · tracks pace' },
-          { v: 'gpp' as ProteinMode, label: '1g per lb of goal', sub: tg.goalLb + 'g · fixed' },
-          {
-            v: 'custom' as ProteinMode,
-            label: 'Custom',
-            sub: tg.pMode === 'custom' ? tg.protein + 'g' : 'Set it',
-          },
-        ].map((o) => ({
-          label: o.label,
-          sub: o.sub,
-          pick: () =>
-            this.update({
-              pMode: o.v,
-              pCustom: o.v === 'custom' && s.pCustom == null ? tg.recProtein : s.pCustom,
-            }),
-          style: `flex:1;min-width:0;text-align:left;padding:12px 10px;border-radius:14px;border:2px solid ${tg.pMode === o.v ? '#5BE3A0' : 'rgba(244,242,237,.14)'};background:${tg.pMode === o.v ? 'rgba(91,227,160,.13)' : 'transparent'}`,
-          labelStyle: `font-size:11px;font-weight:800;line-height:1.25;letter-spacing:-.01em;color:${tg.pMode === o.v ? '#5BE3A0' : 'rgba(244,242,237,.72)'}`,
-          subStyle: `font-size:11px;font-weight:700;margin-top:4px;color:${tg.pMode === o.v ? 'rgba(91,227,160,.7)' : 'rgba(244,242,237,.38)'}`,
+        // Protein is derived and no longer chooseable. The three-option picker
+        // and its custom stepper are gone: they let an athlete type a number
+        // that silently contradicted every other figure on the screen, and the
+        // brief for this pass was that the goal weight decides it.
+        proteinBasis: `${(tg.protein / tg.goalLb).toFixed(2)}g per pound of your ${tg.goalLb} lb goal weight — ${tg.goal === 'lose' ? 'higher while losing, to keep the weight you lose off the fat' : tg.goal === 'gain' ? 'set against the weight you are building toward, not the one you have' : 'enough to hold what you have'}. ${tg.rate === 1 || tg.goal === 'perform' || tg.goal === 'habits' ? 'Change your goal weight and this changes with it.' : `A pace of ${tg.rate} lb a week ${tg.rate > 1 ? 'raises' : 'lowers'} it slightly; change your goal weight and it moves too.`}`,
+        // Every micronutrient, against the reference intake for this age and
+        // sex. `ceiling` marks the two an athlete stays under rather than
+        // reaches, which is the difference between sodium and calcium.
+        micros: MICRONUTRIENTS.map((key) => ({
+          key,
+          label: NUTRIENT_LABEL[key],
+          value: `${tg.micros[key]}${NUTRIENT_UNIT[key]}`,
+          ceiling: CEILING_NUTRIENTS.includes(key),
+          note: key === 'sugar' ? 'total, including fruit and milk' : key === 'sodium' ? 'stay under' : '',
         })),
-        pCustomOn: tg.pMode === 'custom',
-        pCustomVal: tg.protein + 'g',
-        pUp: () => this.update({ pCustom: Math.min(320, tg.protein + 5) }),
-        pDown: () => this.update({ pCustom: Math.max(60, tg.protein - 5) }),
         tuning:
           tg.sex === 'female'
             ? 'Female baseline runs lower for the same height and weight, so your calories sit below a male athlete your size. Iron-rich meals — red meat, beans, dark greens — get priority, and we keep fueling steady rather than skipping meals.'
@@ -2066,7 +2080,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       })),
       eatNext: () => {
         if (!nm) return;
-        const left = Math.max(0, tg.protein - eaten.protein - nm.p);
+        const left = Math.max(0, tg.protein - eaten.protein - nutritionOf(nm, todayServings(nm.id)).protein);
         void this.addLog(this.mealEntry(nm.id, 'plan'), () =>
           left ? `${nm.name} logged — ${left}g protein to go` : `${nm.name} logged — protein target hit`,
         );
@@ -2084,7 +2098,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       openSwap: () => this.update({ overlay: 'swap', deckIdx: 0, swapPick: null, swapFor: nm?.id ?? null }),
       // Committed swaps are applied in `resolveSlots` now, for every slot and
       // every day, so this is just the resolved plan.
-      todayMeals: upcoming.map((r) => this.slotRow(r)),
+      todayMeals: upcoming.map((r) => this.slotRow(r, undefined, todayServings(r.mealId))),
       dayShape: todayMode === 'game' ? 'Game day' : todayMode === 'practice' ? 'Hard day' : 'Rest day',
       trainingBadge: todayMode === 'game' ? 'Game day' : todayMode === 'practice' ? 'Hard day' : 'Rest day',
       trainingBadgeStyle: `padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;${todayMode === 'game' ? 'background:rgba(212,87,58,.14);color:#A03A22' : todayMode === 'practice' ? 'background:rgba(23,160,94,.12);color:#0E7B47' : 'background:rgba(17,24,21,.07);color:#6E6A60'}`,
@@ -2223,7 +2237,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       results: RESULTS.filter((r) => safeMealIds([r.id], allergyLabels).length > 0).map((r) =>
         Object.assign(field(r.id, 13, 9), {
           name: MEALS[r.id].name,
-          macroText: `${MEALS[r.id].kcal} cal · ${MEALS[r.id].p}g protein · ${MEALS[r.id].c}g carbs`,
+          macroText: `${nutritionOf(MEALS[r.id]).kcal} cal · ${nutritionOf(MEALS[r.id]).protein}g protein · ${nutritionOf(MEALS[r.id]).carbs}g carbs`,
           tags: r.tags,
           why: r.why,
           slotId: 'fq-res-' + r.id,
@@ -2354,7 +2368,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       recipes: safeMealIds(RECIPE_SETS[s.cat] || RECIPE_SETS[0], allergyLabels).map((id) =>
         Object.assign(field(id, 21, 12), {
           name: MEALS[id].name,
-          macroText: `${MEALS[id].kcal} cal · ${MEALS[id].p}g protein`,
+          macroText: `${nutritionOf(MEALS[id]).kcal} cal · ${nutritionOf(MEALS[id]).protein}g protein`,
           open: () => this.update({ overlay: 'meal', mealId: id }),
         }),
       ),
@@ -2374,12 +2388,9 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           title: 'Targets',
           rows: [
             ['Daily calories', tg.cal.toLocaleString()],
-            [
-              'Protein',
-              tg.protein +
-                'g · ' +
-                (tg.pMode === 'gpp' ? '1g per lb of goal' : tg.pMode === 'custom' ? 'Custom' : 'Recommended'),
-            ],
+            // Derived, so the row says what it is derived from rather than
+            // which of three modes produced it.
+            ['Protein', `${tg.protein}g · ${tg.gPerLb.toFixed(2)}g per lb of goal`],
             [
               'Goal weight',
               tg.goal === 'perform' || tg.goal === 'habits' ? 'Holding ' + s.lb + ' lb' : goalLb + ' lb',
@@ -2573,14 +2584,16 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       // The sheet's header, which was three lines of copy about a chicken pasta
       // nobody was necessarily eating.
       swapOutName: outgoing?.name ?? '',
-      swapOutMacros: outgoing ? `${outgoing.kcal} cal · ${outgoing.p}g protein · ${outgoing.c}g carbs` : '',
+      swapOutMacros: outgoing
+        ? `${baseNutrition(outgoing).kcal} cal · ${baseNutrition(outgoing).protein}g protein · ${baseNutrition(outgoing).carbs}g carbs`
+        : '',
       swapOutHeading: outgoing ? `Instead of ${outgoing.name.toLowerCase()}` : 'Instead of this meal',
       swapTitle: `${activeSwaps.length === 1 ? 'One way' : activeSwaps.length === 2 ? 'Two ways' : 'Three ways'} to hit the same numbers`,
       swapSub: outgoing
         ? `Each one is ranked by how close it lands to your ${outgoing.slot.toLowerCase()}, and clears your allergies, dislikes and weeknight time.`
         : '',
       swapDeckSub: outgoing
-        ? `${outgoing.kcal} cal · ${outgoing.p}g protein — ranked by how close each one lands`
+        ? `${baseNutrition(outgoing).kcal} cal · ${baseNutrition(outgoing).protein}g protein — ranked by how close each one lands`
         : '',
       moreSwaps: () => {
         if (pages < 2) {

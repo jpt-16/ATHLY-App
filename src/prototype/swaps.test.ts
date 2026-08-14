@@ -5,6 +5,7 @@ import { ALLERGENS } from './foodFacts';
 import type { Allergen } from './foodFacts';
 import { blockingAllergens, prepMinutes } from './filtering';
 import { CAL_TOLERANCE, PROTEIN_TOLERANCE, rankSwaps, swapPool } from './swaps';
+import { baseNutrition } from './portions';
 
 /** Onboarding chip label for an allergen, which is what the app passes around. */
 const CHIP: Record<Allergen, string> = {
@@ -63,13 +64,14 @@ describe('the numbers are measured, not authored', () => {
   it('computes deltas against the meal actually being replaced', () => {
     // The bug this pins: `stats()` used to read `m.kcal - 750`, so every athlete
     // was told their swap's distance from a dinner they may never have been shown.
-    const outgoing = MEALS.breakfast;
+    const outgoing = baseNutrition(MEALS.breakfast);
     for (const o of rankSwaps('breakfast', NO_LIMITS)) {
-      expect(o.dCal).toBe(o.meal.kcal - outgoing.kcal);
-      expect(o.dProtein).toBe(o.meal.p - outgoing.p);
-      expect(o.dCarbs).toBe(o.meal.c - outgoing.c);
-      expect(o.dFat).toBe(o.meal.f - outgoing.f);
-      expect(o.dMinutes).toBe(prepMinutes(o.meal) - prepMinutes(outgoing));
+      const cand = baseNutrition(o.meal);
+      expect(o.dCal).toBe(cand.kcal - outgoing.kcal);
+      expect(o.dProtein).toBe(cand.protein - outgoing.protein);
+      expect(o.dCarbs).toBe(cand.carbs - outgoing.carbs);
+      expect(o.dFat).toBe(cand.fat - outgoing.fat);
+      expect(o.dMinutes).toBe(prepMinutes(o.meal) - prepMinutes(MEALS.breakfast));
     }
   });
 

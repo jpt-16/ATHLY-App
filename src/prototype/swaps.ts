@@ -1,6 +1,7 @@
 import { MEALS, SLOT_CANDIDATES } from './data';
 import type { Meal } from './data';
 import { isSafe, matchesDislikes, prepMinutes } from './filtering';
+import { baseNutrition } from './portions';
 
 /**
  * Finding a replacement that hits the same numbers.
@@ -104,12 +105,14 @@ export interface SwapConstraints {
  * ride and mostly break ties.
  */
 function distance(outgoing: Meal, candidate: Meal): number {
+  const a = baseNutrition(outgoing);
+  const b = baseNutrition(candidate);
   const rel = (delta: number, base: number) => Math.abs(delta) / Math.max(base, 1);
   return (
-    0.45 * rel(candidate.kcal - outgoing.kcal, outgoing.kcal) +
-    0.35 * rel(candidate.p - outgoing.p, outgoing.p) +
-    0.1 * rel(candidate.c - outgoing.c, outgoing.c) +
-    0.1 * rel(candidate.f - outgoing.f, outgoing.f)
+    0.45 * rel(b.kcal - a.kcal, a.kcal) +
+    0.35 * rel(b.protein - a.protein, a.protein) +
+    0.1 * rel(b.carbs - a.carbs, a.carbs) +
+    0.1 * rel(b.fat - a.fat, a.fat)
   );
 }
 
@@ -167,17 +170,21 @@ export function rankSwaps(outgoingId: string, c: SwapConstraints, limit = 6): Sw
 
   const safe = swapPool(outgoingId).filter((m) => isSafe(m, c.allergens));
 
+  // Compared at one serving each. The day's portion factor applies equally to
+  // whatever fills the slot, so it cancels out of the ranking.
+  const out = baseNutrition(outgoing);
   const scored = safe.map((meal) => {
+    const cand = baseNutrition(meal);
     const base = {
-      dCal: meal.kcal - outgoing.kcal,
-      dProtein: meal.p - outgoing.p,
-      dCarbs: meal.c - outgoing.c,
-      dFat: meal.f - outgoing.f,
+      dCal: cand.kcal - out.kcal,
+      dProtein: cand.protein - out.protein,
+      dCarbs: cand.carbs - out.carbs,
+      dFat: cand.fat - out.fat,
       dMinutes: prepMinutes(meal) - prepMinutes(outgoing),
       match: Math.max(0, Math.min(100, Math.round((1 - distance(outgoing, meal)) * 100))),
       withinTolerance:
-        Math.abs(meal.kcal - outgoing.kcal) <= CAL_TOLERANCE &&
-        Math.abs(meal.p - outgoing.p) <= PROTEIN_TOLERANCE,
+        Math.abs(cand.kcal - out.kcal) <= CAL_TOLERANCE &&
+        Math.abs(cand.protein - out.protein) <= PROTEIN_TOLERANCE,
     };
     // Soft demerits, applied to the ordering only. A disliked meal still gets a
     // truthful match percentage — it is ranked last, not misrepresented.

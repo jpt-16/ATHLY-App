@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeTargets, dayMeals } from './nutrition';
+import { computeTargets, dayMeals, microTargets } from './nutrition';
+import { MICRONUTRIENTS } from './nutrients';
 import type { AppState, Week } from './types';
 
 /** A rest-day-only week, so activity is held constant unless a test varies it. */
@@ -27,8 +28,6 @@ const athlete = (over: Partial<AppState> = {}): AppState =>
     lb: 165,
     goalLb: null,
     rate: 1,
-    pMode: 'rec',
-    pCustom: null,
     openDay: null,
     week: restWeek(),
     overrides: {},
@@ -63,12 +62,15 @@ const athlete = (over: Partial<AppState> = {}): AppState =>
   }) as AppState;
 
 describe('computeTargets', () => {
-  it('derives resting burn with Mifflin–St Jeor', () => {
-    // 10(74.844) + 6.25(177.8) - 5(22) + 5 = 1craft… computed below
-    const kg = 165 * 0.4536;
-    const cm = 70 * 2.54;
-    const expected = Math.round(10 * kg + 6.25 * cm - 5 * 22 + 5);
-    expect(computeTargets(athlete()).bmr).toBe(expected);
+  it('derives resting burn with Mifflin–St Jeor, at the basis weight', () => {
+    // The basis weight is the *goal* weight, which for this athlete defaults to
+    // current + 15. That is the change this pass is about: an athlete is fed
+    // like the body they are working toward, not the one they have.
+    const t = computeTargets(athlete());
+    const kg = t.basisLb * 0.4536;
+    const cm = (5 * 12 + 10) * 2.54;
+    expect(t.basisLb).toBe(180);
+    expect(t.bmr).toBe(Math.round(10 * kg + 6.25 * cm - 5 * 22 + 5));
   });
 
   it('lowers the baseline for a female athlete of the same size', () => {
@@ -146,15 +148,7 @@ describe('computeTargets', () => {
     const t = computeTargets(athlete({ goalLb: 180, rate: 1 }));
     // At one pound a week the recommendation is 1g per pound of goal weight.
     expect(t.goalLb).toBe(180);
-    expect(t.recProtein).toBe(180);
-  });
-
-  it('honours a locked protein number', () => {
-    const gpp = computeTargets(athlete({ goalLb: 180, pMode: 'gpp' }));
-    expect(gpp.protein).toBe(180);
-
-    const custom = computeTargets(athlete({ goalLb: 180, pMode: 'custom', pCustom: 210 }));
-    expect(custom.protein).toBe(210);
+    expect(t.protein).toBe(180);
   });
 
   it('splits the remaining calories into fat and carbohydrate', () => {
@@ -191,5 +185,109 @@ describe('dayMeals', () => {
     expect(meals).toContain('preliftPm');
     expect(meals).toContain('postliftPm');
     expect(meals.indexOf('postliftPm')).toBeLessThan(meals.indexOf('dinner'));
+  });
+});
+
+describe('the goal weight drives everything', () => {
+  it('raises calories when the goal weight rises', () => {
+    // Requirement 6: changing the goal weight recalculates the numbers. If this
+    // does not hold, nothing downstream — plan, recipes, shopping list — moves
+    // either, because they are all derived from these.
+    const lower = computeTargets(athlete({ goalLb: 170 }));
+    const higher = computeTargets(athlete({ goalLb: 200 }));
+    expect(higher.cal).toBeGreaterThan(lower.cal);
+    expect(higher.protein).toBeGreaterThan(lower.protein);
+    expect(higher.carbs).toBeGreaterThan(lower.carbs);
+    expect(higher.fat).toBeGreaterThan(lower.fat);
+  });
+
+  it('uses current weight when the athlete is maintaining', () => {
+    for (const goal of ['perform', 'habits'] as const) {
+      const t = computeTargets(athlete({ a: { ...athlete().a, goal }, lb: 165, goalLb: 200 }));
+      // A stray goal weight must not sneak into a maintenance calculation.
+      expect(t.basisLb).toBe(165);
+      expect(t.adj).toBe(0);
+    }
+  });
+
+  it('feeds a losing athlete from the smaller body', () => {
+    const losing = { a: { ...athlete().a, goal: 'lose' as const }, lb: 200, goalLb: 170 };
+    const t = computeTargets(athlete(losing));
+    expect(t.basisLb).toBe(170);
+    // Maintenance is computed at the goal weight, so it sits below what the
+    // athlete burns today even before the pace deficit is applied.
+    const atCurrent = computeTargets(athlete({ ...losing, goalLb: 200 }));
+    expect(t.maint).toBeLessThan(atCurrent.maint);
+  });
+
+  it('never drops the target below resting burn at the current weight', () => {
+    // The guard that stops two deficits stacking on a teenager: maintenance at a
+    // much smaller goal weight, and then a pace deficit on top of that.
+    const t = computeTargets(
+      athlete({
+        a: { ...athlete().a, goal: 'lose' },
+        age: 15,
+        lb: 260,
+        goalLb: 150,
+        rate: 2.5,
+      }),
+    );
+    const kg = 260 * 0.4536;
+    const cm = (5 * 12 + 10) * 2.54;
+    const restingNow = Math.round(10 * kg + 6.25 * cm - 5 * 15 + 5);
+    expect(t.cal).toBeGreaterThanOrEqual(restingNow);
+    expect(t.floored).toBe(true);
+  });
+
+  it('leaves the floor alone for an athlete who is gaining', () => {
+    expect(computeTargets(athlete({ goalLb: 190 })).floored).toBe(false);
+  });
+});
+
+describe('micronutrient targets', () => {
+  it('gives a number for all eight', () => {
+    const t = computeTargets(athlete());
+    for (const key of MICRONUTRIENTS) {
+      expect(t.micros[key], key).toBeGreaterThan(0);
+    }
+  });
+
+  it('scales fibre and sugar with energy, and holds the rest flat', () => {
+    const small = microTargets(16, 'male', 2000);
+    const large = microTargets(16, 'male', 4000);
+    // Fibre is 14g per 1000 kcal and sugar is 10% of energy, so both double.
+    expect(large.fiber).toBe(small.fiber * 2);
+    expect(large.sugar).toBe(small.sugar * 2);
+    // The DRIs are intakes, not ratios.
+    expect(large.calcium).toBe(small.calcium);
+    expect(large.iron).toBe(small.iron);
+  });
+
+  it('asks a 15-year-old girl for more iron than a boy the same age', () => {
+    // The deficiency most often found in this group, and the reason sex is
+    // asked for at all.
+    expect(microTargets(15, 'female', 2500).iron).toBeGreaterThan(microTargets(15, 'male', 2500).iron);
+  });
+
+  it('gives 13-year-olds the younger band', () => {
+    expect(microTargets(13, 'male', 2500).vitaminC).toBe(45);
+    expect(microTargets(14, 'male', 2500).vitaminC).toBe(75);
+  });
+
+  it('averages the two when sex is not stated', () => {
+    const male = microTargets(16, 'male', 2500);
+    const female = microTargets(16, 'female', 2500);
+    const na = microTargets(16, 'na', 2500);
+    expect(na.iron).toBe(Math.round((male.iron + female.iron) / 2));
+    expect(na.potassium).toBe(Math.round((male.potassium + female.potassium) / 2));
+  });
+
+  it('holds calcium at 1300mg through the teenage years', () => {
+    // Peak bone mass is laid down now and not later, which is why this one does
+    // not scale with anything.
+    for (const age of [13, 15, 18]) {
+      expect(microTargets(age, 'male', 3000).calcium).toBe(1300);
+    }
+    expect(microTargets(25, 'male', 3000).calcium).toBe(1000);
   });
 });

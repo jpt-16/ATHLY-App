@@ -20,7 +20,28 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { macrosFor, parseQuantity, round, toGrams } from './quantity.mjs';
-import { ROOT, readRecipes } from './recipes.mjs';
+import { ROOT, readIngredientNutrition, readRecipes } from './recipes.mjs';
+
+const shipped = readIngredientNutrition();
+
+/**
+ * What the app says a meal contains today, summed from its own ingredient table.
+ *
+ * The baseline the USDA numbers are diffed against. An ingredient or portion the
+ * table does not know about contributes nothing and is already reported as a gap
+ * by the loop below, so this stays quiet about it.
+ */
+function shippedTotals(meal) {
+  const total = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+  for (const ing of meal.ingredients) {
+    const entry = shipped[ing.name];
+    const grams = entry?.portions[ing.quantity];
+    if (!entry || grams == null) continue;
+    for (const key of Object.keys(total)) total[key] += (entry.per100g[key] * grams) / 100;
+  }
+  for (const key of Object.keys(total)) total[key] = Math.round(total[key]);
+  return total;
+}
 
 const GENERATED = path.join(ROOT, 'src/prototype/ingredientNutrients.generated.ts');
 const asJson = process.argv.includes('--json');
@@ -70,13 +91,16 @@ for (const meal of meals) {
   }
 
   // A meal missing an ingredient is reported as incomplete rather than compared.
-  // Half a meal's calories next to a whole meal's authored figure would read as
-  // a 40% overstatement by the designer, which would be this script's error.
+  // Half a meal's calories next to the whole meal's shipped figure would read as
+  // a 40% overstatement, which would be this script's error.
   rows.push({
     id: meal.id,
     name: meal.name,
     complete: missing.length === 0,
-    authored: meal.authored,
+    // What the app currently says, summed from the ingredient table it ships
+    // with. This used to be the meal's authored macros; those are gone, and the
+    // thing worth diffing is the table this ingest would replace.
+    current: shippedTotals(meal),
     computed: {
       kcal: Math.round(totals.kcal),
       protein: Math.round(totals.protein),
@@ -96,24 +120,24 @@ if (asJson) {
 
 const complete = rows.filter((r) => r.complete);
 
-console.log('\nComputed vs authored — complete meals only\n');
+console.log('\nUSDA vs the shipped ingredient table — complete meals only\n');
 console.log(pad('Meal', 34) + pad('kcal', 20) + pad('protein', 18) + 'carbs / fat');
 console.log('─'.repeat(96));
 
 for (const r of complete) {
   console.log(
     pad(r.name.slice(0, 32), 34) +
-      pad(compare(r.computed.kcal, r.authored.kcal), 20) +
-      pad(compare(r.computed.protein, r.authored.protein, 'g'), 18) +
-      `${compare(r.computed.carbs, r.authored.carbs, 'g')}  ${compare(r.computed.fat, r.authored.fat, 'g')}`,
+      pad(compare(r.computed.kcal, r.current.kcal), 20) +
+      pad(compare(r.computed.protein, r.current.protein, 'g'), 18) +
+      `${compare(r.computed.carbs, r.current.carbs, 'g')}  ${compare(r.computed.fat, r.current.fat, 'g')}`,
   );
 }
 
 if (complete.length) {
-  const drift = complete.map((r) => pct(r.computed.kcal, r.authored.kcal));
+  const drift = complete.map((r) => pct(r.computed.kcal, r.current.kcal));
   const mean = drift.reduce((a, b) => a + b, 0) / drift.length;
   const worst = complete
-    .map((r) => ({ name: r.name, off: pct(r.computed.kcal, r.authored.kcal) }))
+    .map((r) => ({ name: r.name, off: pct(r.computed.kcal, r.current.kcal) }))
     .sort((a, b) => Math.abs(b.off) - Math.abs(a.off))
     .slice(0, 5);
 

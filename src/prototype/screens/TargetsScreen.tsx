@@ -97,78 +97,41 @@ export function TargetsScreen({ v }: { v: ViewModel }) {
             'font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:rgba(244,242,237,.38);margin-bottom:9px',
           )}
         >
-          How protein is set
+          Micronutrients
         </div>
-        <div style={S('display:flex;gap:8px;margin-bottom:10px')}>
-          {(v.targets.pOpts ?? []).map((p: VmRow, i: number) => (
+        <div
+          style={S('background:rgba(244,242,237,.06);border-radius:14px;overflow:hidden;margin-bottom:16px')}
+        >
+          {(v.targets.micros ?? []).map((m: VmRow, i: number) => (
             <React.Fragment key={i}>
-              <button onClick={p.pick} style={S(p.style)}>
-                <div style={S(p.labelStyle)}>{p.label}</div>
-                <div style={S(p.subStyle)}>{p.sub}</div>
-              </button>
+              <div
+                style={S(
+                  `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 15px;${i ? 'border-top:1px solid rgba(244,242,237,.08)' : ''}`,
+                )}
+              >
+                <div style={S('min-width:0')}>
+                  <div style={S('font-size:12.5px;font-weight:700;color:rgba(244,242,237,.78)')}>
+                    {m.label}
+                  </div>
+                  {m.note ? (
+                    <div
+                      style={S('font-size:10.5px;font-weight:600;color:rgba(244,242,237,.36);margin-top:2px')}
+                    >
+                      {m.note}
+                    </div>
+                  ) : null}
+                </div>
+                <div
+                  style={S(
+                    `font-size:14.5px;font-weight:900;letter-spacing:-.02em;flex:none;color:${m.ceiling ? 'rgba(244,242,237,.55)' : '#F4F2ED'}`,
+                  )}
+                >
+                  {m.value}
+                </div>
+              </div>
             </React.Fragment>
           ))}
         </div>
-        {v.targets.pCustomOn ? (
-          <>
-            <div
-              style={S(
-                'display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(244,242,237,.07);border-radius:14px;padding:11px 11px 11px 15px;margin-bottom:16px',
-              )}
-            >
-              <div style={S('font-size:12.5px;font-weight:700;color:rgba(244,242,237,.72)')}>
-                Daily protein
-              </div>
-              <div style={S('display:flex;align-items:center;gap:10px')}>
-                <button
-                  className={'dc-ho6'}
-                  onClick={v.targets.pDown}
-                  style={S(
-                    'width:34px;height:32px;border-radius:10px;background:rgba(244,242,237,.12);display:flex;align-items:center;justify-content:center',
-                  )}
-                >
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#F4F2ED"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  >
-                    <path d="M5 12h14" />
-                  </svg>
-                </button>
-                <div
-                  style={S(
-                    'font-size:17px;font-weight:900;font-stretch:113%;color:#F4F2ED;min-width:52px;text-align:center',
-                  )}
-                >
-                  {v.targets.pCustomVal}
-                </div>
-                <button
-                  className={'dc-ho6'}
-                  onClick={v.targets.pUp}
-                  style={S(
-                    'width:34px;height:32px;border-radius:10px;background:rgba(244,242,237,.12);display:flex;align-items:center;justify-content:center',
-                  )}
-                >
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#F4F2ED"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </>
-        ) : null}
         <div
           style={S(
             'display:flex;gap:10px;align-items:flex-start;background:rgba(91,227,160,.1);border-radius:14px;padding:14px 15px;margin-bottom:16px',

@@ -7,10 +7,10 @@
  */
 
 import type { IsoDate } from '../lib/clock';
+import type { Micronutrient } from './nutrients';
 
 export type Goal = 'gain' | 'perform' | 'lose' | 'habits';
 export type Sex = 'male' | 'female' | 'na';
-export type ProteinMode = 'rec' | 'gpp' | 'custom';
 export type Stage = 'onboarding' | 'building' | 'targets' | 'auth' | 'app';
 
 /**
@@ -106,8 +106,6 @@ export interface AppState {
   goalLb: number | null;
   /** Pounds per week, gained or lost. */
   rate: number;
-  pMode: ProteinMode;
-  pCustom: number | null;
   /** Day-of-week whose editor is expanded on the schedule question. */
   openDay: number | null;
   week: Week;
@@ -214,10 +212,7 @@ export interface SessionProps {
  * be cast into a shape carrying thirty more it does not have. Naming the real
  * input is both honest and less code. `AppState` still satisfies it.
  */
-export type TargetInputs = Pick<
-  AppState,
-  'a' | 'age' | 'ft' | 'inch' | 'lb' | 'goalLb' | 'rate' | 'pMode' | 'pCustom' | 'week'
->;
+export type TargetInputs = Pick<AppState, 'a' | 'age' | 'ft' | 'inch' | 'lb' | 'goalLb' | 'rate' | 'week'>;
 
 /** Layout variants the prototype exposes; these were the design's A/B knobs. */
 export interface AthlyProps extends SessionProps {
@@ -229,17 +224,22 @@ export interface AthlyProps extends SessionProps {
 
 /** Everything `computeTargets` derives from a set of answers. */
 export interface Targets {
+  /** Resting burn at the *basis* weight — see `nutrition.ts` §2. */
   bmr: number;
   maint: number;
   adj: number;
   cal: number;
+  /** True when the safety floor raised `cal` above maintenance + adjustment. */
+  floored: boolean;
+  /** The weight every number here was computed from: goal weight, or current when maintaining. */
+  basisLb: number;
   protein: number;
-  recProtein: number;
   gPerLb: number;
   paceFactor: number;
-  pMode: ProteinMode;
   fat: number;
   carbs: number;
+  /** The eight micronutrients, from the DRIs for this age and sex. */
+  micros: Record<Micronutrient, number>;
   days: number;
   young: boolean;
   goal: Goal;

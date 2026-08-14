@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FdcShapeError, normalizeFood, readCandidates, readNutrients } from './fdc.mjs';
 import { macrosFor, parseQuantity, toGrams } from './quantity.mjs';
-import { readIngredientNames, readRecipes } from './recipes.mjs';
+import { readIngredientNames, readIngredientNutrition, readRecipes } from './recipes.mjs';
 
 /**
  * The USDA tooling, tested without a network.
@@ -31,15 +31,28 @@ describe('reading this repo', () => {
     for (const meal of meals) {
       expect(meal.name).toBeTruthy();
       expect(meal.ingredients.length).toBeGreaterThan(0);
-      expect(meal.authored.kcal).toBeGreaterThan(0);
     }
   });
 
-  it('reads the authored macros off the meal it belongs to', () => {
+  it('reads the ingredient list off the meal it belongs to', () => {
     const oats = readRecipes().find((m) => m.id === 'breakfast');
     expect(oats.name).toBe('Peanut butter banana oats');
-    expect(oats.authored).toEqual({ kcal: 620, protein: 28, carbs: 82, fat: 21 });
     expect(oats.ingredients[0]).toEqual({ name: 'Rolled oats', quantity: '1 cup' });
+  });
+
+  it('reads the shipped nutrition table, which is what the ingest replaces', () => {
+    const table = readIngredientNutrition();
+    // Meals no longer carry authored macros; the per-100g table is the thing
+    // FoodData Central would supersede, so this is what the report diffs.
+    expect(Object.keys(table).length).toBeGreaterThanOrEqual(70);
+    expect(table['Rolled oats'].per100g.kcal).toBeGreaterThan(300);
+    expect(table['Rolled oats'].portions['1 cup']).toBeGreaterThan(50);
+  });
+
+  it('has a nutrition entry for every ingredient a recipe names', () => {
+    const table = readIngredientNutrition();
+    const used = new Set(readRecipes().flatMap((m) => m.ingredients.map((i) => i.name)));
+    expect([...used].filter((n) => !table[n])).toEqual([]);
   });
 
   it('knows an ingredient for every one a recipe names', () => {

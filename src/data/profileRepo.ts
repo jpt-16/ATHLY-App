@@ -15,7 +15,7 @@ import { isIsoDate } from '../lib/clock';
 import type { IsoDate } from '../lib/clock';
 import { ALLERGEN_BY_LABEL } from '../prototype/foodFacts';
 import { computeTargets } from '../prototype/nutrition';
-import type { AppState, DayMode, DaySpec, ProteinMode, Sex, Week } from '../prototype/types';
+import type { AppState, DayMode, DaySpec, Sex, Week } from '../prototype/types';
 
 /**
  * Everything an athlete's account holds, in both directions.
@@ -34,7 +34,7 @@ import type { AppState, DayMode, DaySpec, ProteinMode, Sex, Week } from '../prot
 /** The subset of `AppState` that belongs to the athlete rather than the session. */
 export type PersistedState = Pick<
   AppState,
-  'a' | 'age' | 'ft' | 'inch' | 'lb' | 'goalLb' | 'rate' | 'pMode' | 'pCustom' | 'week' | 'overrides'
+  'a' | 'age' | 'ft' | 'inch' | 'lb' | 'goalLb' | 'rate' | 'week' | 'overrides'
 >;
 
 /** Chip label → enum, and back. Derived, so the two can never disagree. */
@@ -45,7 +45,6 @@ const LABEL_BY_ALLERGEN: Record<string, string> = Object.fromEntries(
 const DAY_MODES: readonly DayMode[] = ['rest', 'practice', 'game'];
 const SEXES: readonly Sex[] = ['male', 'female', 'na'];
 const GOALS: readonly GoalKind[] = ['gain', 'perform', 'lose', 'habits'];
-const PROTEIN_MODES: readonly ProteinMode[] = ['rec', 'gpp', 'custom'];
 
 /**
  * Trust nothing coming back from the database.
@@ -99,8 +98,11 @@ export async function saveAccount(userId: string, s: PersistedState): Promise<vo
     goal: (a.goal ?? null) as GoalKind | null,
     goal_weight_lb: s.goalLb,
     rate_lb_per_week: s.rate,
-    protein_mode: s.pMode as ProteinModeDb,
-    protein_custom_g: s.pCustom,
+    // Protein is derived from the goal weight now; the columns stay in the
+    // schema until a migration drops them, written with the only value the app
+    // can still mean by them.
+    protein_mode: 'rec' as ProteinModeDb,
+    protein_custom_g: null,
     sports: a.sports ?? [],
     onboarding_complete: true,
   };
@@ -253,8 +255,6 @@ export async function loadAccount(): Promise<PersistedState | null> {
     lb: Number(profile.weight_lb ?? 165),
     goalLb: profile.goal_weight_lb === null ? null : Number(profile.goal_weight_lb),
     rate: Number(profile.rate_lb_per_week ?? 0.75),
-    pMode: oneOf(PROTEIN_MODES, profile.protein_mode, 'rec'),
-    pCustom: profile.protein_custom_g,
     week: weekOut,
     overrides: overridesOut,
   };

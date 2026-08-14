@@ -19,8 +19,6 @@ const sample: PersistedState = {
   lb: 165,
   goalLb: 180,
   rate: 0.75,
-  pMode: 'rec',
-  pCustom: null,
   week: {
     0: ['rest', '', '', ''],
     1: ['practice', '4:30 pm', '', '90'],

@@ -23,10 +23,20 @@ export interface Meal {
   slot: string;
   timeText: string;
   name: string;
-  kcal: number;
-  p: number;
-  c: number;
-  f: number;
+  /**
+   * Nutrition is *not* here.
+   *
+   * Every meal used to carry `kcal`, `p`, `c` and `f` as four hand-written
+   * numbers. They disagreed with themselves — 27 of 44 stated a calorie count
+   * more than 2% away from their own macro breakdown — and they could never
+   * carry a micronutrient, because there is no arithmetic that turns "780
+   * calories" into a milligram of iron.
+   *
+   * A meal's nutrition is now computed from `ingredients` via
+   * `portions.ts:nutritionOf`, which reads the per-100g table in `nutrients.ts`.
+   * Removing the fields rather than deprecating them is deliberate: it makes the
+   * compiler find every screen that was reading an authored number.
+   */
   prep: string;
   tile: Tile;
   next?: number;
@@ -161,10 +171,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Breakfast',
     timeText: '7:10 am',
     name: 'Peanut butter banana oats',
-    kcal: 620,
-    p: 28,
-    c: 82,
-    f: 21,
     prep: '8 min',
     tile: TILES.oats,
     reasons: [
@@ -190,10 +196,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Lunch',
     timeText: '12:20 pm',
     name: 'Chicken burrito bowl',
-    kcal: 780,
-    p: 52,
-    c: 76,
-    f: 24,
     prep: '15 min',
     tile: TILES.bowl,
     reasons: [
@@ -219,10 +221,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-practice',
     timeText: '2:30 pm',
     name: 'Rice cakes, honey & banana',
-    kcal: 310,
-    p: 8,
-    c: 62,
-    f: 4,
     prep: '5 min',
     tile: TILES.snack,
     next: 1,
@@ -248,10 +246,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Dinner',
     timeText: '7:00 pm',
     name: 'Chicken pasta',
-    kcal: 750,
-    p: 45,
-    c: 62,
-    f: 28,
     prep: '28 min',
     tile: TILES.steak,
     reasons: [
@@ -278,10 +272,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-practice',
     timeText: '6:15 pm',
     name: 'Chocolate milk & granola',
-    kcal: 400,
-    p: 22,
-    c: 58,
-    f: 9,
     prep: '2 min',
     tile: TILES.shake,
     reasons: [
@@ -304,10 +294,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-lift',
     timeText: '5:50 am',
     name: 'Toast, jam & banana',
-    kcal: 290,
-    p: 6,
-    c: 62,
-    f: 3,
     prep: '3 min',
     tile: TILES.snack,
     next: 1,
@@ -333,10 +319,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-lift',
     timeText: '7:45 am',
     name: 'Turkey bagel & orange juice',
-    kcal: 520,
-    p: 34,
-    c: 72,
-    f: 11,
     prep: '4 min',
     tile: TILES.wrap,
     reasons: [
@@ -361,10 +343,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-lift',
     timeText: '2:45 pm',
     name: 'Pretzels, applesauce & sports drink',
-    kcal: 320,
-    p: 4,
-    c: 74,
-    f: 2,
     prep: '1 min',
     tile: TILES.snack,
     next: 1,
@@ -388,10 +366,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-lift',
     timeText: '5:15 pm',
     name: 'Chicken rice bowl & honey',
-    kcal: 560,
-    p: 42,
-    c: 68,
-    f: 12,
     prep: '6 min',
     tile: TILES.taco,
     reasons: [
@@ -417,10 +391,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Dinner',
     timeText: '7:00 pm',
     name: 'Steak & roast potatoes',
-    kcal: 765,
-    p: 47,
-    c: 58,
-    f: 31,
     prep: '22 min',
     tile: TILES.steak,
     reasons: [
@@ -446,10 +416,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Dinner',
     timeText: '7:00 pm',
     name: 'Honey soy salmon & rice',
-    kcal: 720,
-    p: 46,
-    c: 74,
-    f: 26,
     prep: '18 min',
     tile: TILES.salmon,
     reasons: [
@@ -475,10 +441,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Dinner',
     timeText: '7:00 pm',
     name: 'Beef & rice power bowl',
-    kcal: 690,
-    p: 48,
-    c: 71,
-    f: 21,
     prep: '20 min',
     tile: TILES.taco,
     reasons: [
@@ -504,10 +466,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Lunch',
     timeText: '12:20 pm',
     name: 'Crispy chicken caesar wrap',
-    kcal: 640,
-    p: 44,
-    c: 55,
-    f: 24,
     prep: '15 min',
     tile: TILES.wrap,
     reasons: [
@@ -532,10 +490,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-game',
     timeText: '3 hrs out',
     name: 'Turkey sandwich & fruit',
-    kcal: 520,
-    p: 30,
-    c: 74,
-    f: 12,
     prep: '6 min',
     tile: TILES.wrap,
     reasons: [
@@ -574,10 +528,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Breakfast',
     timeText: '7:10 am',
     name: 'Berry protein bowl',
-    kcal: 520,
-    p: 34,
-    c: 62,
-    f: 14,
     prep: '4 min',
     tile: TILES.shake,
     reasons: [
@@ -602,10 +552,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Breakfast',
     timeText: '7:10 am',
     name: 'Sunflower butter oats',
-    kcal: 610,
-    p: 22,
-    c: 92,
-    f: 20,
     prep: '8 min',
     tile: TILES.oats,
     reasons: [
@@ -631,10 +577,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Breakfast',
     timeText: '7:10 am',
     name: 'Egg and rice scramble',
-    kcal: 540,
-    p: 27,
-    c: 55,
-    f: 24,
     prep: '10 min',
     tile: TILES.bowl,
     reasons: [
@@ -662,10 +604,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Lunch',
     timeText: '12:20 pm',
     name: 'Chicken quinoa bowl',
-    kcal: 720,
-    p: 52,
-    c: 78,
-    f: 18,
     prep: '15 min',
     tile: TILES.bowl,
     reasons: [
@@ -691,10 +629,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Lunch',
     timeText: '12:20 pm',
     name: 'Turkey rice bowl',
-    kcal: 690,
-    p: 48,
-    c: 72,
-    f: 20,
     prep: '14 min',
     tile: TILES.taco,
     reasons: [
@@ -720,10 +654,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Lunch',
     timeText: '12:20 pm',
     name: 'Beef corn tacos',
-    kcal: 640,
-    p: 42,
-    c: 58,
-    f: 24,
     prep: '12 min',
     tile: TILES.taco,
     reasons: [
@@ -750,10 +680,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-practice',
     timeText: '2:30 pm',
     name: 'Pineapple and rice cakes',
-    kcal: 300,
-    p: 4,
-    c: 70,
-    f: 1,
     prep: '3 min',
     tile: TILES.snack,
     next: 1,
@@ -778,10 +704,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-practice',
     timeText: '2:30 pm',
     name: 'Banana maple rice cakes',
-    kcal: 290,
-    p: 4,
-    c: 66,
-    f: 2,
     prep: '2 min',
     tile: TILES.snack,
     next: 1,
@@ -803,10 +725,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-practice',
     timeText: '2:30 pm',
     name: 'Sunflower butter toast',
-    kcal: 330,
-    p: 8,
-    c: 58,
-    f: 9,
     prep: '3 min',
     tile: TILES.snack,
     next: 1,
@@ -829,10 +747,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Dinner',
     timeText: '7:00 pm',
     name: 'Sirloin and sweet potato',
-    kcal: 740,
-    p: 48,
-    c: 62,
-    f: 28,
     prep: '22 min',
     tile: TILES.steak,
     reasons: [
@@ -858,10 +772,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Dinner',
     timeText: '7:00 pm',
     name: 'Garlic chicken and rice',
-    kcal: 710,
-    p: 46,
-    c: 74,
-    f: 22,
     prep: '18 min',
     tile: TILES.bowl,
     reasons: [
@@ -887,10 +797,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Dinner',
     timeText: '7:00 pm',
     name: 'Pasta and turkey ragu',
-    kcal: 700,
-    p: 47,
-    c: 76,
-    f: 20,
     prep: '20 min',
     tile: TILES.taco,
     reasons: [
@@ -918,10 +824,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-practice',
     timeText: '6:15 pm',
     name: 'Recovery shake',
-    kcal: 420,
-    p: 26,
-    c: 68,
-    f: 5,
     prep: '2 min',
     tile: TILES.shake,
     reasons: [
@@ -942,10 +844,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-practice',
     timeText: '6:15 pm',
     name: 'Turkey and rice cakes',
-    kcal: 430,
-    p: 28,
-    c: 62,
-    f: 6,
     prep: '3 min',
     tile: TILES.shake,
     reasons: [
@@ -968,10 +866,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-practice',
     timeText: '6:15 pm',
     name: 'Coconut yogurt and berries',
-    kcal: 500,
-    p: 32,
-    c: 56,
-    f: 15,
     prep: '2 min',
     tile: TILES.snack,
     reasons: [
@@ -995,10 +889,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-lift',
     timeText: '5:50 am',
     name: 'Rice cakes and jam',
-    kcal: 300,
-    p: 4,
-    c: 68,
-    f: 2,
     prep: '2 min',
     tile: TILES.snack,
     next: 1,
@@ -1023,10 +913,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-lift',
     timeText: '5:50 am',
     name: 'Toast and honey',
-    kcal: 310,
-    p: 6,
-    c: 66,
-    f: 4,
     prep: '3 min',
     tile: TILES.snack,
     next: 1,
@@ -1048,10 +934,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-lift',
     timeText: '5:50 am',
     name: 'Applesauce and sports drink',
-    kcal: 260,
-    p: 0,
-    c: 64,
-    f: 0,
     prep: '1 min',
     tile: TILES.snack,
     next: 1,
@@ -1074,10 +956,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-lift',
     timeText: '7:45 am',
     name: 'Chicken rice and orange juice',
-    kcal: 620,
-    p: 40,
-    c: 88,
-    f: 8,
     prep: '5 min',
     tile: TILES.wrap,
     reasons: [
@@ -1098,10 +976,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-lift',
     timeText: '7:45 am',
     name: 'Turkey corn wrap',
-    kcal: 540,
-    p: 32,
-    c: 56,
-    f: 20,
     prep: '4 min',
     tile: TILES.wrap,
     reasons: [
@@ -1122,10 +996,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-lift',
     timeText: '7:45 am',
     name: 'Post-lift shake',
-    kcal: 480,
-    p: 28,
-    c: 74,
-    f: 6,
     prep: '2 min',
     tile: TILES.shake,
     reasons: [
@@ -1148,10 +1018,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-lift',
     timeText: '2:45 pm',
     name: 'Rice cakes and sports drink',
-    kcal: 330,
-    p: 4,
-    c: 76,
-    f: 2,
     prep: '1 min',
     tile: TILES.snack,
     next: 1,
@@ -1175,10 +1041,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-lift',
     timeText: '2:45 pm',
     name: 'Banana and applesauce',
-    kcal: 310,
-    p: 1,
-    c: 76,
-    f: 0,
     prep: '1 min',
     tile: TILES.snack,
     next: 1,
@@ -1196,10 +1058,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-lift',
     timeText: '2:45 pm',
     name: 'Toast and jam',
-    kcal: 280,
-    p: 5,
-    c: 58,
-    f: 4,
     prep: '3 min',
     tile: TILES.snack,
     next: 1,
@@ -1222,10 +1080,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-lift',
     timeText: '5:15 pm',
     name: 'Beef and rice bowl',
-    kcal: 620,
-    p: 44,
-    c: 68,
-    f: 18,
     prep: '6 min',
     tile: TILES.taco,
     reasons: [
@@ -1246,10 +1100,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-lift',
     timeText: '5:15 pm',
     name: 'Chicken quinoa plate',
-    kcal: 590,
-    p: 46,
-    c: 58,
-    f: 18,
     prep: '5 min',
     tile: TILES.bowl,
     reasons: [
@@ -1270,10 +1120,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Post-lift',
     timeText: '5:15 pm',
     name: 'Chicken rice noodles',
-    kcal: 560,
-    p: 44,
-    c: 66,
-    f: 10,
     prep: '8 min',
     tile: TILES.wrap,
     reasons: [
@@ -1300,10 +1146,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-game',
     timeText: '3 hrs out',
     name: 'Chicken and white rice',
-    kcal: 540,
-    p: 40,
-    c: 66,
-    f: 8,
     prep: '6 min',
     tile: TILES.wrap,
     reasons: [
@@ -1324,10 +1166,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-game',
     timeText: '3 hrs out',
     name: 'Turkey and rice cakes',
-    kcal: 500,
-    p: 34,
-    c: 66,
-    f: 6,
     prep: '4 min',
     tile: TILES.wrap,
     reasons: [
@@ -1348,10 +1186,6 @@ export const MEALS: Record<string, Meal> = {
     slot: 'Pre-game',
     timeText: '3 hrs out',
     name: 'Turkey sandwich',
-    kcal: 560,
-    p: 36,
-    c: 62,
-    f: 18,
     prep: '5 min',
     tile: TILES.wrap,
     reasons: [

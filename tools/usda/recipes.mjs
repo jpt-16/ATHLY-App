@@ -15,12 +15,19 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DATA = path.join(ROOT, 'src/prototype/data.ts');
 const FACTS = path.join(ROOT, 'src/prototype/foodFacts.ts');
+const NUTRITION = path.join(ROOT, 'src/prototype/nutrients.ts');
 
 /**
- * Every meal, with the macros its author wrote down.
+ * Every meal and its ingredient list.
  *
  * `[name, quantity, weight]` triples are the ingredient rows; the third element
- * is the grocery-list weighting the app uses and is not nutrition.
+ * is the recipe's "already in your kitchen" flag and is not nutrition.
+ *
+ * Meals no longer carry authored `kcal`/`p`/`c`/`f` — a meal's nutrition is
+ * summed from its ingredients through `src/prototype/nutrients.ts`. That makes
+ * this tool's job narrower and more useful than it was: the thing worth
+ * replacing with FoodData Central is the per-100g ingredient table, and the
+ * recipes are just the list of which ingredients matter.
  */
 export function readRecipes() {
   const src = fs.readFileSync(DATA, 'utf8');
@@ -34,24 +41,17 @@ export function readRecipes() {
   blocks.forEach((block, i) => {
     const field = (name, pattern) => block.match(new RegExp(`\\n\\s{4}${name}: ${pattern}`))?.[1];
     const name = field('name', "'([^']*)'");
-    const kcal = field('kcal', '(\\d+)');
     const ingredients = [...block.matchAll(/\['([^']+)',\s*'([^']+)',\s*([012])\]/g)].map((m) => ({
       name: m[1],
       quantity: m[2],
     }));
-    if (!name || kcal === undefined || !ingredients.length) return;
+    if (!name || !ingredients.length) return;
 
     meals.push({
       id: field('id', "'([^']*)'") ?? keys[i],
       key: keys[i],
       slot: field('slot', "'([^']*)'") ?? '',
       name,
-      authored: {
-        kcal: Number(kcal),
-        protein: Number(field('p', '(\\d+)') ?? 0),
-        carbs: Number(field('c', '(\\d+)') ?? 0),
-        fat: Number(field('f', '(\\d+)') ?? 0),
-      },
       ingredients,
     });
   });
@@ -79,6 +79,57 @@ export function readIngredientNames() {
     throw new Error(`only parsed ${names.length} ingredients out of foodFacts.ts — parser needs updating.`);
   }
   return names;
+}
+
+/**
+ * The nutrition table the app ships with today, so the report can say what the
+ * ingest would change rather than merely what it found.
+ *
+ * Parses the `n(...)` literals out of `nutrients.ts` in the same
+ * read-the-source-rather-than-build-it spirit as `readRecipes`, and throws on a
+ * short read for the same reason: a partial parse would produce a diff that
+ * looks small because half the table went missing.
+ */
+export function readIngredientNutrition() {
+  const src = fs.readFileSync(NUTRITION, 'utf8');
+  const body = src.slice(src.indexOf('INGREDIENT_NUTRITION'));
+  const out = {};
+
+  const entry =
+    /^ {2}('([^']+)'|([A-Za-z][A-Za-z0-9]*)): \{\s*per100g: n\(([^)]*)\),\s*portions: \{([^}]*)\}/gms;
+  for (const m of body.matchAll(entry)) {
+    const name = m[2] ?? m[3];
+    const nums = m[4].split(',').map((x) => Number(x.trim()));
+    if (nums.length !== 12 || nums.some((x) => Number.isNaN(x))) continue;
+    const [kcal, protein, carbs, fat, fiber, sugar, sodium, potassium, calcium, iron, vitaminC, vitaminD] =
+      nums;
+    const portions = {};
+    for (const p of m[5].matchAll(/'?([^':,]+)'?:\s*([\d.]+)/g)) portions[p[1].trim()] = Number(p[2]);
+    out[name] = {
+      per100g: {
+        kcal,
+        protein,
+        carbs,
+        fat,
+        fiber,
+        sugar,
+        sodium,
+        potassium,
+        calcium,
+        iron,
+        vitaminC,
+        vitaminD,
+      },
+      portions,
+    };
+  }
+
+  if (Object.keys(out).length < 50) {
+    throw new Error(
+      `only parsed ${Object.keys(out).length} entries out of nutrients.ts — parser needs updating.`,
+    );
+  }
+  return out;
 }
 
 export { ROOT };

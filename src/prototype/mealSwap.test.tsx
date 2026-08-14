@@ -6,6 +6,7 @@ import type { UserEvent } from '@testing-library/user-event';
 import { AthlyApp } from './AthlyApp';
 import { MEALS_BY_NAME, SLOW, leadMeal, planArea, reachHome } from './walkthrough';
 import { rankSwaps } from './swaps';
+import { baseNutrition } from './portions';
 
 /**
  * Swapping a meal, end to end.
@@ -54,7 +55,9 @@ describe('the swap sheet', () => {
       // carries the outgoing meal's name too.
       expect(screen.getAllByText(lead).length).toBeGreaterThan(0);
       expect(
-        screen.getByText(`${outgoing.kcal} cal · ${outgoing.p}g protein · ${outgoing.c}g carbs`),
+        screen.getByText(
+          `${baseNutrition(outgoing).kcal} cal · ${baseNutrition(outgoing).protein}g protein · ${baseNutrition(outgoing).carbs}g carbs`,
+        ),
       ).toBeInTheDocument();
     },
     SLOW,
@@ -135,6 +138,20 @@ describe('the swap sheet', () => {
       render(<AthlyApp navPrimary="Even tabs" />);
       await reachHome(u);
 
+      // Read another day *before* the swap. Asserting the swapped meal is simply
+      // absent from day 19 would be a coincidence test: the planner might pick
+      // that same meal for that day anyway, and then the test fails for a
+      // reason that has nothing to do with swaps.
+      const otherDay = async () => {
+        await u.click(screen.getByRole('button', { name: /calendar/i }));
+        await u.click(await screen.findByRole('button', { name: /^month$/i }));
+        await u.click(await screen.findByRole('button', { name: /^19$/ }));
+        const panel = screen.getByText(/meals that day/i).closest('div')!.parentElement as HTMLElement;
+        return panel.textContent;
+      };
+      const before = await otherDay();
+      await u.click(screen.getByRole('button', { name: /^home$/i }));
+
       const lead = leadMeal();
       await openSwap(u);
       const outgoing = MEALS_BY_NAME[lead];
@@ -145,13 +162,9 @@ describe('the swap sheet', () => {
       await u.click(screen.getByRole('button', { name: /swap it into/i }));
 
       // A committed swap was a single field on the whole app, so swapping one
-      // dinner changed every day at once. It is filed against a date now: move
-      // to another day and the swap does not follow.
-      await u.click(screen.getByRole('button', { name: /calendar/i }));
-      await u.click(await screen.findByRole('button', { name: /^month$/i }));
-      await u.click(await screen.findByRole('button', { name: /^19$/ }));
-      const meals = screen.getByText(/meals that day/i).closest('div')!.parentElement as HTMLElement;
-      expect(within(meals).queryByText(first.meal.name)).not.toBeInTheDocument();
+      // dinner changed every day at once. It is filed against a date now, so
+      // another day comes back exactly as it was.
+      expect(await otherDay()).toBe(before);
     },
     SLOW,
   );
