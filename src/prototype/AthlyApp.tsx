@@ -1951,13 +1951,20 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         math: [
           {
             label: 'Resting burn',
-            note: `${tg.sex === 'male' ? 'Male' : tg.sex === 'female' ? 'Female' : 'Averaged'} baseline · ${s.age} yrs, ${s.ft}'${s.inch}", ${s.lb} lb`,
+            // The weight named here has to be the weight the number was
+            // computed from — `tg.basisLb`, which is the goal weight unless the
+            // athlete is maintaining. Reading `s.lb` here stated the current
+            // weight beside a figure derived from a different one, which is
+            // exactly the kind of quiet contradiction this pass set out to end.
+            note: `${tg.sex === 'male' ? 'Male' : tg.sex === 'female' ? 'Female' : 'Averaged'} baseline · ${s.age} yrs, ${s.ft}'${s.inch}", ${tg.basisLb === s.lb ? `${s.lb} lb` : `at your ${tg.basisLb} lb goal weight`}`,
             value: tg.bmr.toLocaleString(),
+            accent: false,
           },
           {
             label: 'Training on top',
             note: `${tg.days} training days a week`,
             value: '+' + (tg.maint - tg.bmr).toLocaleString(),
+            accent: false,
           },
           {
             label: tg.adj === 0 ? 'Goal adjustment' : tg.adj > 0 ? 'Surplus for growth' : 'Deficit',
@@ -1966,13 +1973,29 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
                 ? 'Holding steady'
                 : tg.rate + ' lb a week' + (tg.rate < s.rate ? ' — eased from ' + s.rate : ''),
             value: (tg.adj > 0 ? '+' : '') + tg.adj,
+            accent: tg.adj !== 0,
           },
+          // The floor, shown only when it bound. Without this row the three
+          // above add up to less than the number at the top of the screen — the
+          // app would be serving a calorie target its own arithmetic disowns.
+          // `nutrition.ts` §5: an ambitious goal weight can otherwise put a
+          // growing athlete under what their body spends doing nothing.
+          ...(tg.floored
+            ? [
+                {
+                  label: 'Held at your floor',
+                  note: `Never below what you burn at rest at ${s.lb} lb`,
+                  value: '+' + (tg.cal - (tg.maint + tg.adj)).toLocaleString(),
+                  accent: true,
+                },
+              ]
+            : []),
         ].map((m, i) => ({
           label: m.label,
           note: m.note,
           value: m.value,
           style: `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;${i ? 'border-top:1px solid rgba(244,242,237,.1)' : ''}`,
-          valueStyle: `font-size:17px;font-weight:900;letter-spacing:-.02em;color:${i === 2 && tg.adj !== 0 ? '#5BE3A0' : '#F4F2ED'}`,
+          valueStyle: `font-size:17px;font-weight:900;letter-spacing:-.02em;color:${m.accent ? '#5BE3A0' : '#F4F2ED'}`,
         })),
         macros: [
           { label: 'protein', value: tg.protein + 'g' },

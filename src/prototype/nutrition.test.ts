@@ -242,6 +242,23 @@ describe('the goal weight drives everything', () => {
   it('leaves the floor alone for an athlete who is gaining', () => {
     expect(computeTargets(athlete({ goalLb: 190 })).floored).toBe(false);
   });
+
+  it('leaves a stateable gap when the floor binds', () => {
+    // The targets screen shows the athlete resting burn, training and the goal
+    // adjustment, and those have to account for the whole number at the top of
+    // it. When the floor lifts the target, the difference is a fourth step —
+    // so it has to be a positive amount the screen can name, not a silent
+    // correction that leaves the visible rows summing to less than the total.
+    const t = computeTargets(
+      athlete({ a: { ...athlete().a, goal: 'lose' }, age: 15, lb: 260, goalLb: 150, rate: 2.5 }),
+    );
+    expect(t.floored).toBe(true);
+    expect(t.cal - (t.maint + t.adj)).toBeGreaterThan(0);
+
+    // And nothing to name when it does not bind.
+    const gaining = computeTargets(athlete({ goalLb: 190 }));
+    expect(gaining.cal).toBe(gaining.maint + gaining.adj);
+  });
 });
 
 describe('micronutrient targets', () => {

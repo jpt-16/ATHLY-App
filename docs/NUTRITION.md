@@ -111,8 +111,10 @@ weight is exactly how that would otherwise happen — a 260 lb 15-year-old aimin
 for 150 lb at 2.5 lb a week would otherwise be given maintenance for a 150 lb
 body _minus_ 1,250 calories.
 
-`Targets.floored` records when this bound, so the screens can say so rather than
-quietly serving a different number than the arithmetic asked for.
+`Targets.floored` records when this bound, and the targets screen adds a fourth
+row — _Held at your floor_ — for the difference. Without it the three rows an
+athlete can see would add up to less than the number at the top of the same
+screen, which is the app quietly serving a target its own arithmetic disowns.
 
 ## 6. Protein
 
