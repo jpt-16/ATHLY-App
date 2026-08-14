@@ -104,9 +104,26 @@ session. Add preview URLs one at a time, or not at all.
 - [ ] **Confirm email: ON.** With it off, anyone can create an account against
       an email address that is not theirs. `authActions.ts` already renders the
       "confirm your email first" case, so the app is ready for it.
-- [ ] **Leaked-password protection: ON.** Supabase checks candidate passwords
-      against HaveIBeenPwned. The app's own floor is 8 characters
-      (`MIN_PASSWORD_LENGTH`), which for this audience is not much on its own.
+- [~] **Leaked-password protection: not available on this plan.** Supabase's
+  HaveIBeenPwned check is a **Pro feature**, and this project is on Free.
+  The advisor will keep reporting it; it is not something a setting can fix
+  here.
+
+      What was done instead: `src/auth/passwordStrength.ts` refuses the head of
+      the leaked-password distribution — a bundled list, plus checks for
+      repeated characters, keyboard runs, all-digit passwords, and passwords
+      built from the athlete's own email — on both the sign-up and the
+      password-reset paths. Before it, the entire policy was
+      `MIN_PASSWORD_LENGTH = 8`, which accepts `password` and `12345678`.
+
+      **It is not equivalent, and should not be recorded as if it were.** It
+      runs in the browser and can be skipped; Supabase's runs on the server and
+      cannot. It knows a few hundred passwords; HIBP knows hundreds of millions.
+      Upgrade path, in order: Supabase Pro → the HIBP k-anonymity API from the
+      client (a third-party request from an app used by minors, plus a
+      `connect-src` entry, so it belongs in the privacy review) → what is there
+      now.
+
 - [ ] **Google: enabled** (confirmed as of 03:37 UTC — the provider returns a
       302 to Google). The round trip has still never completed; see Blocking #4.
 - [ ] **Apple: still off**, deliberately. `VITE_ENABLE_APPLE` gates only whether
@@ -186,8 +203,10 @@ they are recorded here so nobody re-investigates them:
   `event_trigger`, a type PostgREST cannot call and Postgres refuses outside a
   DDL event, so neither warning is reachable. Its only effect is enabling RLS,
   which is the safe direction anyway.
-- **Leaked-password protection is off.** This one is real, and it is the same
-  item listed under Providers above.
+- **Leaked-password protection is off.** Real, and **not fixable on this plan** —
+  it is a Pro feature. See the Providers section above for what was done in code
+  instead, and why that is not the same thing. Expect this advisor to stay red
+  until the project moves to Pro.
 
 ---
 

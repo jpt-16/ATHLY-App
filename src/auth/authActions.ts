@@ -1,6 +1,7 @@
 import type { Provider } from '@supabase/supabase-js';
 
 import { requireSupabase, supabase } from '../lib/supabase';
+import { weakPasswordReason } from './passwordStrength';
 
 /**
  * Every account action the app can take.
@@ -87,7 +88,10 @@ export function validateCredentials(email: string, password: string): string | n
   if (password.length < MIN_PASSWORD_LENGTH) {
     return `Passwords need to be at least ${MIN_PASSWORD_LENGTH} characters.`;
   }
-  return null;
+  // Length was the whole policy, which accepted `password` and `12345678`.
+  // Supabase's breach-corpus check is a Pro feature and this project is not on
+  // Pro; see `passwordStrength.ts` for what this does and does not replace.
+  return weakPasswordReason(password, email);
 }
 
 /**
@@ -155,6 +159,11 @@ export async function updatePassword(password: string): Promise<AuthResult> {
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Passwords need to be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
+  // The reset path deserves the same policy as the sign-up path. An athlete who
+  // has just been through "I forgot my password" is exactly the one most likely
+  // to reach for one they cannot forget again.
+  const weak = weakPasswordReason(password);
+  if (weak) return { error: weak };
   const { error } = await requireSupabase().auth.updateUser({ password });
   return error ? { error: readable(error.message) } : OK;
 }

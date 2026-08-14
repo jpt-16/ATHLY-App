@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { UserEvent } from '@testing-library/user-event';
 
 import { App } from './App';
+import { MEALS } from './prototype/data';
+import { isSafe } from './prototype/filtering';
 
 /**
  * A walk through the parts of the product a broken render would take out: the
@@ -11,6 +13,27 @@ import { App } from './App';
  * the app's tabs. It asserts on what an athlete would see rather than on markup,
  * so it stays useful when the screens are restyled.
  */
+
+beforeEach(() => {
+  // Two things here depend on the date: which training day today is, and — since
+  // the planner varies its picks per day — which meal fills each slot. Without a
+  // pinned clock these tests passed or failed depending on when they ran.
+  //
+  // `Date` only: the build animation and every `await` below run on real timers,
+  // and faking those would deadlock against `userEvent`.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 7, 12, 9, 0));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+/** Every meal in the library that a given allergy rules out. */
+const ruledOutBy = (chip: string) =>
+  Object.values(MEALS)
+    .filter((m) => !isSafe(m, [chip]))
+    .map((m) => m.name);
 
 const next = (user: UserEvent) => user.click(screen.getByRole('button', { name: /^next$/i }));
 
@@ -128,9 +151,14 @@ describe('a declared allergy', () => {
     await runOnboarding(user, 'Dairy');
     await buildWeek(user);
 
-    // The shipped post-practice meal is chocolate milk and granola.
-    expect(screen.queryByText(/chocolate milk/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/recovery shake/i)).toBeInTheDocument();
+    // Asserted as a property rather than by naming one meal: which meal fills a
+    // slot depends on the day now, but *no* dairy meal may ever appear, on any
+    // day, to someone who declared a dairy allergy.
+    for (const name of ruledOutBy('Dairy')) {
+      expect(screen.queryByText(name), name).not.toBeInTheDocument();
+    }
+    // And the plan is still a plan — an empty screen would satisfy the above.
+    expect(screen.queryByText(/no safe option yet/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^recipes$/i }));
     expect(screen.queryByText(/steak & roast potatoes/i)).not.toBeInTheDocument();
@@ -144,8 +172,10 @@ describe('a declared allergy', () => {
     await runOnboarding(user, 'Shellfish');
     await buildWeek(user);
 
-    // Nothing in the library contains shellfish, so today should be untouched.
-    expect(screen.getByText(/chocolate milk/i)).toBeInTheDocument();
+    // Nothing in the library contains shellfish, so nothing should be filtered:
+    // the dairy meals that a dairy allergy removes are all still available here.
+    expect(ruledOutBy('Shellfish')).toEqual([]);
+    expect(screen.queryByText(/no safe option yet/i)).not.toBeInTheDocument();
   }, 30000);
 
   it('still fills every slot for the harshest single allergy', async () => {
