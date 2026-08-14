@@ -165,11 +165,13 @@ not in the bundle, not in the repository.
       function and the column bounds are all live and verified: RLS on with no
       policies, `security definer` with `search_path = ''`, execute revoked from
       `anon` and `authenticated`.
-- [ ] **`0005_plan.sql` has not been applied.** It adds `plan_swaps` and
-      `plan_days` — the meals an athlete swapped into their week, and how many
-      times they re-rolled a day. Until it is applied, every swap works for the
-      session and is lost on reload, and the write fails silently behind a
-      "That swap didn't save" toast. Nothing else breaks.
+- [x] `0005_plan.sql` — **applied**. `plan_swaps` and `plan_days` hold the meals
+      an athlete swapped into their week and how many times they re-rolled a
+      day. Verified against the catalog: RLS on, four policies each, and the
+      advisors report nothing new.
+
+`rls_coverage()` now reports **11 tables, all with RLS enabled**, and one view
+(`daily_totals`) running `security_invoker = true`.
 
 ### Supabase advisors
 
