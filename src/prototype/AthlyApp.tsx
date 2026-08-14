@@ -19,7 +19,7 @@ import {
   field,
   shapes,
 } from './data';
-import { CEILING_NUTRIENTS, computeTargets, dayMeals } from './nutrition';
+import { CEILING_NUTRIENTS, computeTargets, dayMeals, proteinPerLb } from './nutrition';
 import { MICRONUTRIENTS, NUTRIENT_LABEL, NUTRIENT_UNIT } from './nutrients';
 import { baseNutrition, nutritionOf, portionDay, servingLabel } from './portions';
 import { isSafe, minutesAvailable, safeMealIds, selectForSlot } from './filtering';
@@ -2006,7 +2006,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         // and its custom stepper are gone: they let an athlete type a number
         // that silently contradicted every other figure on the screen, and the
         // brief for this pass was that the goal weight decides it.
-        proteinBasis: `${(tg.protein / tg.goalLb).toFixed(2)}g per pound of your ${tg.goalLb} lb goal weight — ${tg.goal === 'lose' ? 'higher while losing, to keep the weight you lose off the fat' : tg.goal === 'gain' ? 'set against the weight you are building toward, not the one you have' : 'enough to hold what you have'}. ${tg.rate === 1 || tg.goal === 'perform' || tg.goal === 'habits' ? 'Change your goal weight and this changes with it.' : `A pace of ${tg.rate} lb a week ${tg.rate > 1 ? 'raises' : 'lowers'} it slightly; change your goal weight and it moves too.`}`,
+        proteinBasis: `${proteinPerLb(tg).toFixed(2)}g per pound of your ${tg.goalLb} lb goal weight — ${tg.goal === 'lose' ? 'higher while losing, to keep the weight you lose off the fat' : tg.goal === 'gain' ? 'set against the weight you are building toward, not the one you have' : 'enough to hold what you have'}. ${tg.rate === 1 || tg.goal === 'perform' || tg.goal === 'habits' ? 'Change your goal weight and this changes with it.' : `A pace of ${tg.rate} lb a week ${tg.rate > 1 ? 'raises' : 'lowers'} it slightly; change your goal weight and it moves too.`}`,
         // Every micronutrient, against the reference intake for this age and
         // sex. `ceiling` marks the two an athlete stays under rather than
         // reaches, which is the difference between sodium and calcium.
@@ -2432,7 +2432,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             ['Daily calories', tg.cal.toLocaleString()],
             // Derived, so the row says what it is derived from rather than
             // which of three modes produced it.
-            ['Protein', `${tg.protein}g · ${tg.gPerLb.toFixed(2)}g per lb of goal`],
+            ['Protein', `${tg.protein}g · ${proteinPerLb(tg).toFixed(2)}g per lb of goal`],
             [
               'Goal weight',
               tg.goal === 'perform' || tg.goal === 'habits' ? 'Holding ' + s.lb + ' lb' : goalLb + ' lb',

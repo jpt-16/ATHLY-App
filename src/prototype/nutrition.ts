@@ -261,6 +261,19 @@ export function computeTargets(s: TargetInputs): Targets {
 }
 
 /**
+ * Grams of protein per pound of goal weight, as actually served.
+ *
+ * Not `Targets.gPerLb`, which is the coefficient *before* protein is rounded to
+ * the nearest 5 g. For the default athlete the coefficient is 0.95 but the
+ * shipped target is 170 g against a 180 lb goal, which is 0.94 — so a screen
+ * quoting the coefficient states a rate that does not divide into the number
+ * printed beside it. Every screen naming this rate reads it from here.
+ */
+export function proteinPerLb(t: Targets): number {
+  return t.goalLb > 0 ? t.protein / t.goalLb : 0;
+}
+
+/**
  * The meals that make up a day, in the order they are eaten. A lift splits the
  * day differently depending on whether it lands in the morning or afternoon.
  */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeTargets, dayMeals, microTargets } from './nutrition';
+import { computeTargets, dayMeals, microTargets, proteinPerLb } from './nutrition';
 import { MICRONUTRIENTS } from './nutrients';
 import type { AppState, Week } from './types';
 
@@ -241,6 +241,32 @@ describe('the goal weight drives everything', () => {
 
   it('leaves the floor alone for an athlete who is gaining', () => {
     expect(computeTargets(athlete({ goalLb: 190 })).floored).toBe(false);
+  });
+
+  it('quotes a protein rate that reproduces the protein it serves', () => {
+    // Both screens print this rate to two decimals beside the gram target, so
+    // the check is on the *rounded* string an athlete actually reads: multiply
+    // it back by the goal weight and you must land on the target, give or take
+    // the half-gram that two decimals can hide.
+    for (const goalLb of [150, 165, 180, 190, 205]) {
+      const t = computeTargets(athlete({ goalLb }));
+      const shown = Number(proteinPerLb(t).toFixed(2));
+      expect(Math.abs(shown * t.goalLb - t.protein)).toBeLessThanOrEqual(0.5 + 0.005 * t.goalLb);
+    }
+  });
+
+  it('does not quote the pre-rounding coefficient', () => {
+    // The bug this guards: `gPerLb` is the coefficient applied *before* protein
+    // is rounded to the nearest 5 g. The default athlete is a case where the
+    // two differ — 0.95 against a served 170 g on a 180 lb goal, which is 0.94
+    // — so a screen quoting `gPerLb` states a rate that does not divide into
+    // the number printed next to it.
+    // The athlete the onboarding defaults produce, and the one in the visual
+    // baselines: a 180 lb goal at 0.75 lb a week.
+    const t = computeTargets(athlete({ goalLb: 180, rate: 0.75 }));
+    expect(t.gPerLb.toFixed(2)).toBe('0.95');
+    expect(proteinPerLb(t).toFixed(2)).toBe('0.94');
+    expect(t.protein).toBe(170);
   });
 
   it('leaves a stateable gap when the floor binds', () => {
