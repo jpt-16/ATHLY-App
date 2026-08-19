@@ -44,6 +44,7 @@ import type {
   Targets,
 } from './types';
 import { isAppleEnabled, isBackendConfigured } from '../lib/env';
+import { STARTUP_TIMEOUT_MS, withTimeout } from '../lib/withTimeout';
 import {
   addDays,
   daysInMonth,
@@ -373,11 +374,18 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     if (this.state.authPassword) this.update({ authPassword: '' });
 
     let saved: Awaited<ReturnType<typeof loadAccount>> = null;
+    // Bounded, because an unanswered read is not an error and would otherwise
+    // hold the splash screen open forever — see `withTimeout`.
+    let readFailed = false;
     try {
-      saved = await loadAccount();
+      saved = await withTimeout(loadAccount(), STARTUP_TIMEOUT_MS, 'Reading your account');
     } catch {
-      // An unreadable account is treated as no account rather than a dead end.
+      // An unreadable account is treated as no account rather than a dead end,
+      // but only where that is safe. `readFailed` marks the difference between
+      // "there is nothing saved" and "we could not find out", which matters
+      // below: the two look identical here and must not be acted on alike.
       saved = null;
+      readFailed = true;
     }
     if (!this._alive) return;
 
@@ -395,6 +403,21 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     }
 
     if (pending) {
+      // The read failed rather than came back empty, so whether this athlete
+      // already has a profile is unknown. Writing the stash now is the one
+      // mistake this method is built to avoid: it would overwrite a real
+      // account — schedule, preferences, allergies — with whatever was typed on
+      // this device, invisibly and irreversibly. A retry is the cheaper error.
+      if (readFailed) {
+        this.update({
+          stage: 'auth',
+          authView: 'gate',
+          authBusy: false,
+          hydrating: false,
+          authError: "You're signed in, but we couldn't reach your account. Try once more.",
+        });
+        return;
+      }
       try {
         await saveAccount(userId, pending);
         clearOnboarding();

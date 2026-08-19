@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from '../lib/supabase';
+import { STARTUP_TIMEOUT_MS } from '../lib/withTimeout';
 
 export interface SessionState {
   session: Session | null;
@@ -64,8 +65,21 @@ export function useSession(): SessionApi {
       }));
     });
 
+    // `onAuthStateChange` normally fires INITIAL_SESSION within a tick, because
+    // it reads local storage rather than the network. But a stored session whose
+    // refresh cannot complete leaves it unfired, and nothing else clears
+    // `loading` — the athlete is held on the splash screen indefinitely, with no
+    // error, no control and no way back. That is worse than being wrong: being
+    // wrong here means showing the sign-in gate to someone whose session turns
+    // up a moment later, and the listener above puts them straight back.
+    const deadline = setTimeout(() => {
+      if (!live) return;
+      setState((prev) => (prev.loading ? { ...prev, loading: false } : prev));
+    }, STARTUP_TIMEOUT_MS);
+
     return () => {
       live = false;
+      clearTimeout(deadline);
       data.subscription.unsubscribe();
     };
   }, []);
