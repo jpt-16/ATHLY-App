@@ -204,6 +204,24 @@ export interface AppState {
   weightDraft: string;
   /** Hours slept, as typed. */
   sleepDraft: string;
+
+  /**
+   * The custom-food form, as typed.
+   *
+   * Strings rather than numbers: an empty field and a zero are different
+   * answers, and a half-typed "17" should not briefly become 17 calories.
+   */
+  foodDraft: { name: string; kcal: string; protein: string; carbs: string; fat: string };
+
+  /**
+   * Whether this device shows log reminders.
+   *
+   * A device preference, not an account one — notifications belong to the phone
+   * that shows them, and signing in on a tablet should not start it buzzing. So
+   * it lives in local storage rather than in `profiles`, and it is mirrored here
+   * only so a toggle re-renders.
+   */
+  reminders: boolean;
 }
 
 /** What the app needs to know about who is signed in. */

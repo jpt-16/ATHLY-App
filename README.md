@@ -615,6 +615,27 @@ food, and a figure outside what food can physically contain is dropped. The
 origin is named in `connect-src` (`tools/csp.mjs`) and travels with the backend,
 so the local-only bundle still reaches nothing at all.
 
+### Reminders
+
+Local notifications, not push. Push would need an APNs certificate, a paid
+Apple Developer membership and a server willing to decide every evening which
+athletes have not logged; local notifications need none of that and do the
+actual job. This app's retention problem is not that people dislike it, it is
+that they forget it exists between meals.
+
+Profile → Reminders → Log reminders. Three a day, scheduled on the device. The
+trade is that the device cannot check anything before it fires, so it will nudge
+someone who has already logged — which is why the copy asks rather than
+accuses. "Did dinner happen?" survives being wrong; "you forgot dinner" does
+not.
+
+Needs one more line in the iOS project, alongside the camera string: iOS shows
+nothing at all without the notification entitlement, which Xcode adds under
+**Signing & Capabilities** → **+ Capability** → **Push Notifications** is _not_
+required — local notifications work with no capability at all, but the
+permission prompt only appears once, so a "no" is permanent from inside the app.
+The toggle says so rather than pretending it can ask again.
+
 ### What does not work yet
 
 - **Photo logging.** Still a toast. Estimating macros from a picture needs a

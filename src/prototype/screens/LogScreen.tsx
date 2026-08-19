@@ -102,6 +102,50 @@ export function LogScreen({ v }: { v: ViewModel }) {
               </React.Fragment>
             ))}
           </div>
+          {v.logCustom ? (
+            <div
+              style={S(
+                'margin:12px 0 6px;background:#fff;box-shadow:0 1px 2px rgba(17,24,21,.045),0 12px 28px -18px rgba(17,24,21,.28);border-radius:18px;padding:16px',
+              )}
+            >
+              <div
+                style={S(
+                  'font-size:10px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:#8C8779;margin-bottom:11px',
+                )}
+              >
+                Add a food of your own
+              </div>
+              <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
+                {(v.foodForm ?? []).map((f: VmRow, i: number) => (
+                  <React.Fragment key={i}>
+                    <input
+                      type={f.type}
+                      inputMode={f.type === 'number' ? 'numeric' : 'text'}
+                      value={f.value}
+                      onChange={(e) => f.set(e.target.value)}
+                      placeholder={f.label}
+                      aria-label={f.label}
+                      style={S(
+                        `${f.key === 'name' ? 'flex:1 0 100%' : 'flex:1 1 40%'};min-width:0;padding:11px 13px;border-radius:11px;border:2px solid rgba(17,24,21,.12);font-size:14px;font-weight:700;font-family:inherit;background:#fff;color:#111815`,
+                      )}
+                    />
+                  </React.Fragment>
+                ))}
+              </div>
+              <button
+                onClick={v.saveFood}
+                style={S(
+                  'width:100%;margin-top:10px;padding:12px;border-radius:12px;background:#111815;color:#F4F2ED;font-size:13.5px;font-weight:800',
+                )}
+              >
+                Log it
+              </button>
+              <div style={S('font-size:11px;color:#8C8779;margin-top:9px;line-height:1.45')}>
+                Calories are the only one this needs. Leave the rest blank and they stay blank — the app will
+                not invent them.
+              </div>
+            </div>
+          ) : null}
           {v.logEmpty ? (
             <>
               <div style={S('padding:52px 12px;text-align:center;animation:ffIn .3s ease')}>

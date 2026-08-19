@@ -192,6 +192,21 @@ export function favoriteItems(logs: MealLog[], limit: number): LoggedItem[] {
     .slice(0, limit);
 }
 
+/**
+ * Foods the athlete typed in themselves, most recent first.
+ *
+ * There is no table of custom foods and there does not need to be one. A food
+ * someone entered by hand is a log entry with `source: 'custom'`, so the log is
+ * already the library — which means a food typed once is a one-tap log forever
+ * without a second place for it to live, drift out of date, or be deleted from
+ * independently.
+ */
+export function customItems(logs: MealLog[], limit: number): LoggedItem[] {
+  return rollUp(logs.filter((l) => l.source === 'custom'))
+    .sort(cmpTime)
+    .slice(0, limit);
+}
+
 function cmpTime(a: LoggedItem, b: LoggedItem): number {
   return b.lastLogged.loggedAt.localeCompare(a.lastLogged.loggedAt);
 }

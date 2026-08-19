@@ -25,8 +25,9 @@ import { lookupBarcode, portionOf } from '../data/foodDb';
 import { loadMetrics, saveSleep, saveWater, saveWeight } from '../data/metricsRepo';
 import type { DayMetrics } from '../data/metricsRepo';
 import { GLASS_ML, dailyCalories, sleepTargetMinutes, waterTargetMl, weightTrend } from '../data/series';
+import { remindersOn, setReminders } from '../data/reminders';
 import { scanBarcode } from '../data/barcodeScan';
-import { MICRONUTRIENTS, NUTRIENT_LABEL, NUTRIENT_UNIT } from './nutrients';
+import { MICRONUTRIENTS, NUTRIENT_LABEL, NUTRIENT_UNIT, ZERO } from './nutrients';
 import { baseNutrition, nutritionOf, portionDay, servingLabel } from './portions';
 import { isSafe, minutesAvailable, safeMealIds, selectForSlot } from './filtering';
 import type { SlotConstraints } from './filtering';
@@ -69,6 +70,7 @@ import {
   EMPTY_TOTALS,
   adherence,
   favoriteItems,
+  customItems,
   recentItems,
   totalsFor,
   weeklyCalories,
@@ -290,6 +292,8 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     metrics: [],
     weightDraft: '',
     sleepDraft: '',
+    foodDraft: { name: '', kcal: '', protein: '', carbs: '', fat: '' },
+    reminders: remindersOn(),
   };
 
   /** Planner "generating…" ticker. */
@@ -602,6 +606,32 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
    * history fails to arrive should see today's plan with an empty chart rather
    * than a spinner where the screen should be.
    */
+  /**
+   * Turn log reminders on or off.
+   *
+   * Three outcomes rather than two, because iOS asks for notification
+   * permission once and remembers the answer forever. Someone who said no
+   * cannot be asked again from inside the app, and telling them "off" would
+   * leave them tapping a switch that will never move.
+   */
+  private async toggleReminders() {
+    const next = !this.state.reminders;
+    const result = await setReminders(next);
+    if (!this._alive) return;
+
+    if (result === 'unavailable') {
+      this.toast('Reminders need the ATHLY app on your phone.');
+      return;
+    }
+    if (result === 'denied') {
+      this.update({ reminders: false });
+      this.toast('Notifications are off for ATHLY. Turn them on in Settings.');
+      return;
+    }
+    this.update({ reminders: result === 'on' });
+    this.toast(result === 'on' ? 'Reminders on — three a day.' : 'Reminders off.');
+  }
+
   private async loadBody() {
     if (!isBackendConfigured) return;
     try {
@@ -1831,7 +1861,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         ? favoriteItems(s.logs, 40)
         : s.logTab === 'recent'
           ? recentItems(s.logs, 40)
-          : []
+          : // "My foods" is the log filtered to what the athlete typed
+            // themselves. No second table: a food entered once is a one-tap log
+            // forever, and there is nowhere for it to drift out of date.
+            customItems(s.logs, 40)
     )
       .filter((item) => !logSearch || item.name.toLowerCase().includes(logSearch))
       .slice(0, 8);
@@ -2524,16 +2557,17 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         pick: () => this.update({ logTab: v }),
         style: `padding:12px 0;font-size:13.5px;font-weight:800;color:${s.logTab === v ? INK : '#A9A498'};border-bottom:3px solid ${s.logTab === v ? GREEN : 'transparent'};margin-bottom:-2px`,
       })),
-      logEmpty: s.logTab === 'custom' || logItems.length === 0,
-      logList: s.logTab !== 'custom' && logItems.length > 0,
+      logEmpty: logItems.length === 0,
+      logList: logItems.length > 0,
       // The empty states were three strings baked into the screen, which was
       // fine while only one list could be empty. All three can be now.
-      ...(s.logTab === 'custom'
+      ...(s.logTab === 'custom' && !logSearch
         ? {
-            logEmptyTitle: 'No custom foods yet',
-            logEmptyBody: "Made something of your own? Save it once and it's a one-tap log forever.",
-            logEmptyCta: 'Create a food',
-            logEmptyAction: () => this.toast('Saving your own foods is not built yet'),
+            logEmptyTitle: 'No foods of your own yet',
+            logEmptyBody:
+              'Type one in above — a sandwich your mum makes, a shake you mix. Once it is here it is a one-tap log forever.',
+            logEmptyCta: '',
+            logEmptyAction: () => {},
           }
         : // A search that found nothing is not the same as a log with nothing in
           // it, and telling an athlete "nothing logged yet" while they are
@@ -2560,6 +2594,69 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
                 logEmptyCta: 'Back to today',
                 logEmptyAction: () => this.update({ tab: 'home' }),
               }),
+      logCustom: s.logTab === 'custom',
+      /**
+       * Typing in a food nothing else knows about.
+       *
+       * The gap this closes: everything loggable had to come from the plan, the
+       * recipe library or a barcode. A sandwich somebody's mum makes fits none
+       * of those, and "log it from your plan" is not an answer when the plan
+       * does not contain it.
+       *
+       * Four numbers, no micronutrients. Asking a teenager for the potassium in
+       * their own sandwich would get a guess, and a guess stored beside measured
+       * figures is the thing this app keeps refusing to do. They stay zero,
+       * which the Progress bars already read as "not measured".
+       */
+      foodForm: (
+        [
+          ['name', 'What was it?', 'text'],
+          ['kcal', 'Calories', 'number'],
+          ['protein', 'Protein (g)', 'number'],
+          ['carbs', 'Carbs (g)', 'number'],
+          ['fat', 'Fat (g)', 'number'],
+        ] as [keyof AppState['foodDraft'], string, string][]
+      ).map(([key, label, type]) => ({
+        key,
+        label,
+        type,
+        value: s.foodDraft[key],
+        set: (value: string) => this.update((st) => ({ foodDraft: { ...st.foodDraft, [key]: value } })),
+      })),
+      saveFood: () => {
+        const d = s.foodDraft;
+        const name = d.name.trim();
+        const kcal = Number(d.kcal);
+        if (!name) {
+          this.toast('Give it a name so you can find it again.');
+          return;
+        }
+        if (!Number.isFinite(kcal) || kcal <= 0 || kcal > 10000) {
+          this.toast('Calories are the one number this needs.');
+          return;
+        }
+        const g = (raw: string) => {
+          const n = Number(raw);
+          return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+        };
+        this.update({ foodDraft: { name: '', kcal: '', protein: '', carbs: '', fat: '' } });
+        void this.addLog(
+          {
+            ...ZERO,
+            date: iso,
+            source: 'custom',
+            mealId: null,
+            name: name.slice(0, 200),
+            servings: 1,
+            kcal: Math.round(kcal),
+            protein: g(d.protein),
+            carbs: g(d.carbs),
+            fat: g(d.fat),
+          },
+          () => `${name} logged — it will be here next time`,
+        );
+      },
+
       logItems: logItems.map((item) => {
         const sh = shapes(item.mealId ? MEALS[item.mealId].tile : tileForName(item.name), 46);
         const loggedToday = logsToday.filter((l) =>
@@ -2726,6 +2823,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             ['Budget', a.budget === 'low' ? 'Under $4' : a.budget === 'high' ? 'Any budget' : '$4–8 a meal'],
           ],
         },
+        {
+          title: 'Reminders',
+          rows: [['Log reminders', s.reminders ? 'On' : 'Off']] as [string, string][],
+        },
         // Only when there is an account to manage. With no backend configured
         // there is no session, no email and nothing to sign out of, so the group
         // is absent rather than present and inert.
@@ -2748,11 +2849,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           tap: () =>
             label === 'Schedule'
               ? this.update({ tab: 'calendar' })
-              : label === 'Sign out'
-                ? this.doSignOut()
-                : label === 'Email'
-                  ? undefined
-                  : this.toast(`${label} — editor would open`),
+              : label === 'Log reminders'
+                ? void this.toggleReminders()
+                : label === 'Sign out'
+                  ? this.doSignOut()
+                  : label === 'Email'
+                    ? undefined
+                    : this.toast(`${label} — editor would open`),
           style: `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;width:100%;text-align:left;${i ? 'border-top:1px solid rgba(17,24,21,.09)' : ''}`,
         })),
       })),
