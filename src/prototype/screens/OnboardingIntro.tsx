@@ -89,6 +89,16 @@ export function OnboardingIntro({ v }: { v: ViewModel }) {
           <div style={S('margin-top:16px;font-size:12px;color:rgba(244,242,237,.4);text-align:center')}>
             Takes about two minutes
           </div>
+          {v.obSignIn ? (
+            <button
+              onClick={v.obSignIn}
+              style={S(
+                'margin-top:18px;width:100%;padding:6px;background:transparent;font-size:13px;font-weight:700;color:rgba(244,242,237,.62);text-align:center',
+              )}
+            >
+              Already have an account? Sign in
+            </button>
+          ) : null}
         </div>
       </div>
     </>

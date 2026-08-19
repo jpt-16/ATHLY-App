@@ -132,6 +132,20 @@ describe('the account gate', () => {
     expect(screen.getByRole('button', { name: /sign up with email/i })).toBeInTheDocument();
   });
 
+  it('offers a way in for someone who already has an account', async () => {
+    const user = userEvent.setup();
+    render(<AthlyApp {...signedOut} />);
+
+    // The intro used to offer one button, so the only route to the gate ran
+    // through all thirteen questions — and `onSignedIn` then threw the answers
+    // away in favour of the saved profile, which is correct and makes the detour
+    // pure waste.
+    await user.click(screen.getByRole('button', { name: /already have an account/i }));
+
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /let's set you up/i })).not.toBeInTheDocument();
+  });
+
   it('hides Sign in with Apple until it is configured', async () => {
     const user = userEvent.setup();
     render(<AthlyApp {...signedOut} />);

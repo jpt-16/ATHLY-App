@@ -1952,6 +1952,22 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             ` ` +
             `Practice days get a pre-fuel and a recovery meal; game days get a familiar pre-game meal three hours out.`,
       obBack: this.back,
+      /**
+       * Sign in without answering thirteen questions first.
+       *
+       * The intro screen offered one button, so the only route to the account
+       * gate ran through the whole of onboarding. That is a dead end dressed as
+       * a flow: an athlete on a new phone answered two minutes of questions and
+       * `onSignedIn` then discarded every one of them in favour of the profile
+       * already on their account, exactly as it should. They were doing work
+       * that was designed to be thrown away.
+       *
+       * Only offered when there is a backend. With none there are no accounts to
+       * sign in to, and the button would be a promise the build cannot keep.
+       */
+      obSignIn: isBackendConfigured
+        ? () => this.update({ stage: 'auth', authView: 'gate', authError: null, authBusy: false })
+        : null,
       obNext: () => {
         if (s.ob === 0) {
           this.update({ ob: 1 });
