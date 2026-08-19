@@ -301,6 +301,18 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
   }
 
   componentDidMount() {
+    // Set here, not only at the field, because this component mounts twice in
+    // development. React's StrictMode deliberately mounts, unmounts and remounts
+    // to surface effects that do not clean up after themselves — and for a class
+    // component that means `componentWillUnmount` runs on this same instance,
+    // leaving `_alive` false for the whole of the second, real mount. Every
+    // `if (!this._alive) return` after an await then fires on a tree that is very
+    // much alive, so the account never loads and the splash screen never lifts.
+    //
+    // It only bites where a guard sits after an await, which is why signing in
+    // hung while a signed-out start did not, and why production — no StrictMode
+    // — was fine. `_alive` means mounted; this is where that becomes true.
+    this._alive = true;
     this.syncSession(null);
   }
 
@@ -315,7 +327,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     clearTimeout(this._to);
   }
 
-  /** False after unmount, so an in-flight request cannot set state on a dead tree. */
+  /** True while mounted, so an in-flight request cannot set state on a dead tree. */
   private _alive = true;
 
   // -------------------------------------------------------------------------
