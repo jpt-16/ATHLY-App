@@ -22,6 +22,9 @@ import {
 import { CEILING_NUTRIENTS, computeTargets, dayMeals, proteinPerLb } from './nutrition';
 import { fromInputValue, toInputValue } from './timeOfDay';
 import { lookupBarcode, portionOf } from '../data/foodDb';
+import { loadMetrics, saveSleep, saveWater, saveWeight } from '../data/metricsRepo';
+import type { DayMetrics } from '../data/metricsRepo';
+import { GLASS_ML, dailyCalories, sleepTargetMinutes, waterTargetMl, weightTrend } from '../data/series';
 import { scanBarcode } from '../data/barcodeScan';
 import { MICRONUTRIENTS, NUTRIENT_LABEL, NUTRIENT_UNIT } from './nutrients';
 import { baseNutrition, nutritionOf, portionDay, servingLabel } from './portions';
@@ -284,6 +287,9 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     hydrating: isBackendConfigured,
     logs: [],
     logsLoading: isBackendConfigured,
+    metrics: [],
+    weightDraft: '',
+    sleepDraft: '',
   };
 
   /** Planner "generating…" ticker. */
@@ -441,6 +447,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     // plan, with an empty ring, rather than a spinner.
     void this.loadLogs();
     void this.loadPlanEdits();
+    void this.loadBody();
 
     if (saved) {
       clearOnboarding();
@@ -586,6 +593,62 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       },
       () => `${food.name} logged — ${grams}g${food.servingGrams ? '' : ' (no serving size given)'}`,
     );
+  }
+
+  /**
+   * Read back the weigh-ins, water and sleep.
+   *
+   * Never blocks the app, on the same reasoning as `loadLogs`: an athlete whose
+   * history fails to arrive should see today's plan with an empty chart rather
+   * than a spinner where the screen should be.
+   */
+  private async loadBody() {
+    if (!isBackendConfigured) return;
+    try {
+      const metrics = await loadMetrics(todayIso());
+      if (!this._alive) return;
+      this.update({ metrics });
+    } catch {
+      // An unreadable history is an empty chart. Visibly wrong beats a dead
+      // screen, and the next write reloads the window.
+    }
+  }
+
+  /**
+   * Record one measurement, in state first and the database after.
+   *
+   * Optimistic like `addLog`, and for the same reason: the chart should move
+   * under the thumb that moved it. A failed write is taken back out and said
+   * out loud rather than left looking saved.
+   */
+  private async saveMetric(
+    patch: Partial<Omit<DayMetrics, 'date'>>,
+    write: (userId: string, date: IsoDate) => Promise<void>,
+    toast: string,
+  ) {
+    const date = todayIso();
+    const before = this.state.metrics;
+    this.update((st) => {
+      const rest = st.metrics.filter((m) => m.date !== date);
+      const current = st.metrics.find((m) => m.date === date) ?? {
+        date,
+        weightLb: null,
+        waterMl: null,
+        sleepMinutes: null,
+      };
+      return { metrics: rest.concat({ ...current, ...patch }).sort((a, b) => a.date.localeCompare(b.date)) };
+    });
+    this.toast(toast);
+
+    const userId = this.props.userId;
+    if (!isBackendConfigured || !userId) return;
+    try {
+      await write(userId, date);
+    } catch {
+      if (!this._alive) return;
+      this.update({ metrics: before });
+      this.toast("That didn't save — check your connection and try again.");
+    }
   }
 
   private async loadLogs() {
@@ -1239,6 +1302,17 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const logsToday = s.logs.filter((l) => l.date === iso);
     const eaten = s.logs.length ? totalsFor(s.logs, iso) : EMPTY_TOTALS;
     const weekBars = weeklyCalories(s.logs, tg.cal, iso, 8);
+
+    // Body: weight, water and sleep, all derived from `s.metrics` rather than
+    // held separately, so what the charts draw is what was recorded.
+    const calBars = dailyCalories(s.logs, tg.cal, iso, 14);
+    const trend = weightTrend(s.metrics, iso, 84);
+    const today = s.metrics.find((m) => m.date === iso);
+    const waterNow = today?.waterMl ?? 0;
+    const todaySpec = this.dayType(iso);
+    const trainingToday = todaySpec[0] !== 'rest' || !!todaySpec[2];
+    const waterGoal = waterTargetMl(s.lb, trainingToday);
+    const sleepGoal = sleepTargetMinutes(s.age);
     const adhere = adherence(s.logs, {
       today: iso,
       window: 7,
@@ -2769,6 +2843,102 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           ],
         ] as [string, string, string][]
       ).map(([label, value, note]) => ({ label, value, note })),
+
+      // --- body: weight, calories per day, water, sleep --------------------
+      //
+      // All four read from what is already loaded, so these are renderings of
+      // the log rather than a second opinion about it. See `data/series.ts`,
+      // where the rule that a day with no data is a gap rather than a zero is
+      // enforced and tested.
+      calorieBars: calBars.bars.map((b) => ({
+        label: b.label,
+        value: b.standing ? b.kcal.toLocaleString() : '',
+        // A day nobody logged draws a track and no bar. An empty column at zero
+        // would be the chart saying they ate nothing.
+        bar: `width:100%;height:${Math.round(b.height * 100)}%;min-height:${b.standing ? 3 : 0}px;border-radius:5px;background:${
+          b.standing === 'on'
+            ? GREEN
+            : b.standing === 'over'
+              ? '#E8A33D'
+              : b.standing === 'under'
+                ? 'rgba(17,24,21,.28)'
+                : 'transparent'
+        }`,
+        labelStyle: `font-size:9.5px;font-weight:700;color:${b.date === todayIso() ? '#111815' : '#A5A093'}`,
+      })),
+      calorieTargetStyle: `position:absolute;left:0;right:0;bottom:${Math.round(calBars.targetHeight * 100)}%;height:2px;background:rgba(17,24,21,.22)`,
+      calorieCaption: calBars.bars.some((b) => b.standing)
+        ? `Target ${tg.cal.toLocaleString()} cal · last 14 days`
+        : 'Log a meal and this fills in.',
+
+      weightLatest: trend.latest !== null ? `${trend.latest} lb` : '—',
+      weightChange:
+        trend.points.length < 2
+          ? trend.points.length === 1
+            ? 'One weigh-in so far'
+            : 'No weigh-ins yet'
+          : `${trend.change > 0 ? '+' : ''}${trend.change} lb since ${shortDateLabel(trend.points[0].date)}`,
+      weightGoal: `Goal ${tg.goalLb} lb`,
+      hasWeight: trend.points.length > 0,
+      // An SVG polyline over a 100×100 box, which the screen scales. `y` runs
+      // upward in the series and downward in SVG, hence the subtraction.
+      weightLine: trend.points
+        .map((p) => `${(p.x * 100).toFixed(1)},${(100 - p.y * 100).toFixed(1)}`)
+        .join(' '),
+      weightDots: trend.points.map((p) => ({ cx: (p.x * 100).toFixed(1), cy: (100 - p.y * 100).toFixed(1) })),
+      weightHigh: trend.points.length ? `${trend.high} lb` : '',
+      weightLow: trend.points.length ? `${trend.low} lb` : '',
+      weightDraft: s.weightDraft,
+      setWeightDraft: (value: string) => this.update({ weightDraft: value }),
+      saveWeight: () => {
+        const lb = Math.round(Number(s.weightDraft) * 10) / 10;
+        // Bounds match the column's own check constraint, so a typo is refused
+        // here rather than by Postgres after a round trip.
+        if (!Number.isFinite(lb) || lb < 40 || lb > 700) {
+          this.toast('Enter a weight between 40 and 700 lb.');
+          return;
+        }
+        this.update({ weightDraft: '' });
+        void this.saveMetric({ weightLb: lb }, (u, d) => saveWeight(u, d, lb), `Logged ${lb} lb`);
+      },
+
+      waterGlasses: waterNow / GLASS_ML,
+      waterLabel: `${(waterNow / 1000).toFixed(1)} L of ${(waterGoal / 1000).toFixed(1)} L`,
+      waterNote: trainingToday ? 'Training day — half a litre more' : 'Rest day',
+      waterMarks: Array.from({ length: Math.ceil(waterGoal / GLASS_ML) }, (_, i) => ({
+        style: `flex:1;height:26px;border-radius:7px;background:${i < waterNow / GLASS_ML ? '#3FA7D6' : 'rgba(17,24,21,.08)'}`,
+      })),
+      addWater: () => {
+        const next = Math.min(waterNow + GLASS_ML, 12000);
+        void this.saveMetric({ waterMl: next }, (u, d) => saveWater(u, d, next), 'Glass logged');
+      },
+      undoWater: () => {
+        const next = Math.max(waterNow - GLASS_ML, 0);
+        void this.saveMetric({ waterMl: next }, (u, d) => saveWater(u, d, next), 'Glass taken back');
+      },
+
+      sleepLabel:
+        today?.sleepMinutes != null
+          ? `${Math.floor(today.sleepMinutes / 60)}h ${today.sleepMinutes % 60}m`
+          : '—',
+      sleepNote: `${sleepGoal / 60}+ hours is the recommendation at ${s.age}`,
+      sleepMet: today?.sleepMinutes != null && today.sleepMinutes >= sleepGoal,
+      sleepDraft: s.sleepDraft,
+      setSleepDraft: (value: string) => this.update({ sleepDraft: value }),
+      saveSleep: () => {
+        const hours = Number(s.sleepDraft);
+        if (!Number.isFinite(hours) || hours <= 0 || hours > 24) {
+          this.toast('Enter how many hours you slept.');
+          return;
+        }
+        const minutes = Math.round(hours * 60);
+        this.update({ sleepDraft: '' });
+        void this.saveMetric(
+          { sleepMinutes: minutes },
+          (u, d) => saveSleep(u, d, minutes),
+          `Logged ${hours} hours`,
+        );
+      },
 
       navEven: navPrimary === 'Even tabs',
       navCenter: navPrimary === 'Center action',

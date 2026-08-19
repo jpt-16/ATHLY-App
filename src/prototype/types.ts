@@ -8,6 +8,7 @@
 
 import type { IsoDate } from '../lib/clock';
 import type { Micronutrient, Nutrients } from './nutrients';
+import type { DayMetrics } from '../data/metricsRepo';
 
 export type Goal = 'gain' | 'perform' | 'lose' | 'habits';
 export type Sex = 'male' | 'female' | 'na';
@@ -189,6 +190,20 @@ export interface AppState {
   logs: MealLog[];
   /** True while that window is being read back. */
   logsLoading: boolean;
+
+  // --- body ---------------------------------------------------------------
+  /**
+   * Weight, water and sleep for the last twelve weeks, oldest first.
+   *
+   * Separate from `logs` because they answer a different question. What an
+   * athlete ate is a claim about food; what they weigh is a claim about whether
+   * the plan is working, and it is the one a teenager checks first.
+   */
+  metrics: DayMetrics[];
+  /** Typed into the weigh-in field, before it is committed. */
+  weightDraft: string;
+  /** Hours slept, as typed. */
+  sleepDraft: string;
 }
 
 /** What the app needs to know about who is signed in. */
