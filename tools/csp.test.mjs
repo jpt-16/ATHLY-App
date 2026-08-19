@@ -61,6 +61,13 @@ describe('buildCsp', () => {
     expect(directives(buildCsp('  '))['connect-src']).toEqual(["'self'"]);
   });
 
+  it('names the food database, and nothing wider', () => {
+    // The barcode scanner reads Open Food Facts. Named explicitly for the same
+    // reason the project origin is: a wildcard here would let injected script
+    // post an athlete's data anywhere it liked.
+    expect(directives(buildCsp(PROJECT))['connect-src']).toContain('https://world.openfoodfacts.org');
+  });
+
   it('closes the escalation routes an injection would otherwise reach for', () => {
     const d = directives(buildCsp(PROJECT));
     for (const name of ['object-src', 'base-uri', 'form-action', 'frame-src']) {

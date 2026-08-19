@@ -11,6 +11,9 @@
  * is generated at build time rather than written into `vercel.json`.
  */
 
+/** The barcode lookup's origin. See `src/data/foodDb.ts`. */
+export const FOOD_DB = 'https://world.openfoodfacts.org';
+
 /**
  * @param {string | undefined} supabaseUrl The configured project origin, or
  *   nothing at all for the local-only build, which talks to no backend.
@@ -21,7 +24,12 @@ export function buildCsp(supabaseUrl) {
 
   // The realtime socket shares the project host, and `connect-src` matches on
   // scheme — `https:` does not cover `wss:`, so both are named.
-  const backend = url ? [url, url.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:')] : [];
+  //
+  // The food database rides with the backend rather than being unconditional.
+  // Barcode scanning is native-only, every native build is a configured build,
+  // and the local-only bundle keeps the property its test states: it reaches
+  // nothing at all.
+  const backend = url ? [url, url.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:'), FOOD_DB] : [];
 
   return [
     "default-src 'self'",

@@ -597,11 +597,33 @@ Google's consent screen opens in the system browser rather than the web view,
 which is not a workaround: Google refuses to render it in an embedded browser,
 and a password does not belong in a page this app controls.
 
+### Barcode scanning
+
+Native only — the browser build says so rather than opening a camera that is not
+there. It needs one line in the iOS project that Capacitor does not add:
+
+Target **App** → **Info** → **+** → `Privacy - Camera Usage Description`, with a
+sentence the athlete will read at the permission prompt, e.g. _"ATHLY uses the
+camera to scan food barcodes."_ iOS terminates the app rather than showing a
+prompt without one, so a missing string is a crash and not a refusal.
+
+Lookups go to [Open Food Facts](https://world.openfoodfacts.org) — free, no key,
+and open data, which matters because a number an athlete is held to should be
+one anyone can go and check. It is also crowd-sourced, so `src/data/foodDb.ts`
+trusts nothing: a row with no energy value is a miss rather than a zero-calorie
+food, and a figure outside what food can physically contain is dropped. The
+origin is named in `connect-src` (`tools/csp.mjs`) and travels with the backend,
+so the local-only bundle still reaches nothing at all.
+
 ### What does not work yet
 
-- **Push notifications and barcode scanning.** The two things worth going native
-  for, and neither is wired. `@capacitor/push-notifications` and a barcode
-  plugin are the follow-on work; the barcode button is still a toast.
+- **Photo logging.** Still a toast. Estimating macros from a picture needs a
+  vision model, which means an inference endpoint, a cost per photo, and a
+  decision about sending photographs of minors' meals to a third party — see
+  [`PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md) Blocking #2.
+- **Push notifications.** `@capacitor/push-notifications` is the follow-on work.
+  For a logging app this is the retention mechanic, so it is not a small
+  omission.
 
 ### Before the App Store
 

@@ -21,6 +21,8 @@ import {
 } from './data';
 import { CEILING_NUTRIENTS, computeTargets, dayMeals, proteinPerLb } from './nutrition';
 import { fromInputValue, toInputValue } from './timeOfDay';
+import { lookupBarcode, portionOf } from '../data/foodDb';
+import { scanBarcode } from '../data/barcodeScan';
 import { MICRONUTRIENTS, NUTRIENT_LABEL, NUTRIENT_UNIT } from './nutrients';
 import { baseNutrition, nutritionOf, portionDay, servingLabel } from './portions';
 import { isSafe, minutesAvailable, safeMealIds, selectForSlot } from './filtering';
@@ -535,6 +537,57 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
   }
 
   /** Read back the window the Home ring and the Progress tab are drawn from. */
+  /**
+   * Scan a barcode and log what it turns out to be.
+   *
+   * Four ways to end and each says something different, because "nothing
+   * happened" is the one outcome that teaches an athlete the button is broken.
+   * The portion is the manufacturer's stated serving where they state one, and
+   * 100 g where they do not — never a guess dressed as a measurement, and the
+   * toast says which it used.
+   */
+  private async scanAndLog() {
+    const outcome = await scanBarcode();
+    if (outcome.kind === 'cancelled') return;
+    if (outcome.kind === 'unavailable') {
+      this.toast('Scanning needs the ATHLY app on your phone.');
+      return;
+    }
+    if (outcome.kind === 'denied') {
+      this.toast('Camera access is off. Turn it on for ATHLY in Settings.');
+      return;
+    }
+
+    this.toast('Looking that up…');
+    let food: Awaited<ReturnType<typeof lookupBarcode>> = null;
+    try {
+      food = await lookupBarcode(outcome.value);
+    } catch {
+      food = null;
+    }
+    if (!this._alive) return;
+
+    if (!food) {
+      // Open Food Facts is crowd-sourced, so a miss is ordinary rather than a
+      // fault. Say so plainly and leave the athlete a way forward.
+      this.toast("That one isn't in the food database. Log it by hand for now.");
+      return;
+    }
+
+    const grams = food.servingGrams ?? 100;
+    void this.addLog(
+      {
+        ...portionOf(food, grams),
+        date: todayIso(),
+        source: 'custom',
+        mealId: null,
+        name: food.name,
+        servings: 1,
+      },
+      () => `${food.name} logged — ${grams}g${food.servingGrams ? '' : ' (no serving size given)'}`,
+    );
+  }
+
   private async loadLogs() {
     if (!isBackendConfigured) return;
     this.update({ logsLoading: true });
@@ -2383,7 +2436,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       // tense, first person plural, describing a capability that does not exist
       // — an athlete could reasonably read it as having worked. A stub should be
       // legible as a stub.
-      toastScan: () => this.toast('Barcode scanning is not built yet'),
+      toastScan: () => void this.scanAndLog(),
       toastPhoto: () => this.toast('Photo logging is not built yet'),
       toastCustom: () => this.toast('Saving your own foods is not built yet'),
       logTabs: (

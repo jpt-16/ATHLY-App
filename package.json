@@ -35,8 +35,10 @@
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build:local"
   },
   "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^8.1.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/browser": "^8.0.4",
+    "@capacitor/camera": "^8.2.3",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
     "@supabase/supabase-js": "^2.112.3",
