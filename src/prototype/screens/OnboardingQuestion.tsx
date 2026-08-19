@@ -5,6 +5,7 @@
 import React from 'react';
 import type { ViewModel, VmRow } from '../viewModel';
 import { S } from '../styles';
+import { TimePicker } from './TimePicker';
 
 /**
  * Ceilings on the two fields an athlete types freely into.
@@ -392,6 +393,7 @@ export function OnboardingQuestion({ v }: { v: ViewModel }) {
                                       </button>
                                     </React.Fragment>
                                   ))}
+                                  <TimePicker value={d.timeValue ?? ''} onChange={d.setTime} />
                                 </div>
                               </div>
                             </>
@@ -431,6 +433,7 @@ export function OnboardingQuestion({ v }: { v: ViewModel }) {
                                       </button>
                                     </React.Fragment>
                                   ))}
+                                  <TimePicker value={d.liftTimeValue ?? ''} onChange={d.setLiftTime} />
                                 </div>
                               </>
                             ) : null}

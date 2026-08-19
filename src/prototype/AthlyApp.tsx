@@ -20,6 +20,7 @@ import {
   shapes,
 } from './data';
 import { CEILING_NUTRIENTS, computeTargets, dayMeals, proteinPerLb } from './nutrition';
+import { fromInputValue, toInputValue } from './timeOfDay';
 import { MICRONUTRIENTS, NUTRIENT_LABEL, NUTRIENT_UNIT } from './nutrients';
 import { baseNutrition, nutritionOf, portionDay, servingLabel } from './portions';
 import { isSafe, minutesAvailable, safeMealIds, selectForSlot } from './filtering';
@@ -1305,6 +1306,14 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           pick: () => setWd([mode, t, lift, dur]),
           style: chip(time === t),
         })),
+        // The chips are the common answers; this is every other one. On iOS the
+        // browser renders it as the system hour-and-minute wheel, so a 5:45
+        // start is two spins rather than a time the app cannot express.
+        timeValue: toInputValue(time),
+        setTime: (value: string) => {
+          const picked = fromInputValue(value);
+          if (picked) setWd([mode, picked, lift, dur]);
+        },
         lift: !!lift,
         liftStyle: `display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 13px;border-radius:11px;border:2px solid ${lift ? INK : 'rgba(17,24,21,.12)'};background:${lift ? INK : '#fff'};color:${lift ? '#F4F2ED' : INK}`,
         liftState: lift ? 'On' : 'Off',
@@ -1315,6 +1324,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           pick: () => setWd([mode, time, t, dur]),
           style: chip(lift === t),
         })),
+        liftTimeValue: toInputValue(lift),
+        setLiftTime: (value: string) => {
+          const picked = fromInputValue(value);
+          if (picked) setWd([mode, time, picked, dur]);
+        },
         durOpen: training,
         durs: [
           ['', 'Not set'],
@@ -1478,6 +1492,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         },
         style: this.small(selLift === t) + ';white-space:nowrap;flex:none',
       })),
+      liftTimeValue: toInputValue(selLift),
+      setLiftTime: (value: string) => {
+        const picked = fromInputValue(value);
+        if (!picked) return;
+        this.setLift(s.selDate, picked);
+        this.toast('Lifting snacks moved around ' + picked);
+      },
       timeLabel: selMode === 'game' ? 'First whistle' : 'Practice starts',
       times: TIMES.map((t) => ({
         label: t,
@@ -1487,6 +1508,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         },
         style: this.small(selTime === t) + ';white-space:nowrap;flex:none',
       })),
+      timeValue: toInputValue(selTime),
+      setTime: (value: string) => {
+        const picked = fromInputValue(value);
+        if (!picked) return;
+        this.setDay(s.selDate, selMode, picked);
+        this.toast('Meals shifted around ' + picked);
+      },
       mealsCount: selMeals.length + ' meals',
       meals: selMeals.map((r) => this.slotRow(r, 54, selServings(r.mealId))),
       durNote: selDur

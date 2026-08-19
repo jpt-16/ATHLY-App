@@ -5,6 +5,7 @@
 import React from 'react';
 import type { ViewModel, VmRow } from '../viewModel';
 import { S } from '../styles';
+import { TimePicker } from './TimePicker';
 
 export function CalendarScreen({ v }: { v: ViewModel }) {
   return (
@@ -252,6 +253,7 @@ export function CalendarScreen({ v }: { v: ViewModel }) {
                             </button>
                           </React.Fragment>
                         ))}
+                        <TimePicker value={v.sel.timeValue ?? ''} onChange={v.sel.setTime} />
                       </div>
                     </div>
                   </>

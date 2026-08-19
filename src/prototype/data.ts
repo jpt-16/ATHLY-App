@@ -1411,8 +1411,9 @@ export const SPORTS = [
   'Just the gym',
   'Nothing right now',
 ];
-export const LIFT_TIMES = ['6:00 am', '6:30 am', '7:00 am', '3:30 pm', '5:00 pm', '7:30 pm'];
-export const TIMES = ['6:00 am', '7:00 am', '3:30 pm', '4:30 pm', '5:30 pm', '6:30 pm'];
+// Half-hourly across the hours anyone trains, rather than the six fixed times
+// this used to offer. See `timeOfDay.ts`.
+export { LIFT_TIMES, TIMES } from './timeOfDay';
 export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // ── the onboarding script ────────────────────────────────────────────
