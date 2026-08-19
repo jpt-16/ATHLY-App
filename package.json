@@ -31,7 +31,7 @@
     "icons": "node tools/icons/generate.mjs",
     "ios": "npm run ios:sync && npx cap open ios",
     "ios:sync": "npm run build && npx cap sync ios",
-    "ios:assets": "npm run icons && npx capacitor-assets generate --ios",
+    "ios:assets": "npx capacitor-assets generate --ios",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build:local"
   },
   "dependencies": {
