@@ -568,9 +568,30 @@ as the app having failed.
    it has not been told about and falls back to the Site URL, so an unlisted
    scheme looks exactly like no deep link at all.
 
-Then confirm Xcode agrees: target **App** → **Info** → **URL Types** should
-carry `com.athly.app`. Capacitor writes it from `appId`, but it is worth a look
-before concluding the code is wrong.
+**Capacitor does not register the scheme with iOS.** It has to be added by hand,
+once, after `npx cap add ios`: target **App** → **Info** → **URL Types** → **+**,
+with `com.athly.app` as both the identifier and the scheme. Or in
+`ios/App/App/Info.plist` directly:
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLName</key>
+    <string>com.athly.app</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>com.athly.app</string>
+    </array>
+  </dict>
+</array>
+```
+
+Without it the sign-in completes and Safari then says the address is invalid,
+because nothing on the device has claimed the scheme it was sent to. That is a
+different failure from the Site URL fallback above and worth telling apart:
+landing on the website means Supabase rejected the redirect, and "invalid
+address" means Supabase accepted it and iOS had nowhere to send it.
 
 Google's consent screen opens in the system browser rather than the web view,
 which is not a workaround: Google refuses to render it in an embedded browser,
