@@ -339,7 +339,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const now = this.props.userId ?? null;
 
     if (now && now !== was) {
-      void this.onSignedIn(now);
+      this.beginSignedIn(now);
       return;
     }
     if (!now && was) {
@@ -348,6 +348,34 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     }
     // Signed out and staying that way: the session is known, so stop waiting.
     if (!now && this.state.hydrating) this.update({ hydrating: false });
+  }
+
+  /**
+   * Start `onSignedIn`, and make sure it cannot fail silently.
+   *
+   * `hydrating` is cleared by `onSignedIn` on every route through it, which
+   * means an exception on any of those routes clears it on none of them: the
+   * promise rejects into nothing, React never re-renders, and the athlete keeps
+   * the splash screen for as long as they are willing to look at it. A floating
+   * `void` call is what let that happen, so there are no floating calls to it
+   * any more.
+   *
+   * The recovery is the sign-in gate with the reason on it. They are signed in,
+   * so nothing has been lost; the app simply could not finish opening, and that
+   * is a sentence worth showing instead of a logo.
+   */
+  private beginSignedIn(userId: string) {
+    this.onSignedIn(userId).catch((error: unknown) => {
+      if (!this._alive) return;
+      console.error('ATHLY: could not finish signing in.', error);
+      this.update({
+        stage: 'auth',
+        authView: 'gate',
+        authBusy: false,
+        hydrating: false,
+        authError: "You're signed in, but the app couldn't finish opening. Try once more.",
+      });
+    });
   }
 
   /**
@@ -690,7 +718,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     // The session is real, so the ordinary signed-in path can take over from
     // here: load the account if there is one, or start onboarding if not.
     const userId = this.props.userId;
-    if (userId) void this.onSignedIn(userId);
+    if (userId) this.beginSignedIn(userId);
   };
 
   private doSignOut = () => {
