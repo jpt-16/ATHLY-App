@@ -43,6 +43,22 @@ export type ProfileRow = {
   updated_at: string;
 };
 
+/**
+ * Weight, water and sleep for one athlete on one day.
+ *
+ * Every measurement is nullable and they are recorded independently — an
+ * athlete who logs their sleep has not thereby said they drank nothing. `null`
+ * is "not recorded", which is a different fact from zero for all three.
+ */
+export type DailyMetricsRow = {
+  user_id: string;
+  log_date: string;
+  weight_lb: number | null;
+  water_ml: number | null;
+  sleep_minutes: number | null;
+  updated_at: string;
+};
+
 export type GoalsRow = {
   user_id: string;
   calories: number;
@@ -176,9 +192,18 @@ export type DailyTotalsRow = {
 /** Columns the database fills in for us, and so are not required on insert. */
 type Generated = 'created_at' | 'updated_at' | 'computed_at' | 'declared_at' | 'id' | 'logged_at';
 
-type Table<Row> = {
+/**
+ * @typeParam Sparse Columns a write may legitimately leave out.
+ *
+ * `daily_metrics` is the case: weight, water and sleep are recorded
+ * independently, so an upsert that had to name all three would blank the two
+ * the athlete did not touch. Nullable in the schema is not the same as optional
+ * on insert, and only the second one is safe to assume.
+ */
+type Table<Row, Sparse extends keyof Row = never> = {
   Row: Row;
-  Insert: Omit<Row, Extract<keyof Row, Generated>> & Partial<Pick<Row, Extract<keyof Row, Generated>>>;
+  Insert: Omit<Row, Extract<keyof Row, Generated> | Sparse> &
+    Partial<Pick<Row, Extract<keyof Row, Generated> | Sparse>>;
   Update: Partial<Row>;
   Relationships: [];
 };
@@ -194,6 +219,7 @@ export interface Database {
       training_overrides: Table<TrainingOverrideRow>;
       entitlements: Table<EntitlementRow>;
       meal_logs: Table<MealLogRow>;
+      daily_metrics: Table<DailyMetricsRow, 'weight_lb' | 'water_ml' | 'sleep_minutes'>;
       plan_swaps: Table<PlanSwapRow>;
       plan_days: Table<PlanDayRow>;
     };
@@ -230,6 +256,7 @@ export const USER_TABLES = [
   'meal_logs',
   'plan_swaps',
   'plan_days',
+  'daily_metrics',
 ] as const;
 
 export type UserTable = (typeof USER_TABLES)[number];
