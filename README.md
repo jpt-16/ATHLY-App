@@ -547,11 +547,37 @@ shows its own splash until Supabase answers: two frames of one moment, and
 matching them makes the handover invisible instead of a flash of one logo
 replaced by another.
 
+### Signing in on a device
+
+Both the provider consent screen and the email confirmation link finish
+_outside_ the app, in the system browser, and have to find their way back in.
+On the web that is free — the redirect lands on a page this app rendered. Native
+has no such page, so a custom scheme is registered and iOS hands the URL back;
+`src/auth/deepLink.ts` catches it and exchanges the code for a session.
+
+Without it, both paths end on the deployed website with the athlete still signed
+out in the app they started in — a working page in the wrong place, which reads
+as the app having failed.
+
+**Three things have to name the same scheme**, and a mismatch fails silently:
+
+1. `appId` in `capacitor.config.ts` — `com.athly.app`
+2. `NATIVE_AUTH_CALLBACK` in `src/lib/platform.ts` — `com.athly.app://auth-callback`
+3. Supabase → Authentication → URL Configuration → **Redirect URLs**, which must
+   list `com.athly.app://auth-callback`. Supabase refuses to redirect anywhere
+   it has not been told about and falls back to the Site URL, so an unlisted
+   scheme looks exactly like no deep link at all.
+
+Then confirm Xcode agrees: target **App** → **Info** → **URL Types** should
+carry `com.athly.app`. Capacitor writes it from `appId`, but it is worth a look
+before concluding the code is wrong.
+
+Google's consent screen opens in the system browser rather than the web view,
+which is not a workaround: Google refuses to render it in an embedded browser,
+and a password does not belong in a page this app controls.
+
 ### What does not work yet
 
-- **Google sign-in.** OAuth in a web view needs `@capacitor/browser` and a deep
-  link back into the app, plus the custom scheme registered in Supabase's
-  redirect URLs. Email and password work as they are.
 - **Push notifications and barcode scanning.** The two things worth going native
   for, and neither is wired. `@capacitor/push-notifications` and a barcode
   plugin are the follow-on work; the barcode button is still a toast.

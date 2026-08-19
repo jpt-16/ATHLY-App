@@ -318,6 +318,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
 
   componentDidUpdate(prev: AthlyProps) {
     this.syncSession(prev);
+    // A deep link that failed. Reported once, on the change, so a re-render
+    // does not repeat it.
+    const link = this.props.authLinkError;
+    if (link && link !== prev.authLinkError) this.toast(link);
   }
 
   componentWillUnmount() {

@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react';
+
 import { AthlyApp } from './prototype/AthlyApp';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useSession } from './auth/useSession';
+import { listenForAuthCallback } from './auth/deepLink';
 
 /**
  * Application root.
@@ -16,6 +19,13 @@ import { useSession } from './auth/useSession';
  */
 export function App() {
   const { session, loading, recovering, endRecovery } = useSession();
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  // Sign-ins that finish outside the app — a provider's consent screen, an
+  // email link — come back to iOS as a URL rather than a page load. On the web
+  // this listener does nothing and the Supabase client handles the redirect
+  // itself. See `auth/deepLink.ts`.
+  useEffect(() => listenForAuthCallback(setLinkError), []);
 
   return (
     <ErrorBoundary>
@@ -29,6 +39,7 @@ export function App() {
         sessionLoading={loading}
         recovering={recovering}
         onRecoveryHandled={endRecovery}
+        authLinkError={linkError}
       />
     </ErrorBoundary>
   );

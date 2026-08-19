@@ -203,6 +203,15 @@ export interface SessionProps {
   recovering?: boolean;
   /** Releases the recovery hold once a new password is saved. */
   onRecoveryHandled?: () => void;
+  /**
+   * A sign-in link that came back from iOS and did not work.
+   *
+   * Native only. The web equivalent surfaces on the gate itself, because the
+   * redirect lands on a page this app rendered; a deep link arrives from
+   * outside, so there is nowhere for it to land and no reason for the athlete
+   * to know the difference — hence a toast rather than a screen.
+   */
+  authLinkError?: string | null;
 }
 
 /**

@@ -1,6 +1,9 @@
 import type { Provider } from '@supabase/supabase-js';
 
+import { Browser } from '@capacitor/browser';
+
 import { requireSupabase, supabase } from '../lib/supabase';
+import { NATIVE_AUTH_CALLBACK, isNative } from '../lib/platform';
 import { weakPasswordReason } from './passwordStrength';
 
 /**
@@ -67,6 +70,10 @@ function readable(message: string): string {
  * reason this cannot simply be trusted from the page.
  */
 function redirectTo(): string | undefined {
+  // Native has no origin worth returning to — `capacitor://localhost` is not a
+  // place Supabase can redirect to. The custom scheme is, and iOS hands it back
+  // to the app; `deepLink.ts` is what catches it.
+  if (isNative) return NATIVE_AUTH_CALLBACK;
   if (typeof window === 'undefined') return undefined;
   return `${window.location.origin}/`;
 }
@@ -129,16 +136,30 @@ export async function signInWithEmail(email: string, password: string): Promise<
 export async function signInWithProvider(
   provider: Extract<Provider, 'google' | 'apple'>,
 ): Promise<AuthResult> {
-  const { error } = await requireSupabase().auth.signInWithOAuth({
+  const { data, error } = await requireSupabase().auth.signInWithOAuth({
     provider,
     options: {
       redirectTo: redirectTo(),
+      // On the web this navigates the tab away and nothing after it runs. In a
+      // web view that navigation is the bug: Google refuses to render its
+      // consent screen inside an embedded browser, and even where it did, the
+      // athlete would be typing a password into a page the app controls. So
+      // native asks for the URL instead and opens it in the system browser,
+      // which is both the only thing Google will accept and the only place a
+      // password belongs.
+      skipBrowserRedirect: isNative,
       // Ask Google for a refresh token and force the account chooser, so
       // someone with two accounts on one device can pick.
       queryParams: provider === 'google' ? { access_type: 'offline', prompt: 'select_account' } : undefined,
     },
   });
-  return error ? { error: readable(error.message) } : OK;
+  if (error) return { error: readable(error.message) };
+
+  if (isNative) {
+    if (!data?.url) return { error: 'Something went wrong. Try again in a moment.' };
+    await Browser.open({ url: data.url, presentationStyle: 'popover' });
+  }
+  return OK;
 }
 
 /**
