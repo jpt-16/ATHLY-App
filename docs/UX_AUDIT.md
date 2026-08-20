@@ -72,6 +72,20 @@ exist, the persistence exists, and the two are not connected.
 
 ---
 
+## 2. Every day gets the same calorie target — **fixed**
+
+> `dayMultiplier` in `nutrition.ts` replaces the weekly slope. A practice, a
+> game, a lift and a session past an hour each cost something, and the calendar
+> portions each day against its own number rather than today's.
+>
+> The Targets screen now says which day its headline is about and what the rest
+> of the week comes to. An athlete who sees 3,515 on Tuesday and 3,140 on
+> Wednesday should have been told that would happen.
+>
+> The six increments are a plausible shape rather than evidence. That is the
+> first thing to put in front of a dietitian, and it is now a question about six
+> numbers rather than about a slope.
+
 ## 2. Every day gets the same calorie target
 
 **The evidence.** `nutrition.ts` folds the whole training week into a single
