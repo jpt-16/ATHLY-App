@@ -14,6 +14,7 @@ import { GeneratingOverlay } from './overlays/GeneratingOverlay';
 import { MealSheet } from './overlays/MealSheet';
 import { Onboarding } from './screens/Onboarding';
 import { SwapSheet } from './overlays/SwapSheet';
+import { EditSheet } from './overlays/EditSheet';
 import { Toast } from './overlays/Toast';
 import { IOSDevice } from '../components/ios/IOSFrame';
 import { useIsCompact } from '../hooks/useIsCompact';
@@ -65,6 +66,7 @@ function Screens({ v }: { v: ViewModel }) {
       {v.isApp ? <AppShell v={v} /> : null}
       {v.showMeal ? <MealSheet v={v} /> : null}
       {v.showSwap ? <SwapSheet v={v} /> : null}
+      {v.showEdit ? <EditSheet v={v} /> : null}
       {v.showGen ? <GeneratingOverlay v={v} /> : null}
       {v.showToast ? <Toast v={v} /> : null}
     </div>

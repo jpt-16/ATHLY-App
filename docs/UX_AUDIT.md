@@ -11,6 +11,17 @@ surfaces that already exist.
 
 ---
 
+## 1. Nothing on the Profile screen can be changed — **fixed**
+
+> Built in `profileFields.ts` and `overlays/EditSheet.tsx`. Eleven rows are now
+> editable; a weigh-in on Progress updates the weight the arithmetic uses; and
+> the 13+ floor the privacy policy promises is enforced rather than stated.
+>
+> Still not editable: sports, favourite foods, foods to avoid and allergies. All
+> four are chip lists rather than single values and want the onboarding picker,
+> not this sheet. **Allergies is the one that matters**, because it is a safety
+> filter an athlete cannot currently correct.
+
 ## 1. Nothing on the Profile screen can be changed
 
 **The evidence.** Every row in `profileGroups` (`AthlyApp.tsx`) routes to the

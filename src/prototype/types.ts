@@ -116,7 +116,7 @@ export interface AppState {
   /** The calendar day being viewed or edited. */
   selDate: IsoDate;
   tab: Tab;
-  overlay: 'meal' | 'swap' | null;
+  overlay: 'meal' | 'swap' | 'edit' | null;
   mealId: string;
   toast: string | null;
   genOn: boolean;
@@ -222,6 +222,18 @@ export interface AppState {
    * only so a toggle re-renders.
    */
   reminders: boolean;
+
+  /**
+   * Which Profile row is being edited, by its label, or `null`.
+   *
+   * The label rather than a key, because the row and the field are the same
+   * thing to the athlete and one name for both means they cannot drift apart.
+   */
+  editing: string | null;
+  /** What is typed into the editor, before it is committed. */
+  editDraft: string;
+  /** Inches, for the one field that is two numbers. */
+  editDraft2: string;
 }
 
 /** What the app needs to know about who is signed in. */

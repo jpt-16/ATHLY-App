@@ -21,6 +21,7 @@ import {
 } from './data';
 import { CEILING_NUTRIENTS, computeTargets, dayMeals, proteinPerLb } from './nutrition';
 import { fromInputValue, toInputValue } from './timeOfDay';
+import { currentValue, fieldFor, invalidHeight, invalidReason } from './profileFields';
 import { Browser } from '@capacitor/browser';
 
 import { lookupBarcode, portionOf } from '../data/foodDb';
@@ -296,6 +297,9 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     sleepDraft: '',
     foodDraft: { name: '', kcal: '', protein: '', carbs: '', fat: '' },
     reminders: remindersOn(),
+    editing: null,
+    editDraft: '',
+    editDraft2: '',
   };
 
   /** Planner "generating…" ticker. */
@@ -799,6 +803,117 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     if (!this._alive) return;
     this.update({ authBusy: false, authError: error });
     if (!error) onSuccess?.();
+  }
+
+  /**
+   * Save the account's answers, now.
+   *
+   * Onboarding used to be the only thing that wrote them, because it was the
+   * only thing that could change them. Every editor calls this, and a failure
+   * is said out loud: an athlete who changed their weight and saw nothing has
+   * no way to know the app is still feeding them for the old one.
+   */
+  private persistProfile() {
+    const userId = this.props.userId;
+    if (!isBackendConfigured || !userId) return;
+    void saveAccount(userId, this.persistable()).catch(() =>
+      this.toast("That didn't save — check your connection and try again."),
+    );
+  }
+
+  /** Open the editor for one Profile row. */
+  private openEditor = (label: string) => {
+    const field = fieldFor(label);
+    if (!field) {
+      this.toast(`${label} — not editable yet`);
+      return;
+    }
+    this.update({
+      overlay: 'edit',
+      editing: label,
+      editDraft: field.kind === 'height' ? String(this.state.ft) : currentValue(field, this.state),
+      editDraft2: field.kind === 'height' ? String(this.state.inch) : '',
+    });
+  };
+
+  private closeEditor = () => this.update({ overlay: null, editing: null });
+
+  /**
+   * Commit an edit, and let everything downstream follow.
+   *
+   * Nothing here recomputes a target. `computeTargets` is a pure function of
+   * these answers, so changing one of them changes the calories, the protein,
+   * the macros, the micronutrient targets and the portions of every planned day
+   * on the next render — which is the whole reason the arithmetic was written
+   * that way.
+   */
+  private commitEdit = () => {
+    const label = this.state.editing;
+    if (!label) return;
+    const field = fieldFor(label);
+    if (!field) return;
+
+    if (field.kind === 'height') {
+      const bad = invalidHeight(this.state.editDraft, this.state.editDraft2);
+      if (bad) {
+        this.toast(bad);
+        return;
+      }
+      this.update({ ft: Number(this.state.editDraft), inch: Number(this.state.editDraft2) });
+      this.finishEdit(label);
+      return;
+    }
+
+    const raw = this.state.editDraft;
+    const bad = invalidReason(field, raw);
+    if (bad) {
+      this.toast(bad);
+      return;
+    }
+
+    const n = Number(raw);
+    const setAnswer = (patch: Record<string, unknown>) =>
+      this.update((st) => ({ a: Object.assign({}, st.a, patch) }));
+
+    switch (label) {
+      case 'Name':
+        setAnswer({ name: raw.trim().slice(0, 60) });
+        break;
+      case 'Age':
+        this.update({ age: Math.round(n) });
+        break;
+      case 'Weight':
+        this.update({ lb: Math.round(n * 10) / 10 });
+        break;
+      case 'Baseline':
+        setAnswer({ sex: raw });
+        break;
+      case 'Goal weight':
+        this.update({ goalLb: Math.round(n) });
+        break;
+      case 'Pace':
+        this.update({ rate: n });
+        break;
+      case 'Goal':
+        setAnswer({ goal: raw });
+        break;
+      case 'Cooking level':
+        setAnswer({ cook: raw });
+        break;
+      case 'Weekday time':
+        setAnswer({ time: raw });
+        break;
+      case 'Budget':
+        setAnswer({ budget: raw });
+        break;
+    }
+    this.finishEdit(label);
+  };
+
+  private finishEdit(label: string) {
+    this.closeEditor();
+    this.persistProfile();
+    this.toast(`${label} updated`);
   }
 
   /** The account's own slice of state, ready for the database. */
@@ -1354,6 +1469,8 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     // What has actually been eaten today. `1840` used to live here.
     const logsToday = s.logs.filter((l) => l.date === iso);
     const eaten = s.logs.length ? totalsFor(s.logs, iso) : EMPTY_TOTALS;
+    const editField = s.editing ? fieldFor(s.editing) : undefined;
+
     const weekBars = weeklyCalories(s.logs, tg.cal, iso, 8);
 
     // Body: weight, water and sleep, all derived from `s.metrics` rather than
@@ -2889,7 +3006,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
                       ? this.doSignOut()
                       : label === 'Email'
                         ? undefined
-                        : this.toast(`${label} — editor would open`),
+                        : this.openEditor(label),
           style: `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;width:100%;text-align:left;${i ? 'border-top:1px solid rgba(17,24,21,.09)' : ''}`,
         })),
       })),
@@ -3035,8 +3152,19 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           this.toast('Enter a weight between 40 and 700 lb.');
           return;
         }
-        this.update({ weightDraft: '' });
-        void this.saveMetric({ weightLb: lb }, (u, d) => saveWeight(u, d, lb), `Logged ${lb} lb`);
+        // The weigh-in and the profile were two weights, and only one of them
+        // fed the arithmetic. An athlete could watch the chart climb while
+        // every calorie target on every other screen went on being calculated
+        // from whatever they typed during onboarding — the app disagreeing with
+        // itself about the single most important number it holds.
+        const moved = Math.round(lb) !== Math.round(s.lb);
+        this.update({ weightDraft: '', lb });
+        if (moved) this.persistProfile();
+        void this.saveMetric(
+          { weightLb: lb },
+          (u, d) => saveWeight(u, d, lb),
+          moved ? `Logged ${lb} lb — targets updated` : `Logged ${lb} lb`,
+        );
       },
 
       waterGlasses: waterNow / GLASS_ML,
@@ -3082,6 +3210,31 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       tabs: tabsDef.map(mkTab),
       tabsSplitL: tabsDef.slice(0, 2).map(mkTab),
       tabsSplitR: tabsDef.slice(3).map(mkTab),
+
+      // --- the Profile editor ------------------------------------------
+      //
+      // Every row on Profile used to end at `toast('editor would open')`, so an
+      // athlete who gained ten pounds or developed an allergy had one option:
+      // delete the account and start again. Nothing below recomputes a target —
+      // `computeTargets` is a pure function of these answers, so changing one
+      // changes the calories, the macros, the micronutrient targets and every
+      // planned day's portions on the next render.
+      showEdit: s.overlay === 'edit' && !!editField,
+      editTitle: editField?.title ?? '',
+      editHint: editField?.hint ?? '',
+      editKind: editField?.kind ?? 'text',
+      editUnit: editField?.unit ?? '',
+      editValue: s.editDraft,
+      editValue2: s.editDraft2,
+      setEditValue: (value: string) => this.update({ editDraft: value }),
+      setEditValue2: (value: string) => this.update({ editDraft2: value }),
+      editOptions: (editField?.options ?? []).map(([value, label]) => ({
+        label,
+        pick: () => this.update({ editDraft: value }),
+        style: this.chip(s.editDraft === value, false),
+      })),
+      editSave: this.commitEdit,
+      editCancel: this.closeEditor,
 
       showMeal: s.overlay === 'meal',
       showSwap: s.overlay === 'swap',
