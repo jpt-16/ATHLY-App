@@ -1,3 +1,4 @@
+import { ALLERGENS, HATE, LOVE, SPORTS } from './data';
 import type { AppState } from './types';
 
 /**
@@ -15,7 +16,7 @@ import type { AppState } from './types';
  * drift apart is exactly the kind of thing this file exists to stop.
  */
 
-export type ProfileFieldKind = 'text' | 'number' | 'height' | 'choice';
+export type ProfileFieldKind = 'text' | 'number' | 'height' | 'choice' | 'chips';
 
 export interface ProfileField {
   /** The Profile row's label, which is also how the row finds its field. */
@@ -31,6 +32,12 @@ export interface ProfileField {
   /** Whole numbers only, or one decimal place. */
   step?: number;
   options?: [string, string][];
+  /** For `chips`: the key in `Answers` this list lives under. */
+  answerKey?: 'sports' | 'likes' | 'dislikes' | 'allergies';
+  /** For `chips`: the offered options, before anything typed in. */
+  pool?: string[];
+  /** For `chips`: the placeholder on the box for anything not offered. */
+  addHint?: string;
 }
 
 /**
@@ -143,7 +150,75 @@ export const PROFILE_FIELDS: ProfileField[] = [
       ['high', 'Any budget'],
     ],
   },
+  {
+    label: 'Sports',
+    kind: 'chips',
+    answerKey: 'sports',
+    title: 'What do you play?',
+    pool: SPORTS,
+    addHint: 'e.g. ultimate frisbee',
+  },
+  {
+    label: 'Favorites',
+    kind: 'chips',
+    answerKey: 'likes',
+    title: 'What do you actually love?',
+    hint: 'These show up the most. Anything here comes off your "won\'t eat" list.',
+    pool: LOVE,
+    addHint: "e.g. my mom's arroz con pollo",
+  },
+  {
+    label: "Won't eat",
+    kind: 'chips',
+    answerKey: 'dislikes',
+    title: "What won't you eat?",
+    hint: 'No judgment — it just never gets suggested.',
+    pool: HATE,
+    addHint: 'e.g. anything with cilantro',
+  },
+  {
+    label: 'Allergies',
+    kind: 'chips',
+    answerKey: 'allergies',
+    title: 'Any allergies?',
+    hint: 'Hard blocks: nothing containing them is ever suggested. Check labels yourself as well — the filter is a convenience, not a safety system.',
+    pool: ALLERGENS,
+    addHint: 'Something else?',
+  },
 ];
+
+/**
+ * Apply a chip edit, with the two rules the lists have between them.
+ *
+ * A food cannot be both loved and refused, and "None of these" is an answer
+ * about allergies rather than an allergy. Both were already true in onboarding;
+ * they have to stay true when the same lists are edited from Profile, or the
+ * two routes into the same field disagree.
+ */
+export function applyChips(
+  field: ProfileField,
+  chosen: string[],
+  answers: Record<string, unknown>,
+): Record<string, unknown> {
+  const key = field.answerKey;
+  if (!key) return answers;
+
+  const next = { ...answers };
+  if (key === 'allergies' && chosen.includes('None of these')) {
+    // Saying "none" and naming three is not an answer we can act on. The
+    // explicit "none" wins, because it is the more recent claim.
+    next[key] = ['None of these'];
+    return next;
+  }
+  next[key] = chosen;
+
+  const opposite = key === 'likes' ? 'dislikes' : key === 'dislikes' ? 'likes' : null;
+  if (opposite) {
+    const other = (next[opposite] as string[] | undefined) ?? [];
+    next[opposite] = other.filter((x) => !chosen.includes(x));
+  }
+  return next;
+}
 
 export function fieldFor(label: string): ProfileField | undefined {
   return PROFILE_FIELDS.find((f) => f.label === label);
@@ -189,6 +264,13 @@ export function invalidHeight(ft: string, inch: string): string | null {
 }
 
 /** What a field currently reads, as the string its input wants. */
+/** The chips currently chosen for a chip field. */
+export function currentChips(field: ProfileField, s: AppState): string[] {
+  const key = field.answerKey;
+  if (!key) return [];
+  return ((s.a as Record<string, unknown>)[key] as string[] | undefined) ?? [];
+}
+
 export function currentValue(field: ProfileField, s: AppState): string {
   switch (field.label) {
     case 'Name':

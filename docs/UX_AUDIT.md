@@ -17,10 +17,16 @@ surfaces that already exist.
 > editable; a weigh-in on Progress updates the weight the arithmetic uses; and
 > the 13+ floor the privacy policy promises is enforced rather than stated.
 >
-> Still not editable: sports, favourite foods, foods to avoid and allergies. All
-> four are chip lists rather than single values and want the onboarding picker,
-> not this sheet. **Allergies is the one that matters**, because it is a safety
-> filter an athlete cannot currently correct.
+> All fifteen rows that hold an answer are editable, including the four chip
+> lists — sports, favourites, foods to avoid and allergies. Allergies mattered
+> most: it is the filter the terms lean on, and an athlete who developed one
+> could not tell the app.
+>
+> The two rules the lists have between them survive the second route in. A food
+> cannot be both loved and refused, and "None of these" wins over three named
+> allergies, because saying "none" and naming three is not an answer a filter can
+> act on. Both were already true in onboarding; `applyChips` is where they are
+> now true once.
 
 ## 1. Nothing on the Profile screen can be changed
 

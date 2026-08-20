@@ -234,6 +234,14 @@ export interface AppState {
   editDraft: string;
   /** Inches, for the one field that is two numbers. */
   editDraft2: string;
+  /**
+   * The chips chosen in the editor, before Save.
+   *
+   * A copy rather than the answers themselves, so Cancel actually cancels — a
+   * chip list edited in place has already happened by the time anyone reaches
+   * the buttons.
+   */
+  editChips: string[];
 }
 
 /** What the app needs to know about who is signed in. */

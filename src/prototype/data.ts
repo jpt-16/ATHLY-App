@@ -1388,6 +1388,26 @@ export const HATE = [
   'Liver',
   'Sardines',
 ];
+/**
+ * The allergy chips, named once.
+ *
+ * Onboarding asks this and Profile lets it be corrected, and the two lists have
+ * to be the same list — an allergen offered in one place and absent from the
+ * other is a filter an athlete cannot turn on where they need it.
+ */
+export const ALLERGENS = [
+  'Peanuts',
+  'Tree nuts',
+  'Dairy',
+  'Gluten',
+  'Shellfish',
+  'Fish',
+  'Soy',
+  'Eggs',
+  'Sesame',
+  'None of these',
+];
+
 export const SPORTS = [
   'Soccer',
   'Football',
@@ -1499,18 +1519,7 @@ export const OB: ObStep[] = [
     tag: 'Safety',
     title: 'Any allergies?',
     sub: 'Hard blocks. Nothing containing them is ever suggested.',
-    options: [
-      'Peanuts',
-      'Tree nuts',
-      'Dairy',
-      'Gluten',
-      'Shellfish',
-      'Fish',
-      'Soy',
-      'Eggs',
-      'Sesame',
-      'None of these',
-    ],
+    options: ALLERGENS,
     hint: 'Something else?',
   },
   {

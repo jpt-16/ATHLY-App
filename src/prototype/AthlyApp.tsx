@@ -21,7 +21,14 @@ import {
 } from './data';
 import { CEILING_NUTRIENTS, computeTargets, dayMeals, proteinPerLb } from './nutrition';
 import { fromInputValue, toInputValue } from './timeOfDay';
-import { currentValue, fieldFor, invalidHeight, invalidReason } from './profileFields';
+import {
+  applyChips,
+  currentChips,
+  currentValue,
+  fieldFor,
+  invalidHeight,
+  invalidReason,
+} from './profileFields';
 import { Browser } from '@capacitor/browser';
 
 import { lookupBarcode, portionOf } from '../data/foodDb';
@@ -300,6 +307,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     editing: null,
     editDraft: '',
     editDraft2: '',
+    editChips: [],
   };
 
   /** Planner "generating…" ticker. */
@@ -831,8 +839,16 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     this.update({
       overlay: 'edit',
       editing: label,
-      editDraft: field.kind === 'height' ? String(this.state.ft) : currentValue(field, this.state),
+      // The free-text box on a chip field starts empty; everything else starts
+      // at what the row already says.
+      editDraft:
+        field.kind === 'chips'
+          ? ''
+          : field.kind === 'height'
+            ? String(this.state.ft)
+            : currentValue(field, this.state),
       editDraft2: field.kind === 'height' ? String(this.state.inch) : '',
+      editChips: field.kind === 'chips' ? currentChips(field, this.state) : [],
     });
   };
 
@@ -852,6 +868,12 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     if (!label) return;
     const field = fieldFor(label);
     if (!field) return;
+
+    if (field.kind === 'chips') {
+      this.update((st) => ({ a: applyChips(field, st.editChips, st.a) as typeof st.a }));
+      this.finishEdit(label);
+      return;
+    }
 
     if (field.kind === 'height') {
       const bad = invalidHeight(this.state.editDraft, this.state.editDraft2);
@@ -3233,6 +3255,30 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         pick: () => this.update({ editDraft: value }),
         style: this.chip(s.editDraft === value, false),
       })),
+      // Chips edit a copy, so Cancel actually cancels. Anything typed into the
+      // box joins the list — the pools are a starting point, not the limit of
+      // what an athlete is allowed to be allergic to.
+      editChips: (editField?.pool ?? [])
+        .concat(s.editChips.filter((c) => !(editField?.pool ?? []).includes(c)))
+        .map((chip) => ({
+          label: chip,
+          pick: () =>
+            this.update((st) => ({
+              editChips: st.editChips.includes(chip)
+                ? st.editChips.filter((x) => x !== chip)
+                : st.editChips.concat(chip),
+            })),
+          style: this.chip(s.editChips.includes(chip), false),
+        })),
+      editAddHint: editField?.addHint ?? '',
+      editAdd: () => {
+        const typed = s.editDraft.trim().slice(0, 60);
+        if (!typed) return;
+        this.update((st) => ({
+          editDraft: '',
+          editChips: st.editChips.includes(typed) ? st.editChips : st.editChips.concat(typed),
+        }));
+      },
       editSave: this.commitEdit,
       editCancel: this.closeEditor,
 

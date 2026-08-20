@@ -5,7 +5,7 @@ import type { UserEvent } from '@testing-library/user-event';
 
 import { AthlyApp } from './AthlyApp';
 import { SLOW, reachHome } from './walkthrough';
-import { MIN_AGE, invalidHeight, invalidReason, fieldFor } from './profileFields';
+import { MIN_AGE, applyChips, fieldFor, invalidHeight, invalidReason } from './profileFields';
 
 /**
  * Changing an answer, and everything that follows from it.
@@ -117,6 +117,48 @@ describe('the profile editor', () => {
   );
 });
 
+describe('the chip lists', () => {
+  it(
+    'adds an allergy that is not on the list',
+    async () => {
+      const u = user();
+      render(<AthlyApp navPrimary="Even tabs" />);
+      await reachHome(u);
+      await openProfile(u);
+
+      await u.click(screen.getByText('Allergies').closest('button') as HTMLElement);
+      // The pool is a starting point, not the limit of what someone is allowed
+      // to be allergic to.
+      await u.type(await screen.findByLabelText(/something else/i), 'Kiwi');
+      await u.click(screen.getByRole('button', { name: /^add$/i }));
+      await u.click(screen.getByRole('button', { name: /^save$/i }));
+
+      expect(await screen.findByText(/kiwi/i)).toBeInTheDocument();
+    },
+    SLOW,
+  );
+
+  it(
+    'takes a food off the other list rather than holding both',
+    async () => {
+      const u = user();
+      render(<AthlyApp navPrimary="Even tabs" />);
+      await reachHome(u);
+      await openProfile(u);
+
+      // Onboarding puts Eggs on the "won't eat" list in the walkthrough.
+      await u.click(screen.getByText('Favorites').closest('button') as HTMLElement);
+      const eggs = await screen.findByRole('button', { name: /^eggs$/i });
+      await u.click(eggs);
+      await u.click(screen.getByRole('button', { name: /^save$/i }));
+
+      const wontEat = screen.getByText("Won't eat").closest('button');
+      expect(wontEat?.textContent).not.toMatch(/eggs/i);
+    },
+    SLOW,
+  );
+});
+
 describe('the rules, on their own', () => {
   it('states the age floor once, and it is the one the policy promises', () => {
     expect(MIN_AGE).toBe(13);
@@ -135,6 +177,19 @@ describe('the rules, on their own', () => {
     expect(invalidHeight('5', '12')).toMatch(/inches go from 0 to 11/i);
     expect(invalidHeight('2', '0')).toMatch(/not a height/i);
     expect(invalidHeight('5', '10')).toBeNull();
+  });
+
+  it('lets "none of these" win over three named allergies', () => {
+    // Saying "none" and naming three is not an answer the filter can act on,
+    // and the explicit "none" is the more recent claim.
+    const out = applyChips(fieldFor('Allergies')!, ['Peanuts', 'None of these'], { allergies: ['Peanuts'] });
+    expect(out.allergies).toEqual(['None of these']);
+  });
+
+  it('will not let a food be both loved and refused', () => {
+    const out = applyChips(fieldFor('Favorites')!, ['Eggs'], { likes: [], dislikes: ['Eggs', 'Olives'] });
+    expect(out.likes).toEqual(['Eggs']);
+    expect(out.dislikes).toEqual(['Olives']);
   });
 
   it('refuses a choice that is not on the list', () => {

@@ -57,7 +57,42 @@ export function EditSheet({ v }: { v: ViewModel }) {
           <div style={S('height:10px')} />
         )}
 
-        {v.editKind === 'choice' ? (
+        {v.editKind === 'chips' ? (
+          <>
+            <div
+              style={S('display:flex;flex-wrap:wrap;gap:8px;max-height:210px;overflow-y:auto')}
+              className={'ffs'}
+            >
+              {(v.editChips ?? []).map((c: VmRow, i: number) => (
+                <React.Fragment key={i}>
+                  <button onClick={c.pick} style={S(c.style)}>
+                    {c.label}
+                  </button>
+                </React.Fragment>
+              ))}
+            </div>
+            <div style={S('display:flex;gap:8px;margin-top:12px')}>
+              <input
+                type="text"
+                value={v.editValue}
+                onChange={(e) => v.setEditValue(e.target.value)}
+                placeholder={v.editAddHint}
+                aria-label={v.editAddHint}
+                style={S(
+                  'flex:1;min-width:0;padding:12px 14px;border-radius:12px;border:2px solid rgba(17,24,21,.12);font-size:14px;font-weight:700;font-family:inherit;background:#fff;color:#111815',
+                )}
+              />
+              <button
+                onClick={v.editAdd}
+                style={S(
+                  'padding:12px 18px;border-radius:12px;border:2px solid rgba(17,24,21,.12);background:#fff;font-size:13.5px;font-weight:800;flex:none',
+                )}
+              >
+                Add
+              </button>
+            </div>
+          </>
+        ) : v.editKind === 'choice' ? (
           <div style={S('display:flex;flex-wrap:wrap;gap:8px')}>
             {(v.editOptions ?? []).map((o: VmRow, i: number) => (
               <React.Fragment key={i}>
