@@ -55,16 +55,33 @@ a substitute for it.
 
 ### 2. No privacy review, and the app holds health data about minors
 
-Logged food intake tied to a named 13-year-old is health data about a child.
-Whatever that requires — parental consent, retention limits, a Privacy Policy
-and Terms, regional rules — is a question for a lawyer, and one has not been
-asked.
+**A drafted policy is now in `public/privacy.html`**, reachable at
+`/privacy.html` on the deployed site and from Profile → About → Privacy policy
+inside the app. It was written from the schema rather than from a template, and
+`src/lib/privacyPolicy.test.ts` fails if a new user-owned table appears without
+the policy describing it — a policy that has quietly stopped being true is worse
+than none, because it is a specific false statement to a fourteen-year-old and
+their parents.
 
-What exists is the technical groundwork, not a compliance position: RLS on every
-table, an audited deletion path, no analytics, no third-party trackers, and no
-data sold or shared. What does not exist: a Privacy Policy, Terms of Service, an
-in-app disclosure that this is not medical advice, a retention policy, or any
-answer at all on parental consent.
+**It does not discharge this item.** Still outstanding:
+
+- [ ] **A qualified lawyer reads it.** COPPA if anyone under 13 ever gets in,
+      state minor-privacy laws, and GDPR-K if this is ever offered in the EU.
+- [ ] **Terms of Use.** Not drafted at all.
+- [ ] **A real contact address.** The policy says `privacy@athly.app`, which
+      does not exist yet. A promise to answer, pointed at a mailbox nobody
+      reads, is worse than no promise.
+- [ ] **Set `VITE_SITE_URL`** in the iOS build. Without it the in-app link has
+      nowhere to go — the app's own origin is `capacitor://localhost`, which no
+      browser outside the app can open, and Apple requires a working public URL.
+- [ ] **Decide about Google Fonts.** The typeface is loaded from Google's
+      servers, so Google receives every user's IP address on every launch. The
+      policy says so, because it is true. Self-hosting Archivo removes a
+      third-party data flow from a minors' app entirely and costs one build
+      step; it is the cheapest privacy win available here.
+- [ ] **Age gate.** The policy says 13+; nothing in the app asks or enforces it.
+      Onboarding collects an age, so refusing under-13 sign-ups is a small
+      change, and it is the one that makes the sentence true.
 
 ### 3. The nutrition values are authored estimates
 

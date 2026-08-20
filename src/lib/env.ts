@@ -90,3 +90,22 @@ export const env: Env | null = isBackendConfigured ? { supabaseUrl: rawUrl, supa
  * be on before an App Store submission.
  */
 export const isAppleEnabled: boolean = import.meta.env.VITE_ENABLE_APPLE === 'true';
+
+/**
+ * Where the public site lives, for links that must work outside the app.
+ *
+ * The privacy policy is the reason this exists. In a browser the page can be
+ * reached at `/privacy.html` on whatever origin the app is served from, but the
+ * iOS build's origin is `capacitor://localhost` — a scheme no browser outside
+ * the app can open, and Apple requires a privacy policy at a real, public URL.
+ *
+ * So: the configured site if there is one, the current origin otherwise, and
+ * `null` when neither is usable rather than a link that goes nowhere.
+ */
+export const siteUrl: string | null = (() => {
+  const configured = import.meta.env.VITE_SITE_URL?.trim();
+  if (configured && usableUrl(configured)) return configured.replace(/\/+$/, '');
+  if (typeof window === 'undefined') return null;
+  const origin = window.location.origin;
+  return /^https?:/.test(origin) ? origin : null;
+})();

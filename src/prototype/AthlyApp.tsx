@@ -21,6 +21,8 @@ import {
 } from './data';
 import { CEILING_NUTRIENTS, computeTargets, dayMeals, proteinPerLb } from './nutrition';
 import { fromInputValue, toInputValue } from './timeOfDay';
+import { Browser } from '@capacitor/browser';
+
 import { lookupBarcode, portionOf } from '../data/foodDb';
 import { loadMetrics, saveSleep, saveWater, saveWeight } from '../data/metricsRepo';
 import type { DayMetrics } from '../data/metricsRepo';
@@ -50,7 +52,7 @@ import type {
   Tab,
   Targets,
 } from './types';
-import { isAppleEnabled, isBackendConfigured } from '../lib/env';
+import { isAppleEnabled, isBackendConfigured, siteUrl } from '../lib/env';
 import { STARTUP_TIMEOUT_MS, withTimeout } from '../lib/withTimeout';
 import {
   addDays,
@@ -614,6 +616,27 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
    * cannot be asked again from inside the app, and telling them "off" would
    * leave them tapping a switch that will never move.
    */
+  /**
+   * Open the privacy policy.
+   *
+   * Deliberately the hosted page rather than a screen inside the app. Apple
+   * requires a policy at a public URL, a parent asking what the app holds about
+   * their child should not have to install it first, and a second copy of this
+   * text living in the bundle is a second copy to fall out of date.
+   *
+   * Needs `VITE_SITE_URL` in the iOS build: the app's own origin is
+   * `capacitor://localhost`, which no browser outside it can open.
+   */
+  private openPrivacy() {
+    if (!siteUrl) {
+      this.toast('The privacy policy is on the ATHLY website.');
+      return;
+    }
+    void Browser.open({ url: `${siteUrl}/privacy.html` }).catch(() => {
+      this.toast("Couldn't open that just now.");
+    });
+  }
+
   private async toggleReminders() {
     const next = !this.state.reminders;
     const result = await setReminders(next);
@@ -2827,6 +2850,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           title: 'Reminders',
           rows: [['Log reminders', s.reminders ? 'On' : 'Off']] as [string, string][],
         },
+        {
+          title: 'About',
+          rows: [['Privacy policy', '']] as [string, string][],
+        },
         // Only when there is an account to manage. With no backend configured
         // there is no session, no email and nothing to sign out of, so the group
         // is absent rather than present and inert.
@@ -2849,13 +2876,15 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           tap: () =>
             label === 'Schedule'
               ? this.update({ tab: 'calendar' })
-              : label === 'Log reminders'
-                ? void this.toggleReminders()
-                : label === 'Sign out'
-                  ? this.doSignOut()
-                  : label === 'Email'
-                    ? undefined
-                    : this.toast(`${label} — editor would open`),
+              : label === 'Privacy policy'
+                ? this.openPrivacy()
+                : label === 'Log reminders'
+                  ? void this.toggleReminders()
+                  : label === 'Sign out'
+                    ? this.doSignOut()
+                    : label === 'Email'
+                      ? undefined
+                      : this.toast(`${label} — editor would open`),
           style: `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;width:100%;text-align:left;${i ? 'border-top:1px solid rgba(17,24,21,.09)' : ''}`,
         })),
       })),

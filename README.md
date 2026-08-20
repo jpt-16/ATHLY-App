@@ -697,6 +697,27 @@ on once an error tracker exists to consume them.
 branch to the one you are deploying, or Vercel will look for `main` and find
 nothing.
 
+## Privacy
+
+`public/privacy.html`, served at `/privacy.html` and linked from Profile → About
+→ Privacy policy. Written from the schema rather than from a template, and
+`src/lib/privacyPolicy.test.ts` fails if a user-owned table appears without the
+policy describing it.
+
+That test is the point of the exercise. A privacy policy goes wrong the way a
+Content-Security-Policy does — not with an error, but by quietly ceasing to be
+true — and here the thing that stops being true is a specific promise to a
+fourteen-year-old and their parents.
+
+**It is a draft and says so at the top.** It has not been reviewed by a lawyer,
+there is no Terms of Use, `privacy@athly.app` does not exist yet, and nothing in
+the app enforces the 13+ floor the policy states. See
+[`PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md) Blocking #2.
+
+Set `VITE_SITE_URL` for the iOS build or the in-app link has nowhere to go: the
+app's own origin is `capacitor://localhost`, which no browser outside it can
+open, and Apple requires a policy at a working public URL.
+
 ## Before this is public
 
 The full list, including the dashboard settings this repository cannot check for
