@@ -617,22 +617,22 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
    * leave them tapping a switch that will never move.
    */
   /**
-   * Open the privacy policy.
+   * Open the privacy policy or the terms.
    *
-   * Deliberately the hosted page rather than a screen inside the app. Apple
-   * requires a policy at a public URL, a parent asking what the app holds about
-   * their child should not have to install it first, and a second copy of this
+   * Deliberately the hosted pages rather than screens inside the app. Apple
+   * requires both at public URLs, a parent asking what the app holds about
+   * their child should not have to install it first, and a second copy of that
    * text living in the bundle is a second copy to fall out of date.
    *
    * Needs `VITE_SITE_URL` in the iOS build: the app's own origin is
    * `capacitor://localhost`, which no browser outside it can open.
    */
-  private openPrivacy() {
+  private openLegal(page: 'privacy' | 'terms') {
     if (!siteUrl) {
-      this.toast('The privacy policy is on the ATHLY website.');
+      this.toast('That page is on the ATHLY website.');
       return;
     }
-    void Browser.open({ url: `${siteUrl}/privacy.html` }).catch(() => {
+    void Browser.open({ url: `${siteUrl}/${page}.html` }).catch(() => {
       this.toast("Couldn't open that just now.");
     });
   }
@@ -2852,7 +2852,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         },
         {
           title: 'About',
-          rows: [['Privacy policy', '']] as [string, string][],
+          rows: [
+            ['Privacy policy', ''],
+            ['Terms of use', ''],
+          ] as [string, string][],
         },
         // Only when there is an account to manage. With no backend configured
         // there is no session, no email and nothing to sign out of, so the group
@@ -2877,14 +2880,16 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
             label === 'Schedule'
               ? this.update({ tab: 'calendar' })
               : label === 'Privacy policy'
-                ? this.openPrivacy()
-                : label === 'Log reminders'
-                  ? void this.toggleReminders()
-                  : label === 'Sign out'
-                    ? this.doSignOut()
-                    : label === 'Email'
-                      ? undefined
-                      : this.toast(`${label} — editor would open`),
+                ? this.openLegal('privacy')
+                : label === 'Terms of use'
+                  ? this.openLegal('terms')
+                  : label === 'Log reminders'
+                    ? void this.toggleReminders()
+                    : label === 'Sign out'
+                      ? this.doSignOut()
+                      : label === 'Email'
+                        ? undefined
+                        : this.toast(`${label} — editor would open`),
           style: `display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;width:100%;text-align:left;${i ? 'border-top:1px solid rgba(17,24,21,.09)' : ''}`,
         })),
       })),

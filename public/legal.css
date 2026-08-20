@@ -1,0 +1,154 @@
+/*
+ * The look of ATHLY's legal pages.
+ *
+ * Shared by `privacy.html` and `terms.html`. They are plain static files rather
+ * than app screens — Apple wants both at public URLs, and a parent checking what
+ * the app holds about their child should not have to install it first — so they
+ * carry their own stylesheet rather than the app's.
+ *
+ * System fonts on purpose. Archivo would mean a request to Google's servers on
+ * a page whose whole subject is which third parties see you.
+ */
+
+:root {
+  --ink: #111815;
+  --ground: #f4f2ed;
+  --page: #e8e5de;
+  --muted: #6e6a60;
+  --green: #17a05e;
+  --rule: rgba(17, 24, 21, 0.12);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  padding: 0 20px 80px;
+  background: var(--page);
+  color: var(--ink);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.6;
+  font-size: 16px;
+}
+main {
+  max-width: 680px;
+  margin: 0 auto;
+  background: var(--ground);
+  padding: 40px 28px 48px;
+  border-radius: 20px;
+  margin-top: 28px;
+}
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.tile {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--ink);
+  color: var(--ground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: -0.04em;
+}
+.name {
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  font-size: 17px;
+}
+h1 {
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  font-weight: 900;
+}
+.updated {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 26px;
+}
+h2 {
+  font-size: 20px;
+  letter-spacing: -0.015em;
+  margin: 34px 0 10px;
+  font-weight: 900;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+}
+h2:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+p {
+  margin: 0 0 14px;
+}
+ul {
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+li {
+  margin-bottom: 7px;
+}
+strong {
+  font-weight: 800;
+}
+a {
+  color: var(--green);
+}
+.callout {
+  background: #fff;
+  border-left: 4px solid var(--green);
+  border-radius: 0 12px 12px 0;
+  padding: 16px 18px;
+  margin: 0 0 20px;
+  font-size: 15px;
+}
+.draft {
+  background: #111815;
+  color: var(--ground);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin: 0 0 26px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.draft strong {
+  color: #5be3a0;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 18px;
+  font-size: 15px;
+}
+th,
+td {
+  text-align: left;
+  padding: 9px 10px 9px 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 800;
+}
+footer {
+  max-width: 680px;
+  margin: 22px auto 0;
+  color: var(--muted);
+  font-size: 13px;
+}

@@ -697,12 +697,17 @@ on once an error tracker exists to consume them.
 branch to the one you are deploying, or Vercel will look for `main` and find
 nothing.
 
-## Privacy
+## Privacy and terms
 
-`public/privacy.html`, served at `/privacy.html` and linked from Profile → About
-→ Privacy policy. Written from the schema rather than from a template, and
+Two static pages — `public/privacy.html` and `public/terms.html` — served at
+`/privacy.html` and `/terms.html`, and linked from Profile → About.
+
+The policy is written from the schema rather than from a template, and
 `src/lib/privacyPolicy.test.ts` fails if a user-owned table appears without the
-policy describing it.
+policy describing it. `src/lib/terms.test.ts` does the same job for the clauses
+this app specifically needs: not medical advice, no dietitian has reviewed the
+numbers, do not use it with an eating disorder, and the allergy filter is a
+convenience rather than a safety system.
 
 That test is the point of the exercise. A privacy policy goes wrong the way a
 Content-Security-Policy does — not with an error, but by quietly ceasing to be

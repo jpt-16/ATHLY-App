@@ -67,7 +67,16 @@ their parents.
 
 - [ ] **A qualified lawyer reads it.** COPPA if anyone under 13 ever gets in,
       state minor-privacy laws, and GDPR-K if this is ever offered in the EU.
-- [ ] **Terms of Use.** Not drafted at all.
+- [ ] **Terms of Use** is drafted (`public/terms.html`) and unreviewed. It
+      carries the clauses this app specifically needs — not medical advice, no
+      dietitian has seen the numbers, do not use it with an eating disorder, and
+      the allergy filter is a convenience rather than a safety system — and
+      `src/lib/terms.test.ts` holds each of them in place.
+- [ ] **Governing law is a placeholder.** `[STATE]` and `[COUNTY]` are literal
+      in the file, because the answer depends on where ATHLY is established and
+      a guess would be worse than a blank. A test asserts the placeholders are
+      still there, and fails once they are filled in — which is the prompt to
+      delete the test.
 - [ ] **A real contact address.** The policy says `privacy@athly.app`, which
       does not exist yet. A promise to answer, pointed at a mailbox nobody
       reads, is worse than no promise.
