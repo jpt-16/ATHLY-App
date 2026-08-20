@@ -1142,8 +1142,20 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     return `padding:8px 13px;border-radius:99px;border:2px solid ${on ? GREEN : 'rgba(17,24,21,.13)'};font-size:12.5px;font-weight:700;background:${on ? 'rgba(23,160,94,.1)' : '#fff'};color:${on ? '#0E7B47' : INK}`;
   }
 
-  targets(): Targets {
-    return computeTargets(this.state);
+  /**
+   * The targets for one day.
+   *
+   * Today by default, because that is what Home, the rings and the Log are
+   * about. Pass a date for the calendar: the day an athlete is looking at is
+   * the day whose number they need, and a rest day and a game day are not the
+   * same day — see `nutrition.ts` §3.
+   *
+   * Pass `null` for the typical week, which is what the onboarding summary and
+   * the stored `goals` row describe.
+   */
+  targets(date?: IsoDate | null): Targets {
+    if (date === null) return computeTargets(this.state);
+    return computeTargets({ ...this.state, day: this.dayType(date ?? todayIso()) });
   }
 
   /**
@@ -1491,6 +1503,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     // What has actually been eaten today. `1840` used to live here.
     const logsToday = s.logs.filter((l) => l.date === iso);
     const eaten = s.logs.length ? totalsFor(s.logs, iso) : EMPTY_TOTALS;
+    // What the week's easiest and hardest days come to, for the sentence under
+    // the headline. Computed rather than described, so it cannot drift from
+    // what the days actually produce.
+    const weekCals = Object.keys(s.week).map((k) => computeTargets({ ...s, day: s.week[+k] }).cal);
+    const calLow = Math.min(...weekCals);
+    const calHigh = Math.max(...weekCals);
+
     const editField = s.editing ? fieldFor(s.editing) : undefined;
 
     const weekBars = weeklyCalories(s.logs, tg.cal, iso, 8);
@@ -1769,7 +1788,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
 
     const [selMode, selTime, selLift, selDur] = this.dayType(s.selDate);
     const selMeals = this.resolveSlots(dayMeals(selMode, selLift), s.selDate);
-    const { servingsFor: selServings } = this.portionedDay(selMeals, tg.cal);
+    // The day being looked at, not today. Portioning a Saturday game against
+    // Tuesday's target is how a plan comes out 600 calories short of the number
+    // printed at the top of the same screen.
+    const selTargets = this.targets(s.selDate);
+    const { servingsFor: selServings } = this.portionedDay(selMeals, selTargets.cal);
     const sel = {
       dateLabel: longDateLabel(s.selDate),
       modes: (
@@ -2381,6 +2404,14 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
                 : 'Small enough that training quality holds up.'
               : 'Enough to hold your weight and train hard.',
         calText: tg.cal.toLocaleString(),
+        // The number above is today's. Saying so, and saying what the other
+        // days come to, is the difference between a target and a claim: an
+        // athlete who sees 3,515 on Tuesday and 3,140 on Wednesday should have
+        // been told that would happen.
+        calRange:
+          calLow === calHigh
+            ? 'The same every day — your week has no training in it yet.'
+            : `Today's number. Across your week it runs ${calLow.toLocaleString()}–${calHigh.toLocaleString()}, by how hard the day is.`,
         math: [
           {
             label: 'Resting burn',
@@ -2926,7 +2957,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         {
           title: 'Targets',
           rows: [
-            ['Daily calories', tg.cal.toLocaleString()],
+            ['Daily calories', `${tg.cal.toLocaleString()} today`],
             // Derived, so the row says what it is derived from rather than
             // which of three modes produced it.
             ['Protein', `${tg.protein}g · ${proteinPerLb(tg).toFixed(2)}g per lb of goal`],

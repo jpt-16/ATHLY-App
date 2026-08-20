@@ -275,7 +275,17 @@ export interface SessionProps {
  * be cast into a shape carrying thirty more it does not have. Naming the real
  * input is both honest and less code. `AppState` still satisfies it.
  */
-export type TargetInputs = Pick<AppState, 'a' | 'age' | 'ft' | 'inch' | 'lb' | 'goalLb' | 'rate' | 'week'>;
+export type TargetInputs = Pick<AppState, 'a' | 'age' | 'ft' | 'inch' | 'lb' | 'goalLb' | 'rate' | 'week'> & {
+  /**
+   * The day being computed for.
+   *
+   * Omitted means "a typical week" — the average across the seven, which is what
+   * the stored `goals` row and the onboarding summary describe. Anything showing
+   * an athlete a number for a particular day passes that day, because a rest day
+   * and a game day are not the same day.
+   */
+  day?: DaySpec;
+};
 
 /** Layout variants the prototype exposes; these were the design's A/B knobs. */
 export interface AthlyProps extends SessionProps {

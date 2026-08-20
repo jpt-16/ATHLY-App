@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeTargets, dayMeals, microTargets, proteinPerLb } from './nutrition';
+import { computeTargets, dayMeals, dayMultiplier, microTargets, proteinPerLb } from './nutrition';
 import { MICRONUTRIENTS } from './nutrients';
-import type { AppState, Week } from './types';
+import type { AppState, DaySpec, Week } from './types';
 
 /** A rest-day-only week, so activity is held constant unless a test varies it. */
 const restWeek = (): Week => ({
@@ -332,5 +332,73 @@ describe('micronutrient targets', () => {
       expect(microTargets(age, 'male', 3000).calcium).toBe(1300);
     }
     expect(microTargets(25, 'male', 3000).calcium).toBe(1000);
+  });
+});
+
+describe('the day, not the week', () => {
+  /** A week of one repeated day, so the multiplier is the only variable. */
+  const everyDay = (spec: DaySpec) =>
+    Object.fromEntries(Array.from({ length: 7 }, (_, i) => [i, spec])) as unknown as Week;
+
+  /** Targets for one named day. `day` is a `TargetInputs` field, not app state. */
+  const on = (week: Week, day: DaySpec) => computeTargets({ ...athlete({ week }), day });
+
+  it('feeds a game day more than a rest day', () => {
+    const week = everyDay(['rest', '', '', '']);
+    const rest = on(week, ['rest', '', '', ''] as DaySpec);
+    const practice = on(week, ['practice', '4:30 pm', '', ''] as DaySpec);
+    const game = on(week, ['game', '1:00 pm', '', ''] as DaySpec);
+
+    // The whole point of UX_AUDIT #2: these used to be identical.
+    expect(practice.cal).toBeGreaterThan(rest.cal);
+    expect(game.cal).toBeGreaterThan(practice.cal);
+  });
+
+  it('adds a lift on top of whatever the day already was', () => {
+    const week = everyDay(['rest', '', '', '']);
+    const plain = on(week, ['rest', '', '', ''] as DaySpec);
+    const lifting = on(week, ['rest', '', '6:30 am', ''] as DaySpec);
+    expect(lifting.cal).toBeGreaterThan(plain.cal);
+  });
+
+  it('pays for a longer session, up to a point', () => {
+    const week = everyDay(['practice', '4:30 pm', '', '']);
+    const hour = on(week, ['practice', '4:30 pm', '', '60'] as DaySpec);
+    const two = on(week, ['practice', '4:30 pm', '', '120'] as DaySpec);
+    const absurd = on(week, ['practice', '4:30 pm', '', '600'] as DaySpec);
+
+    expect(two.cal).toBeGreaterThan(hour.cal);
+    // Bounded: someone typing 600 minutes should not be handed a target to
+    // match it.
+    expect(absurd.cal).toBe(two.cal);
+  });
+
+  it('describes a typical week when no day is named', () => {
+    // What the stored `goals` row and the onboarding summary are about. It has
+    // to sit between the easiest day and the hardest, or it is describing a
+    // week nobody has.
+    const week = {
+      0: ['rest', '', '', ''],
+      1: ['practice', '4:30 pm', '', ''],
+      2: ['practice', '4:30 pm', '6:30 am', ''],
+      3: ['rest', '', '', ''],
+      4: ['practice', '4:30 pm', '', ''],
+      5: ['rest', '', '', ''],
+      6: ['game', '1:00 pm', '', ''],
+    } as unknown as Week;
+
+    const typical = computeTargets(athlete({ week }));
+    const rest = on(week, ['rest', '', '', ''] as DaySpec);
+    const game = on(week, ['game', '1:00 pm', '', ''] as DaySpec);
+
+    expect(typical.cal).toBeGreaterThan(rest.cal);
+    expect(typical.cal).toBeLessThan(game.cal);
+  });
+
+  it('stays in the range the weekly slope used to produce', () => {
+    // The old formula ran 1.34 to 1.76. A per-day figure outside that would be
+    // a change of substance dressed as a refactor.
+    expect(dayMultiplier(['rest', '', '', ''] as DaySpec)).toBeGreaterThanOrEqual(1.34);
+    expect(dayMultiplier(['game', '1:00 pm', '6:30 am', '120'] as DaySpec)).toBeLessThanOrEqual(1.85);
   });
 });

@@ -52,6 +52,13 @@ export function TargetsScreen({ v }: { v: ViewModel }) {
           </div>
           <div style={S('font-size:15px;font-weight:800;color:rgba(244,242,237,.5)')}>cal / day</div>
         </div>
+        <p
+          style={S(
+            'margin:-10px 0 18px;font-size:12.5px;line-height:1.5;color:rgba(244,242,237,.5);max-width:330px',
+          )}
+        >
+          {v.targets.calRange}
+        </p>
         <div
           style={S('background:rgba(244,242,237,.07);border-radius:18px;overflow:hidden;margin-bottom:14px')}
         >

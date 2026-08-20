@@ -1,4 +1,4 @@
-import type { DayMode, Sex, TargetInputs, Targets } from './types';
+import type { DayMode, DaySpec, Sex, TargetInputs, Targets, Week } from './types';
 import type { Micronutrient } from './nutrients';
 
 /**
@@ -30,14 +30,25 @@ import type { Micronutrient } from './nutrients';
  * The −78 for an unstated sex is the midpoint of the other two, so declining to
  * answer lands between rather than defaulting to either.
  *
- * ## 3. Activity — training days per week
+ * ## 3. Activity — per day, not per week
  *
- *     multiplier = 1.34 + 0.06 · trainingDays        (1.34 … 1.76)
+ *     multiplier = 1.35 base
+ *                + 0.15 practice  /  0.25 game
+ *                + 0.10 a lift
+ *                + 0.05 per half hour past the first             (1.35 … 1.80)
  *     maintenance = round(BMR · multiplier, to 10)
  *
- * A day counts if it has a session or a lift. This is a weekly average, and
- * `docs/UX_AUDIT.md` §2 argues it should become per-day — that is a clinical
- * question, deliberately not answered here.
+ * This used to be `1.34 + 0.06 · trainingDays`: one number for the whole week,
+ * so a rest day and a game day were given identical targets on a screen that
+ * labelled them differently. `docs/UX_AUDIT.md` §2 called it the biggest
+ * nutrition improvement available, and this is it.
+ *
+ * The increments are **not clinical figures.** They are a defensible shape —
+ * a game costs more than a practice, a lift costs more than neither, a longer
+ * session costs more than a short one — sized so a typical week averages close
+ * to what the old weekly figure produced. What each one should actually be is
+ * the first question for a dietitian, and it is now a question about six
+ * numbers in one function rather than about a slope.
  *
  * ## 4. The goal adjustment
  *
@@ -171,6 +182,38 @@ export const CEILING_NUTRIENTS: readonly Micronutrient[] = ['sodium', 'sugar'];
 // Targets
 // ---------------------------------------------------------------------------
 
+/**
+ * What one day's training costs, as a multiple of resting burn.
+ *
+ * See §3. The shape is the argument: a game is harder than a practice, a lift
+ * on top is more than neither, and two hours is more than one. The numbers are
+ * a starting point for a dietitian rather than a finding.
+ */
+export function dayMultiplier(spec: DaySpec): number {
+  const [mode, , lift, duration] = spec;
+
+  let mult = 1.35;
+  if (mode === 'practice') mult += 0.15;
+  if (mode === 'game') mult += 0.25;
+  if (lift) mult += 0.1;
+
+  // Duration is optional and only counts for an actual session. Half an hour
+  // past the first hour is 0.05, so two hours is 0.1 — bounded, because an
+  // athlete who types 300 minutes should not be handed a 4,000-calorie target.
+  const minutes = Number(duration);
+  if (mode !== 'rest' && Number.isFinite(minutes) && minutes > 60) {
+    mult += Math.min(0.1, Math.floor((minutes - 60) / 30) * 0.05);
+  }
+  return mult;
+}
+
+/** The week's average, for anything describing a typical day rather than a real one. */
+export function averageMultiplier(week: Week): number {
+  const specs = Object.keys(week).map((k) => week[+k]);
+  if (specs.length === 0) return 1.35;
+  return specs.reduce((sum, spec) => sum + dayMultiplier(spec), 0) / specs.length;
+}
+
 /** Mifflin–St Jeor. Pounds and inches in, kcal out. */
 function restingBurn(lb: number, ft: number, inch: number, age: number, sex: Sex): number {
   const kg = lb * 0.4536;
@@ -204,10 +247,13 @@ export function computeTargets(s: TargetInputs): Targets {
           : s.lb;
   const basisLb = goal === 'perform' || goal === 'habits' ? s.lb : goalLb;
 
-  // §2, §3 — resting burn at the basis weight, scaled by the training week.
+  // §2, §3 — resting burn at the basis weight, scaled by *this day's* training.
   const bmr = restingBurn(basisLb, s.ft, s.inch, s.age, sex);
   const days = Object.keys(s.week).filter((k) => s.week[+k][0] !== 'rest' || s.week[+k][2]).length;
-  const mult = 1.34 + 0.06 * days;
+  // No day given means "a typical week" — the average across the seven, which
+  // is what the stored `goals` row and the onboarding summary want. Anything
+  // showing an athlete a number for a particular day passes that day.
+  const mult = s.day ? dayMultiplier(s.day) : averageMultiplier(s.week);
   const maint = Math.round((bmr * mult) / 10) * 10;
 
   // §4 — the pace adjustment.
