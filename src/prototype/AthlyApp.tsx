@@ -575,11 +575,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const outcome = await scanBarcode();
     if (outcome.kind === 'cancelled') return;
     if (outcome.kind === 'unavailable') {
-      this.toast('Scanning needs the ATHLY app on your phone.');
+      this.toast('Scanning needs the ATHLY IQ app on your phone.');
       return;
     }
     if (outcome.kind === 'denied') {
-      this.toast('Camera access is off. Turn it on for ATHLY in Settings.');
+      this.toast('Camera access is off. Turn it on for ATHLY IQ in Settings.');
       return;
     }
 
@@ -641,7 +641,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
    */
   private openLegal(page: 'privacy' | 'terms') {
     if (!siteUrl) {
-      this.toast('That page is on the ATHLY website.');
+      this.toast('That page is on the ATHLY IQ website.');
       return;
     }
     void Browser.open({ url: `${siteUrl}/${page}.html` }).catch(() => {
@@ -655,12 +655,12 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     if (!this._alive) return;
 
     if (result === 'unavailable') {
-      this.toast('Reminders need the ATHLY app on your phone.');
+      this.toast('Reminders need the ATHLY IQ app on your phone.');
       return;
     }
     if (result === 'denied') {
       this.update({ reminders: false });
-      this.toast('Notifications are off for ATHLY. Turn them on in Settings.');
+      this.toast('Notifications are off for ATHLY IQ. Turn them on in Settings.');
       return;
     }
     this.update({ reminders: result === 'on' });

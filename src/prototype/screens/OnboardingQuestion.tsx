@@ -55,7 +55,7 @@ export function OnboardingQuestion({ v }: { v: ViewModel }) {
                 )}
               />
               <div style={S('margin-top:12px;font-size:12.5px;color:#8C8779;line-height:1.5')}>
-                Athly uses it to talk to you, nothing else.
+                Athly IQ uses it to talk to you, nothing else.
               </div>
             </div>
           </>

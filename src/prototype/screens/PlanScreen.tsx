@@ -27,7 +27,7 @@ export function PlanScreen({ v }: { v: ViewModel }) {
                 'font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#17A05E',
               )}
             >
-              Athly planner
+              Athly IQ planner
             </div>
           </div>
           <h1

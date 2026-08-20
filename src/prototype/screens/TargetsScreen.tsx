@@ -23,7 +23,7 @@ export function TargetsScreen({ v }: { v: ViewModel }) {
           >
             <span style={S('font-size:10.5px;font-weight:900;color:#111815;letter-spacing:-.04em')}>A</span>
           </div>
-          <span style={S('font-size:13px;font-weight:900;color:rgba(244,242,237,.65)')}>ATHLY</span>
+          <span style={S('font-size:13px;font-weight:900;color:rgba(244,242,237,.65)')}>ATHLY IQ</span>
         </div>
         <div
           style={S(

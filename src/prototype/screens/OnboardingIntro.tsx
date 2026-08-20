@@ -46,7 +46,7 @@ export function OnboardingIntro({ v }: { v: ViewModel }) {
           <span
             style={S('font-size:15px;font-weight:900;font-stretch:125%;letter-spacing:.01em;color:#F4F2ED')}
           >
-            ATHLY
+            ATHLY IQ
           </span>
         </div>
         <div style={S('position:relative')}>
@@ -62,7 +62,7 @@ export function OnboardingIntro({ v }: { v: ViewModel }) {
               'margin:0 0 34px;font-size:16px;line-height:1.5;color:rgba(244,242,237,.65);max-width:305px',
             )}
           >
-            Tell us what you love, what you won't touch, and when you train. Athly handles the rest — no
+            Tell us what you love, what you won't touch, and when you train. Athly IQ handles the rest — no
             spreadsheets.
           </p>
           <button

@@ -27,7 +27,7 @@ export function GeneratingOverlay({ v }: { v: ViewModel }) {
               )}
             />
           </div>
-          <span style={S('font-size:14px;font-weight:900;color:rgba(244,242,237,.7)')}>ATHLY</span>
+          <span style={S('font-size:14px;font-weight:900;color:rgba(244,242,237,.7)')}>ATHLY IQ</span>
         </div>
         <h2
           style={S(

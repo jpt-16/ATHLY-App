@@ -81,7 +81,7 @@ export function AuthGate({ v }: { v: ViewModel }) {
           <span
             style={S('font-size:15px;font-weight:900;font-stretch:125%;letter-spacing:.01em;color:#F4F2ED')}
           >
-            ATHLY
+            ATHLY IQ
           </span>
         </div>
         <div style={S('position:relative')}>

@@ -32,7 +32,7 @@ export function HomeScreen({ v }: { v: ViewModel }) {
               />
             </div>
             <span style={S('font-size:13.5px;font-weight:900;font-stretch:125%;letter-spacing:.01em')}>
-              ATHLY
+              ATHLY IQ
             </span>
           </div>
           <button

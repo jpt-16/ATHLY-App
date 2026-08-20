@@ -25,7 +25,9 @@ describe('the terms of use', () => {
   it('tells someone with an eating disorder not to use it, and where to go', () => {
     // A calorie tracker aimed at teenagers has to say this first, not in a
     // footnote. It is the clause most easily cut for length.
-    expect(TERMS).toContain('do not use athly if you have an eating disorder');
+    // Brand-agnostic on purpose: the clause is what matters, and the app has
+    // been renamed once already.
+    expect(TERMS).toMatch(/do not use [\w ]+ if you have an eating disorder/);
     expect(TERMS).toContain('helpline');
   });
 

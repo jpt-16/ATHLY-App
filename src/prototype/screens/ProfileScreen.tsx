@@ -103,7 +103,7 @@ export function ProfileScreen({ v }: { v: ViewModel }) {
             </React.Fragment>
           ))}
           <div style={S('padding:6px 0 10px;font-size:12px;line-height:1.55;color:#8C8779')}>
-            Athly gives general nutrition guidance to help you fuel, recover and grow. It isn't medical
+            Athly IQ gives general nutrition guidance to help you fuel, recover and grow. It isn't medical
             advice, and it won't set aggressive weight targets for anyone under 18.
           </div>
           <button

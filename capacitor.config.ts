@@ -19,7 +19,7 @@ const config: CapacitorConfig = {
   // Developer account before anything can be signed. Changing it later means a
   // new app as far as the App Store is concerned, so it is worth being sure.
   appId: 'com.athly.app',
-  appName: 'ATHLY',
+  appName: 'ATHLY IQ',
 
   // The Vite build output. `npm run build` refuses to run without Supabase
   // credentials, which is the behaviour we want here more than anywhere: an

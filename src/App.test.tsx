@@ -195,6 +195,6 @@ describe('the iOS frame', () => {
     const { container } = render(<App />);
     const frame = container.querySelector('[data-om-starter="ios-frame"]');
     expect(frame).not.toBeNull();
-    expect(within(frame as HTMLElement).getByText('ATHLY')).toBeInTheDocument();
+    expect(within(frame as HTMLElement).getByText('ATHLY IQ')).toBeInTheDocument();
   });
 });

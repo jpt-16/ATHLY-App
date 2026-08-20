@@ -108,7 +108,7 @@ export function PrototypeShell({ v }: { v: ViewModel }) {
           />
         </div>
         <div style={S('font-weight:900;font-stretch:125%;font-size:17px;letter-spacing:.01em;color:#111815')}>
-          ATHLY
+          ATHLY IQ
         </div>
         <div
           style={S(
