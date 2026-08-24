@@ -104,7 +104,14 @@ export default defineConfig(({ mode }) => ({
     // `tools/` is in here because the USDA ingest parses this repo's own recipe
     // data, and the assertion that it reads all 44 meals rather than six is only
     // useful if it runs with everything else.
-    include: ['src/**/*.{test,spec}.{ts,tsx}', 'tools/**/*.{test,spec}.mjs'],
+    include: [
+      'src/**/*.{test,spec}.{ts,tsx}',
+      'tools/**/*.{test,spec}.mjs',
+      // The nutrition providers. Pure functions over a JSON document, so they
+      // are tested here against committed fixtures rather than against a live
+      // API — the same bargain `tools/usda/` strikes.
+      'supabase/functions/_shared/**/*.{test,spec}.ts',
+    ],
     css: false,
   },
 }));

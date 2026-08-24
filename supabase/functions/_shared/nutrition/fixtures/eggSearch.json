@@ -1,0 +1,60 @@
+{
+  "foods": [
+    {
+      "fdcId": 748967,
+      "description": "Egg, whole, raw, fresh",
+      "dataType": "Foundation",
+      "foodNutrients": [
+        { "nutrientId": 1008, "value": 143, "unitName": "KCAL" },
+        { "nutrientId": 1003, "value": 12.6 },
+        { "nutrientId": 1005, "value": 0.72 },
+        { "nutrientId": 1004, "value": 9.51 },
+        { "nutrientId": 1093, "value": 142 },
+        { "nutrientId": 1087, "value": 48 },
+        { "nutrientId": 1089, "value": 1.67 },
+        { "nutrientId": 1114, "value": 2 }
+      ],
+      "foodPortions": [
+        { "amount": 1, "gramWeight": 50, "measureUnit": { "name": "large" } },
+        { "amount": 1, "gramWeight": 44, "measureUnit": { "name": "medium" } }
+      ]
+    },
+    {
+      "fdcId": 999001,
+      "description": "Egg, whole, dried, stabilized, glucose reduced",
+      "dataType": "SR Legacy",
+      "foodNutrients": [
+        { "nutrientId": 1008, "value": 615, "unitName": "KCAL" },
+        { "nutrientId": 1003, "value": 48.2 }
+      ]
+    },
+    {
+      "fdcId": 999002,
+      "description": "Energy drink, sugar free",
+      "dataType": "Branded",
+      "brandOwner": "Someone",
+      "foodNutrients": [{ "nutrientId": 1008, "value": 5, "unitName": "KCAL" }],
+      "servingSize": 250,
+      "servingSizeUnit": "ml",
+      "householdServingFullText": "1 can"
+    },
+    {
+      "fdcId": 999003,
+      "description": "Egg, cooked, no energy reported",
+      "dataType": "Foundation",
+      "foodNutrients": [{ "nutrientId": 1003, "value": 12 }]
+    },
+    {
+      "fdcId": 999004,
+      "description": "Egg, impossible row",
+      "dataType": "Foundation",
+      "foodNutrients": [{ "nutrientId": 1008, "value": 3000, "unitName": "KCAL" }]
+    },
+    {
+      "fdcId": 999005,
+      "description": "Egg, energy in kilojoules only",
+      "dataType": "Foundation",
+      "foodNutrients": [{ "nutrientId": 1008, "value": 598, "unitName": "kJ" }]
+    }
+  ]
+}

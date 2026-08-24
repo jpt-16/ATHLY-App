@@ -14,7 +14,11 @@
     "noUnusedParameters": true,
     "exactOptionalPropertyTypes": false,
 
-    "allowImportingTsExtensions": false,
+    // On for the Edge Functions' shared code only, in practice: Deno resolves
+    // imports by real path and requires the extension, and that code has to be
+    // valid under both runtimes. `noEmit` is already true, which is the
+    // condition TypeScript attaches to this.
+    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "esModuleInterop": true,
@@ -26,5 +30,12 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "types": ["vite/client", "vitest/globals"]
   },
-  "include": ["src", "supabase/tests/roundTrip.test.ts"]
+  "include": [
+    "src",
+    "supabase/tests/roundTrip.test.ts",
+    // Pure, secret-free provider code, shared with the Edge Functions. The
+    // function entrypoints are deliberately not here: they use Deno globals
+    // this compiler has no types for, and they are checked by `deno check`.
+    "supabase/functions/_shared"
+  ]
 }
