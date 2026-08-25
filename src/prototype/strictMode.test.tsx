@@ -48,6 +48,14 @@ vi.mock('../data/planRepo', () => ({
   savePlanReplans: vi.fn(async () => undefined),
 }));
 
+// Signed-in tests render past the consent gate; what they are about is
+// elsewhere. `consentGate.test.tsx` is where the gate itself is checked.
+vi.mock('../data/consentRepo', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  loadConsents: vi.fn(async () => ({ privacy: true, ai: true })),
+  recordAllConsents: vi.fn(async () => undefined),
+}));
+
 const { AthlyApp } = await import('./AthlyApp');
 
 /** Signed in, session resolved — the state that used to hang. */

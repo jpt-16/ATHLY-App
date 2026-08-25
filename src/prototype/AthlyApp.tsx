@@ -36,6 +36,13 @@ import { loadMetrics, saveSleep, saveWater, saveWeight } from '../data/metricsRe
 import type { DayMetrics } from '../data/metricsRepo';
 import { GLASS_ML, dailyCalories, sleepTargetMinutes, waterTargetMl, weightTrend } from '../data/series';
 import { remindersOn, setReminders } from '../data/reminders';
+import {
+  CONSENT_VERSION,
+  NO_CONSENT,
+  consentOutstanding,
+  loadConsents,
+  recordAllConsents,
+} from '../data/consentRepo';
 import { scanBarcode } from '../data/barcodeScan';
 import { MICRONUTRIENTS, NUTRIENT_LABEL, NUTRIENT_UNIT, ZERO } from './nutrients';
 import { baseNutrition, nutritionOf, portionDay, servingLabel } from './portions';
@@ -304,6 +311,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     sleepDraft: '',
     foodDraft: { name: '', kcal: '', protein: '', carbs: '', fat: '' },
     reminders: remindersOn(),
+    consents: NO_CONSENT,
+    consentPrivacy: false,
+    consentAi: false,
+    consentBusy: false,
     editing: null,
     editDraft: '',
     editDraft2: '',
@@ -443,6 +454,17 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     // Whatever brought them here, the typed password has done its job. No reason
     // for it to sit in a React tree for the rest of the session.
     if (this.state.authPassword) this.update({ authPassword: '' });
+
+    // Read alongside the account, before anything is shown. A failure here
+    // leaves both false and the gate appears: asking twice is harmless, and
+    // letting somebody past a consent nobody could confirm is not.
+    try {
+      const consents = await withTimeout(loadConsents(), STARTUP_TIMEOUT_MS, 'Reading your agreements');
+      if (this._alive) this.update({ consents });
+    } catch {
+      if (this._alive) this.update({ consents: NO_CONSENT });
+    }
+    if (!this._alive) return;
 
     let saved: Awaited<ReturnType<typeof loadAccount>> = null;
     // Bounded, because an unanswered read is not an error and would otherwise
@@ -628,6 +650,30 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
    * cannot be asked again from inside the app, and telling them "off" would
    * leave them tapping a switch that will never move.
    */
+  /**
+   * Record both agreements.
+   *
+   * Written before the gate lifts, not after. A gate that opens optimistically
+   * and reconciles later is a gate that lets somebody into the app having
+   * agreed to nothing the moment the network is bad — and this is the one place
+   * in the app where the record *is* the point.
+   */
+  private async agreeToAll() {
+    const userId = this.props.userId;
+    if (!userId) return;
+
+    this.update({ consentBusy: true });
+    try {
+      await recordAllConsents(userId);
+      if (!this._alive) return;
+      this.update({ consents: { privacy: true, ai: true }, consentBusy: false });
+    } catch {
+      if (!this._alive) return;
+      this.update({ consentBusy: false });
+      this.toast("That didn't save — check your connection and try again.");
+    }
+  }
+
   /**
    * Open the privacy policy or the terms.
    *
@@ -1510,6 +1556,10 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const calLow = Math.min(...weekCals);
     const calHigh = Math.max(...weekCals);
 
+    // Only ever due for a signed-in athlete. With no backend nothing leaves the
+    // device and there is no account, so there is nothing to agree to.
+    const consentDue = isBackendConfigured && !!this.props.userId && consentOutstanding(s.consents);
+
     const editField = s.editing ? fieldFor(s.editing) : undefined;
 
     const weekBars = weeklyCalories(s.logs, tg.cal, iso, 8);
@@ -2176,15 +2226,21 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       // Nothing renders until the session is known. Without this the app shows
       // the intro screen for a frame to someone who is already signed in, then
       // yanks it away — worse than a beat of nothing.
+      // The consent gate, shown over everything once signed in until both boxes
+      // are ticked. A gate rather than a stage: the athlete's real stage is
+      // already correct underneath, so agreeing reveals it rather than routing
+      // them somewhere.
+      isConsent: consentDue,
       isHydrating: s.hydrating,
       isOnboarding:
         !inAuth &&
         !s.hydrating &&
+        !consentDue &&
         (s.stage === 'onboarding' || s.stage === 'building' || s.stage === 'targets'),
-      isApp: !inAuth && !s.hydrating && s.stage === 'app',
+      isApp: !inAuth && !s.hydrating && !consentDue && s.stage === 'app',
 
       // --- account ---------------------------------------------------------
-      isAuth: inAuth && !s.hydrating,
+      isAuth: inAuth && !s.hydrating && !consentDue,
       authIsGate: authView === 'gate',
       authIsForm:
         authView === 'signUp' || authView === 'signIn' || authView === 'forgot' || authView === 'setPassword',
@@ -3312,6 +3368,19 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       },
       editSave: this.commitEdit,
       editCancel: this.closeEditor,
+
+      consentVersion: CONSENT_VERSION,
+      consentPrivacy: s.consentPrivacy,
+      consentAi: s.consentAi,
+      consentBusy: s.consentBusy,
+      toggleConsentPrivacy: () => this.update((st) => ({ consentPrivacy: !st.consentPrivacy })),
+      toggleConsentAi: () => this.update((st) => ({ consentAi: !st.consentAi })),
+      // Deliberately not enabled until both are ticked. A Continue button that
+      // works without them would make the boxes decoration.
+      consentReady: s.consentPrivacy && s.consentAi && !s.consentBusy,
+      openConsentPrivacy: () => this.openLegal('privacy'),
+      openConsentTerms: () => this.openLegal('terms'),
+      agreeToAll: () => void this.agreeToAll(),
 
       showMeal: s.overlay === 'meal',
       showSwap: s.overlay === 'swap',

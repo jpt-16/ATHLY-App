@@ -15,6 +15,7 @@ import { MealSheet } from './overlays/MealSheet';
 import { Onboarding } from './screens/Onboarding';
 import { SwapSheet } from './overlays/SwapSheet';
 import { EditSheet } from './overlays/EditSheet';
+import { ConsentGate } from './screens/ConsentGate';
 import { Toast } from './overlays/Toast';
 import { IOSDevice } from '../components/ios/IOSFrame';
 import { useIsCompact } from '../hooks/useIsCompact';
@@ -61,6 +62,7 @@ function Screens({ v }: { v: ViewModel }) {
       )}
     >
       {v.isHydrating ? <Hydrating /> : null}
+      {v.isConsent ? <ConsentGate v={v} /> : null}
       {v.isOnboarding ? <Onboarding v={v} /> : null}
       {v.isAuth ? <Auth v={v} /> : null}
       {v.isApp ? <AppShell v={v} /> : null}

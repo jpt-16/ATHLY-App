@@ -59,6 +59,23 @@ export type DailyMetricsRow = {
   updated_at: string;
 };
 
+/**
+ * One agreement, as recorded.
+ *
+ * `document_version` is the version that was on screen when the box was ticked.
+ * Agreeing to the old text is not agreeing to the new one, so a bumped version
+ * asks again rather than assuming.
+ */
+export type ConsentRow = {
+  user_id: string;
+  kind: ConsentKind;
+  document_version: string;
+  agreed_at: string;
+};
+
+/** The two things an athlete is asked to agree to. */
+export type ConsentKind = 'privacy' | 'ai';
+
 export type GoalsRow = {
   user_id: string;
   calories: number;
@@ -220,6 +237,7 @@ export interface Database {
       entitlements: Table<EntitlementRow>;
       meal_logs: Table<MealLogRow>;
       daily_metrics: Table<DailyMetricsRow, 'weight_lb' | 'water_ml' | 'sleep_minutes'>;
+      consents: Table<ConsentRow>;
       plan_swaps: Table<PlanSwapRow>;
       plan_days: Table<PlanDayRow>;
     };
@@ -257,6 +275,7 @@ export const USER_TABLES = [
   'plan_swaps',
   'plan_days',
   'daily_metrics',
+  'consents',
 ] as const;
 
 export type UserTable = (typeof USER_TABLES)[number];

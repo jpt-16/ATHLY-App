@@ -37,6 +37,7 @@ const DESCRIBED: Record<string, string[]> = {
   plan_swaps: ['meal swaps'],
   plan_days: ['replanned days'],
   daily_metrics: ['weight, water and sleep'],
+  consents: ['which agreements you accepted'],
 };
 
 describe('the privacy policy', () => {
@@ -80,5 +81,23 @@ describe('the privacy policy', () => {
   it('sets a floor of 13 and says what happens below it', () => {
     expect(POLICY).toContain('13 and over');
     expect(POLICY).toContain('under 13');
+  });
+});
+
+describe('the consent gate agrees with the documents', () => {
+  it('records against the version printed on both pages', async () => {
+    // A gate that records "2026-08-20" while the page says something else is
+    // recording agreement to a document nobody read.
+    const { CONSENT_VERSION } = await import('../data/consentRepo');
+    const terms = (await import('../../public/terms.html?raw')).default.toLowerCase().replace(/\s+/g, ' ');
+
+    const printed = /last updated (\d{1,2} \w+ \d{4})/.exec(POLICY)?.[1];
+    expect(printed, 'the policy has no "Last updated" line').toBeTruthy();
+    expect(/last updated/.test(terms)).toBe(true);
+
+    // Both documents carry the same date, and the constant matches it.
+    const iso = new Date(`${printed} UTC`).toISOString().slice(0, 10);
+    expect(CONSENT_VERSION).toBe(iso);
+    expect(terms).toContain(`last updated ${printed}`);
   });
 });

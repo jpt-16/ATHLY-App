@@ -9,6 +9,7 @@
 import type { IsoDate } from '../lib/clock';
 import type { Micronutrient, Nutrients } from './nutrients';
 import type { DayMetrics } from '../data/metricsRepo';
+import type { ConsentState } from '../data/consentRepo';
 
 export type Goal = 'gain' | 'perform' | 'lose' | 'habits';
 export type Sex = 'male' | 'female' | 'na';
@@ -222,6 +223,21 @@ export interface AppState {
    * only so a toggle re-renders.
    */
   reminders: boolean;
+
+  // --- consent -------------------------------------------------------------
+  /**
+   * What this athlete has agreed to, at the current document version.
+   *
+   * Read once at sign-in. A failure to read it leaves both false, so the gate
+   * appears — asking twice is harmless, and letting somebody past a consent
+   * nobody could confirm is not.
+   */
+  consents: ConsentState;
+  /** The two boxes on the gate, before Continue is pressed. */
+  consentPrivacy: boolean;
+  consentAi: boolean;
+  /** True while the agreement is being written. */
+  consentBusy: boolean;
 
   /**
    * Which Profile row is being edited, by its label, or `null`.
