@@ -98,6 +98,7 @@ import type { NewLog } from '../data/logRepo';
 import {
   deleteAccount,
   sendPasswordReset,
+  resendConfirmation,
   signInWithEmail,
   signInWithProvider,
   signOut,
@@ -196,7 +197,7 @@ const AUTH_COPY: Record<
     kicker: 'Account',
     title: 'Check your email.',
     sub: 'We sent a link to confirm your address. Open it and your plan is saved.',
-    hint: 'Nothing there? Look in spam. Your answers are safe on this device until you confirm.',
+    hint: 'Nothing there? Look in spam, then send it again. If you already had an account with this address, no new email is sent — sign in instead.',
     cta: 'Back to sign in',
     busy: '',
   },
@@ -1080,6 +1081,25 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
         this.update({ authView: 'signUp' });
     }
   };
+
+  /**
+   * Ask for the confirmation email again.
+   *
+   * Reports success either way, like the sign-up that preceded it: saying "no
+   * account with that address" here would undo the enumeration protection the
+   * whole flow is built around. A rate limit is the one thing worth naming,
+   * because "wait a minute" and "this is broken" are different problems.
+   */
+  private async resendEmail() {
+    const email = this.state.authEmail.trim();
+    if (!email) return;
+
+    this.update({ authBusy: true, authError: null });
+    const { error } = await resendConfirmation(email);
+    if (!this._alive) return;
+    this.update({ authBusy: false, authError: error });
+    if (!error) this.toast('Sent. Give it a minute, and check spam.');
+  }
 
   private finishRecovery = () => {
     this.update({ authPassword: '', authError: null });
@@ -2245,6 +2265,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       authIsForm:
         authView === 'signUp' || authView === 'signIn' || authView === 'forgot' || authView === 'setPassword',
       authIsNotice: authView === 'checkEmail' || authView === 'resetSent',
+      // "Check your email" with no way to ask again strands anyone whose
+      // address already had an account: Supabase answers that signup with a 200
+      // and no email, on purpose, and this app says "check your email", on
+      // purpose. Both are right and together they leave somebody waiting for
+      // something that was never sent.
+      authResend: authView === 'checkEmail' && !!s.authEmail ? () => void this.resendEmail() : null,
+      authResendLabel: s.authBusy ? 'Sending…' : 'Send it again',
       // The gate paints its own dark ground edge to edge; the rail belongs to
       // the cream screens behind it.
       authShowBar: authView !== 'gate',

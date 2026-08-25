@@ -121,6 +121,36 @@ export async function signUpWithEmail(email: string, password: string): Promise<
   return error ? { error: readable(error.message) } : OK;
 }
 
+/**
+ * Send the confirmation email again.
+ *
+ * The gap this closes. Supabase answers a signup for an address that already
+ * has an account with a 200 and **no email** — deliberately, because a
+ * different answer would tell anyone with a login form which addresses are
+ * registered. This app then says "check your email", for the same reason. Both
+ * decisions are right and together they strand somebody: they sign up, they are
+ * told to check their email, and no email was ever going to arrive.
+ *
+ * Resending is the way out that does not give the game away. It works for an
+ * account that exists and is unconfirmed, and for anything else it reports
+ * success without sending — so the screen stays uninformative about whether the
+ * address is registered, and the athlete who is genuinely waiting gets their
+ * link.
+ */
+export async function resendConfirmation(email: string): Promise<AuthResult> {
+  if (!email.includes('@')) return { error: "That doesn't look like an email address." };
+  const { error } = await requireSupabase().auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: redirectTo() },
+  });
+  // A rate limit is worth saying out loud — it is the difference between "wait
+  // a minute" and "this is broken". Everything else is swallowed for the same
+  // reason the sign-up path swallows it.
+  if (error && /rate limit|too many/i.test(error.message)) return { error: readable(error.message) };
+  return OK;
+}
+
 export async function signInWithEmail(email: string, password: string): Promise<AuthResult> {
   const { error } = await requireSupabase().auth.signInWithPassword({ email, password });
   return error ? { error: readable(error.message) } : OK;

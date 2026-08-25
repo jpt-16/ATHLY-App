@@ -50,6 +50,16 @@ export function AuthNotice({ v }: { v: ViewModel }) {
           'padding:14px 22px calc(30px + env(safe-area-inset-bottom, 0px));border-top:2px solid rgba(17,24,21,.1);background:#F4F2ED',
         )}
       >
+        {v.authResend ? (
+          <button
+            onClick={v.authResend}
+            style={S(
+              'width:100%;margin-bottom:10px;padding:14px;border-radius:14px;border:2px solid rgba(17,24,21,.14);background:#fff;font-size:14px;font-weight:800;color:#111815',
+            )}
+          >
+            {v.authResendLabel}
+          </button>
+        ) : null}
         <button onClick={v.authSubmit} style={S(v.authCtaStyle)}>
           <span>{v.authCta}</span>
           <svg
