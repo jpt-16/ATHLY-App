@@ -1031,7 +1031,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
 
   /** Where the back arrow goes from each account screen. */
   private authBack = () => {
-    const view = this.state.authView;
+    const view = this.authViewNow();
     if (view === 'gate') {
       this.update({ stage: 'targets', authError: null });
       return;
@@ -1049,8 +1049,30 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
 
   private setAuthView = (authView: AuthView) => this.update({ authView, authError: null });
 
+  /**
+   * Which account screen is actually on the phone.
+   *
+   * A password-reset link overrides the stored view, because the link grants a
+   * real session and the athlete must not land in the app still holding the
+   * password they came to change. That override used to live only in
+   * `renderVals`, so the screen and the button disagreed: the render said
+   * "Choose a new password" while `submitAuth` read `state.authView` and ran
+   * whatever the athlete had been doing beforehand. Arriving from "Forgot
+   * password" — which is how everybody arrives — that meant typing a password
+   * into a field whose button asked Supabase to send a reset email, and being
+   * told "That doesn't look like an email address."
+   *
+   * It made the reset flow impossible to finish. Two testers reached this
+   * screen; neither ended up with a password. So the override is computed here
+   * and read everywhere, and no caller is allowed its own copy of the rule.
+   */
+  private authViewNow(): AuthView {
+    return this.props.recovering ? 'setPassword' : this.state.authView;
+  }
+
   private submitAuth = () => {
-    const { authView, authEmail, authPassword } = this.state;
+    const { authEmail, authPassword } = this.state;
+    const authView = this.authViewNow();
     switch (authView) {
       case 'signUp':
         void this.runAuth(
@@ -2239,7 +2261,7 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     // in: the link grants a real session, so without this the athlete lands in
     // the app still holding the password they came here to change.
     const recovering = !!this.props.recovering;
-    const authView: AuthView = recovering ? 'setPassword' : s.authView;
+    const authView: AuthView = this.authViewNow();
     const inAuth = recovering || s.stage === 'auth';
     const copy = AUTH_COPY[authView];
     const canSubmit =
