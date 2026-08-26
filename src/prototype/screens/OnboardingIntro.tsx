@@ -65,6 +65,31 @@ export function OnboardingIntro({ v }: { v: ViewModel }) {
             Tell us what you love, what you won't touch, and when you train. Athly IQ handles the rest — no
             spreadsheets.
           </p>
+          {v.obSignedInAs ? (
+            <div
+              style={S(
+                'display:flex;align-items:center;gap:9px;margin:-18px 0 22px;padding:11px 13px;border-radius:12px;background:rgba(23,160,94,.16);border:1px solid rgba(91,227,160,.32)',
+              )}
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#5BE3A0"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={S('flex:none')}
+              >
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              <span style={S('font-size:12.5px;line-height:1.45;color:rgba(244,242,237,.8);min-width:0')}>
+                Signed in as <strong style={S('color:#F4F2ED')}>{v.obSignedInAs}</strong>. Finish setting up
+                and your plan is saved to this account.
+              </span>
+            </div>
+          ) : null}
           <button
             className={'dc-ho1'}
             onClick={v.obNext}
@@ -72,7 +97,7 @@ export function OnboardingIntro({ v }: { v: ViewModel }) {
               'width:100%;display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:#17A05E;color:#fff;font-weight:800;font-size:16px;border-radius:14px',
             )}
           >
-            <span>Let's set you up</span>
+            <span>{v.obSignedInAs ? 'Pick up where you left off' : "Let's set you up"}</span>
             <svg
               width="20"
               height="20"

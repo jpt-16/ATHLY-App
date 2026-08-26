@@ -73,7 +73,7 @@ describe('the consent gate', () => {
 
     expect(await screen.findByText(/before you start/i)).toBeInTheDocument();
     // Nothing behind it is reachable — not the app, not onboarding.
-    expect(screen.queryByRole('button', { name: /let's set you up/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /pick up where you left off/i })).not.toBeInTheDocument();
   });
 
   it('asks separately about AI, because it is the surprising one', async () => {
@@ -108,7 +108,7 @@ describe('the consent gate', () => {
     await u.click(screen.getByRole('button', { name: /agree and continue/i }));
 
     expect(recordAllConsents).toHaveBeenCalledWith('athlete-1');
-    expect(await screen.findByRole('button', { name: /let's set you up/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /pick up where you left off/i })).toBeInTheDocument();
   });
 
   it('holds the gate when the agreement could not be written', async () => {
@@ -140,7 +140,7 @@ describe('the consent gate', () => {
     loadConsents.mockResolvedValue({ privacy: true, ai: true });
     render(<AthlyApp {...signedIn} />);
 
-    expect(await screen.findByRole('button', { name: /let's set you up/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /pick up where you left off/i })).toBeInTheDocument();
     expect(screen.queryByText(/before you start/i)).not.toBeInTheDocument();
   });
 });

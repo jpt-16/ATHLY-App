@@ -80,9 +80,13 @@ describe('under StrictMode', () => {
       </StrictMode>,
     );
 
-    // An account with nothing saved starts onboarding. Reaching it at all is the
-    // assertion: before the fix this stayed on the splash for good.
-    expect(await screen.findByRole('button', { name: /let's set you up/i })).toBeInTheDocument();
+    // An account with nothing saved starts onboarding, and says so — the intro
+    // offers a signed-in athlete "pick up where you left off" rather than the
+    // stranger's "let's set you up". Reaching it at all is the assertion: before
+    // the fix this stayed on the splash for good.
+    expect(
+      await screen.findByRole('button', { name: /pick up where you left off/i }),
+    ).toBeInTheDocument();
   });
 
   it('still reads the account rather than skipping straight past it', async () => {
@@ -92,7 +96,7 @@ describe('under StrictMode', () => {
       </StrictMode>,
     );
 
-    await screen.findByRole('button', { name: /let's set you up/i });
+    await screen.findByRole('button', { name: /pick up where you left off/i });
     // The guard exists to stop a dead tree being written to, not to stop the
     // request. A fix that simply deleted it would pass the test above.
     expect(loadAccount).toHaveBeenCalled();

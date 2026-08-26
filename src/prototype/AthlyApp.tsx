@@ -537,7 +537,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     }
 
     // Signed in with nothing saved and nothing parked — an account made but
-    // onboarding abandoned.
+    // onboarding abandoned. This is the branch that looks like a bug: it lands
+    // on question zero, which is byte for byte the screen a signed-out stranger
+    // sees, so an athlete who has just followed a sign-in link concludes the
+    // link did not work and asks for another one. It did work. `obSignedInAs`
+    // is how the screen says so.
     this.update({ stage: 'onboarding', ob: 0, hydrating: false, authBusy: false });
   }
 
@@ -2355,6 +2359,11 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
           return signInWithProvider('apple');
         }),
 
+      // Only on the intro, and only for someone signed in who has no account to
+      // load — that pairing is exactly "your link worked, you just never
+      // finished". Anyone mid-onboarding is already past needing to be told.
+      obSignedInAs:
+        s.stage === 'onboarding' && s.ob === 0 && this.props.userId ? (this.props.userEmail ?? null) : null,
       obShowBar: s.stage === 'onboarding' && s.ob > 0,
       ob0: s.stage === 'onboarding' && s.ob === 0,
       obQuestion: s.stage === 'onboarding' && s.ob > 0,
