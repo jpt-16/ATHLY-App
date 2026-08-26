@@ -206,7 +206,7 @@ const AUTH_COPY: Record<
     kicker: 'Account',
     title: 'Link sent.',
     sub: 'If that address has an account, a reset link is in the inbox now.',
-    hint: 'The link expires in an hour. You can ask for another one if it does.',
+    hint: 'Look in spam if it is not there. The link is good for one hour and it only works once — an older one from a previous email will say it has expired. Ask for another and use the newest.',
     cta: 'Back to sign in',
     busy: '',
   },
@@ -1094,8 +1094,13 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
     const email = this.state.authEmail.trim();
     if (!email) return;
 
+    // Which email to send again depends on which notice is on screen. Both
+    // report success without saying whether the address is registered, and both
+    // name a rate limit, so the only difference is the link inside.
+    const again = this.state.authView === 'resetSent' ? sendPasswordReset : resendConfirmation;
+
     this.update({ authBusy: true, authError: null });
-    const { error } = await resendConfirmation(email);
+    const { error } = await again(email);
     if (!this._alive) return;
     this.update({ authBusy: false, authError: error });
     if (!error) this.toast('Sent. Give it a minute, and check spam.');
@@ -2270,7 +2275,14 @@ export class AthlyApp extends React.Component<AthlyProps, AppState> {
       // and no email, on purpose, and this app says "check your email", on
       // purpose. Both are right and together they leave somebody waiting for
       // something that was never sent.
-      authResend: authView === 'checkEmail' && !!s.authEmail ? () => void this.resendEmail() : null,
+      //
+      // The reset screen needs the same escape hatch for a different reason: a
+      // reset that the project's email quota refused still showed "Link sent."
+      // Asking again is what actually works once the quota recovers.
+      authResend:
+        (authView === 'checkEmail' || authView === 'resetSent') && !!s.authEmail
+          ? () => void this.resendEmail()
+          : null,
       authResendLabel: s.authBusy ? 'Sending…' : 'Send it again',
       // The gate paints its own dark ground edge to edge; the rail belongs to
       // the cream screens behind it.

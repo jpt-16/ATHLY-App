@@ -29,6 +29,18 @@ const OK: AuthResult = { error: null };
  * distinct "user not found" tells anyone with a login form which email addresses
  * have accounts. Both problems are fixed in the same place.
  */
+/**
+ * Did the server refuse this because too much has been asked of it?
+ *
+ * Two different limits answer alike. One counts requests from this device; the
+ * other counts emails sent by the whole project, and on the built-in sender
+ * that budget is small enough that a few testers signing up in the same hour
+ * will exhaust it. Both mean wait, and neither means the address is unknown.
+ */
+function isRateLimit(message: string): boolean {
+  return /rate limit|too many|429/i.test(message);
+}
+
 function readable(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('invalid login credentials')) {
@@ -44,8 +56,8 @@ function readable(message: string): string {
   if (m.includes('password') && m.includes('at least')) {
     return 'Passwords need to be at least 8 characters.';
   }
-  if (m.includes('rate limit') || m.includes('too many')) {
-    return 'Too many attempts just now. Give it a minute and try again.';
+  if (isRateLimit(message)) {
+    return 'Too many attempts just now. Give it a few minutes and try again.';
   }
   if (m.includes('failed to fetch') || m.includes('network')) {
     return "Couldn't reach the server. Check your connection and try again.";
@@ -147,7 +159,7 @@ export async function resendConfirmation(email: string): Promise<AuthResult> {
   // A rate limit is worth saying out loud — it is the difference between "wait
   // a minute" and "this is broken". Everything else is swallowed for the same
   // reason the sign-up path swallows it.
-  if (error && /rate limit|too many/i.test(error.message)) return { error: readable(error.message) };
+  if (error && isRateLimit(error.message)) return { error: readable(error.message) };
   return OK;
 }
 
@@ -195,13 +207,24 @@ export async function signInWithProvider(
 /**
  * Send a password reset link.
  *
- * Always reports success. Supabase does not say whether the address exists, and
- * neither do we — "no account with that email" is a free membership check for
- * anyone who wants one.
+ * Silent about whether the address exists — "no account with that email" is a
+ * free membership check for anyone who wants one, so an unknown address gets
+ * the same "link sent" screen as a real one.
+ *
+ * A rate limit is the exception, and it is not a hypothetical: this swallowed
+ * every error, so when the project's email quota was spent Supabase answered
+ * `429: email rate limit exceeded`, no email was sent, and the athlete was
+ * shown "Link sent." She waited for a message that was never coming, and
+ * nothing anywhere said so. Naming that one case leaks nothing — the quota
+ * belongs to the project, not to the address — and it is the difference
+ * between "wait a few minutes" and "this app is broken".
  */
 export async function sendPasswordReset(email: string): Promise<AuthResult> {
   if (!email.includes('@')) return { error: "That doesn't look like an email address." };
-  await requireSupabase().auth.resetPasswordForEmail(email, { redirectTo: redirectTo() });
+  const { error } = await requireSupabase().auth.resetPasswordForEmail(email, {
+    redirectTo: redirectTo(),
+  });
+  if (error && isRateLimit(error.message)) return { error: readable(error.message) };
   return OK;
 }
 

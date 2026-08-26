@@ -186,9 +186,21 @@ deliberately rather than inheriting defaults:
 - [ ] Password-reset emails per hour
 - [ ] Confirmation emails per hour
 
-Related: the built-in SMTP sender is heavily rate-limited and not intended for
-production. A real SMTP provider is needed before more than a handful of people
-sign up, or confirmation emails will silently stop arriving.
+Related, and no longer hypothetical: the built-in SMTP sender is capped at a
+couple of emails an hour **for the whole project**, not per person, and it is
+not intended for production. On 26 August 2026 a tester asked for a password
+reset, Supabase answered `429: email rate limit exceeded`, and no email was
+sent — because two other testers had signed up in the same hour. Three people
+was enough.
+
+- [ ] **Connect a real SMTP provider** (Resend, Postmark, SendGrid) under
+      Authentication → Emails → SMTP Settings, then raise the email rate limits
+      above. Until that is done, every additional tester makes the next one
+      more likely to receive nothing.
+
+The app now names a rate limit rather than swallowing it (`sendPasswordReset`
+and `resendConfirmation` in `authActions.ts`), so this fails loudly instead of
+silently. That is a better failure, not a fix.
 
 What _is_ in code: `consume_rate_limit()` in `0004_limits.sql`, a
 service-role-only counter in Postgres, applied to the `delete-account` Edge
